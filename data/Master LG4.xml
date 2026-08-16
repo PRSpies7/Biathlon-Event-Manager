@@ -1,0 +1,579 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<results xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+	<result>
+		<athleteNo>3235</athleteNo>
+		<athleteName>Hans Sliep (AFL)</athleteName>
+		<runtime>01:37.53</runtime>
+		<swimtime>00:47.55</swimtime>
+	</result>
+	<result>
+		<athleteNo>7276</athleteNo>
+		<athleteName>Carel Snyman (AFL)</athleteName>
+		<runtime>01:18.14</runtime>
+		<swimtime>00:41.68</swimtime>
+	</result>
+	<result>
+		<athleteNo>6814</athleteNo>
+		<athleteName>Carl Homveld (AFL)</athleteName>
+		<runtime>01:50.57</runtime>
+		<swimtime>00:48.02</swimtime>
+	</result>
+	<result>
+		<athleteNo>4911</athleteNo>
+		<athleteName>Marieke Bouwer (AFL)</athleteName>
+		<runtime>01:34.07</runtime>
+		<swimtime>00:36.41</swimtime>
+	</result>
+	<result>
+		<athleteNo>6382</athleteNo>
+		<athleteName>Johan Potgieter</athleteName>
+		<runtime>01:36.16</runtime>
+		<swimtime>00:56.99</swimtime>
+	</result>
+	<result>
+		<athleteNo>3233</athleteNo>
+		<athleteName>Andrew Van Delden (AFL)</athleteName>
+		<runtime>01:18.75</runtime>
+		<swimtime>00:33.99</swimtime>
+	</result>
+	<result>
+		<athleteNo>5861</athleteNo>
+		<athleteName>Schalk Van Heerden (AFL)</athleteName>
+		<runtime>01:45.11</runtime>
+		<swimtime>00:41.21</swimtime>
+	</result>
+	<result>
+		<athleteNo>7567</athleteNo>
+		<athleteName>Ernst Nel (AFL)</athleteName>
+		<runtime>01:42.63</runtime>
+		<swimtime>00:39.10</swimtime>
+	</result>
+	<result>
+		<athleteNo>7409</athleteNo>
+		<athleteName>Elke Vorster</athleteName>
+		<runtime>01:39.19</runtime>
+		<swimtime>00:27.66</swimtime>
+	</result>
+	<result>
+		<athleteNo>7128</athleteNo>
+		<athleteName>Lisa Boshoff (AFL)</athleteName>
+		<runtime>01:42.86</runtime>
+		<swimtime>00:34.15</swimtime>
+	</result>
+	<result>
+		<athleteNo>8209</athleteNo>
+		<athleteName>Lara van der Merwe (AFL)</athleteName>
+		<runtime>01:40.22</runtime>
+		<swimtime>01:17.97</swimtime>
+	</result>
+	<result>
+		<athleteNo>8445</athleteNo>
+		<athleteName>Milla Liebetrau (AFL)</athleteName>
+		<runtime>01:50.08</runtime>
+		<swimtime>01:27.62</swimtime>
+	</result>
+	<result>
+		<athleteNo>8442</athleteNo>
+		<athleteName>Zuvanieke James (AFL)</athleteName>
+		<runtime>01:41.83</runtime>
+		<swimtime>00:35.50</swimtime>
+	</result>
+	<result>
+		<athleteNo>8124</athleteNo>
+		<athleteName>Nicholas Rudolph Nel (AFL)</athleteName>
+		<runtime>01:50.96</runtime>
+		<swimtime>00:40.15</swimtime>
+	</result>
+	<result>
+		<athleteNo>5449</athleteNo>
+		<athleteName>Elri Vorster</athleteName>
+		<runtime>01:21.42</runtime>
+		<swimtime>00:49.79</swimtime>
+	</result>
+	<result>
+		<athleteNo>8206</athleteNo>
+		<athleteName>Lily Andrews (AFL)</athleteName>
+		<runtime>01:44.22</runtime>
+		<swimtime>00:44.38</swimtime>
+	</result>
+	<result>
+		<athleteNo>8441</athleteNo>
+		<athleteName>Zarime James (AFL)</athleteName>
+		<runtime>01:28.85</runtime>
+		<swimtime>01:13.62</swimtime>
+	</result>
+	<result>
+		<athleteNo>8114</athleteNo>
+		<athleteName>Lene Nel (AFL)</athleteName>
+		<runtime>01:25.22</runtime>
+		<swimtime>00:54.29</swimtime>
+	</result>
+	<result>
+		<athleteNo>8465</athleteNo>
+		<athleteName>Juno van Rooy (AFL)</athleteName>
+		<runtime>01:31.93</runtime>
+		<swimtime>01:15.09</swimtime>
+	</result>
+	<result>
+		<athleteNo>5025</athleteNo>
+		<athleteName>Zara Lombard (AFL)</athleteName>
+		<runtime>01:22.07</runtime>
+		<swimtime>00:45.70</swimtime>
+	</result>
+	<result>
+		<athleteNo>5115</athleteNo>
+		<athleteName>Amelie Smith (AFL)</athleteName>
+		<runtime>01:29.57</runtime>
+		<swimtime>00:40.05</swimtime>
+	</result>
+	<result>
+		<athleteNo>7465</athleteNo>
+		<athleteName>Zoey Fouche (AFL)</athleteName>
+		<runtime>01:21.77</runtime>
+		<swimtime>00:46.36</swimtime>
+	</result>
+	<result>
+		<athleteNo>8098</athleteNo>
+		<athleteName>Ené de Vos (AFL)</athleteName>
+		<runtime>01:30.40</runtime>
+		<swimtime>01:04.28</swimtime>
+	</result>
+	<result>
+		<athleteNo>8434</athleteNo>
+		<athleteName>Stephanie Roma Lewies (AFL)</athleteName>
+		<runtime>01:46.72</runtime>
+		<swimtime>00:50.78</swimtime>
+	</result>
+	<result>
+		<athleteNo>8080</athleteNo>
+		<athleteName>Zanay Harmse (AFL)</athleteName>
+		<runtime>01:26.94</runtime>
+		<swimtime>00:57.81</swimtime>
+	</result>
+	<result>
+		<athleteNo>8089</athleteNo>
+		<athleteName>Gizelle Roelofse (AFL)</athleteName>
+		<runtime>01:48.82</runtime>
+		<swimtime>00:55.03</swimtime>
+	</result>
+	<result>
+		<athleteNo>8106</athleteNo>
+		<athleteName>Isabella Esterhuysen (AFL)</athleteName>
+		<runtime>01:33.77</runtime>
+		<swimtime>01:04.36</swimtime>
+	</result>
+	<result>
+		<athleteNo>8444</athleteNo>
+		<athleteName>Zoané Liebetrau (AFL)</athleteName>
+		<runtime>01:43.18</runtime>
+		<swimtime>00:55.12</swimtime>
+	</result>
+	<result>
+		<athleteNo>6805</athleteNo>
+		<athleteName>Taylor Vlotman</athleteName>
+		<runtime>01:34.43</runtime>
+		<swimtime>01:28.74</swimtime>
+	</result>
+	<result>
+		<athleteNo>5350</athleteNo>
+		<athleteName>Elaine Jacobs (AFL)</athleteName>
+		<runtime>01:38.01</runtime>
+		<swimtime>00:44.96</swimtime>
+	</result>
+	<result>
+		<athleteNo>7210</athleteNo>
+		<athleteName>Isabelle Barnard (AFL)</athleteName>
+		<runtime>01:28.28</runtime>
+		<swimtime>01:10.98</swimtime>
+	</result>
+	<result>
+		<athleteNo>7131</athleteNo>
+		<athleteName>Ellie Combrink (AFL)</athleteName>
+		<runtime>01:29.98</runtime>
+		<swimtime>01:14.48</swimtime>
+	</result>
+	<result>
+		<athleteNo>8158</athleteNo>
+		<athleteName>Nicholas Rudolph (AFL)</athleteName>
+		<runtime>01:37.43</runtime>
+		<swimtime>00:58.97</swimtime>
+	</result>
+	<result>
+		<athleteNo>8554</athleteNo>
+		<athleteName>Jozua Blom (TO)</athleteName>
+		<runtime>01:51.14</runtime>
+		<swimtime>01:39.86</swimtime>
+	</result>
+	<result>
+		<athleteNo>8207</athleteNo>
+		<athleteName>Logan Andrews (AFL)</athleteName>
+		<runtime>02:05.12</runtime>
+		<swimtime>01:04.40</swimtime>
+	</result>
+	<result>
+		<athleteNo>8459</athleteNo>
+		<athleteName>Nico Barnard (AFL)</athleteName>
+		<runtime>01:30.52</runtime>
+		<swimtime>01:24.96</swimtime>
+	</result>
+	<result>
+		<athleteNo>8104</athleteNo>
+		<athleteName>Ariel Lombard (AFL)</athleteName>
+		<runtime>01:27.09</runtime>
+		<swimtime>01:22.93</swimtime>
+	</result>
+	<result>
+		<athleteNo>8099</athleteNo>
+		<athleteName>Janu Korff (AFL)</athleteName>
+		<runtime>01:46.58</runtime>
+		<swimtime>01:28.45</swimtime>
+	</result>
+	<result>
+		<athleteNo>8097</athleteNo>
+		<athleteName>Louwrens Brink (AFL)</athleteName>
+		<runtime>01:24.30</runtime>
+		<swimtime>00:51.30</swimtime>
+	</result>
+	<result>
+		<athleteNo>6729</athleteNo>
+		<athleteName>Ehan Human (AFL)</athleteName>
+		<runtime>01:56.20</runtime>
+		<swimtime>01:05.94</swimtime>
+	</result>
+	<result>
+		<athleteNo>8460</athleteNo>
+		<athleteName>Sienna Solomons (TO)</athleteName>
+		<runtime>01:17.19</runtime>
+		<swimtime>00:45.28</swimtime>
+	</result>
+	<result>
+		<athleteNo>7372</athleteNo>
+		<athleteName>Alex Venter (AFL)</athleteName>
+		<runtime>01:17.74</runtime>
+		<swimtime>00:43.19</swimtime>
+	</result>
+	<result>
+		<athleteNo>8081</athleteNo>
+		<athleteName>MJ Mostert (AFL)</athleteName>
+		<runtime>01:31.09</runtime>
+		<swimtime>00:47.00</swimtime>
+	</result>
+	<result>
+		<athleteNo>8590</athleteNo>
+		<athleteName>Cayson Coetsee</athleteName>
+		<runtime>01:22.57</runtime>
+		<swimtime>01:20.70</swimtime>
+	</result>
+	<result>
+		<athleteNo>8433</athleteNo>
+		<athleteName>Dawid Klopper (AFL)</athleteName>
+		<runtime>01:24.23</runtime>
+		<swimtime>01:15.04</swimtime>
+	</result>
+	<result>
+		<athleteNo>8569</athleteNo>
+		<athleteName>Christoff Cronjé (TO)</athleteName>
+		<runtime>01:21.71</runtime>
+		<swimtime>01:06.57</swimtime>
+	</result>
+	<result>
+		<athleteNo>6749</athleteNo>
+		<athleteName>JJ van der Westhuizen (AFL)</athleteName>
+		<runtime>01:27.43</runtime>
+		<swimtime>01:02.52</swimtime>
+	</result>
+	<result>
+		<athleteNo>6518</athleteNo>
+		<athleteName>Blake Truter (AFL)</athleteName>
+		<runtime>01:28.71</runtime>
+		<swimtime>00:40.66</swimtime>
+	</result>
+	<result>
+		<athleteNo>6804</athleteNo>
+		<athleteName>Justin Vlotman (AFL)</athleteName>
+		<runtime>01:15.64</runtime>
+		<swimtime>00:44.95</swimtime>
+	</result>
+	<result>
+		<athleteNo>5387</athleteNo>
+		<athleteName>Johanna Buys</athleteName>
+		<runtime>02:39.97</runtime>
+		<swimtime>01:05.71</swimtime>
+	</result>
+	<result>
+		<athleteNo>8204</athleteNo>
+		<athleteName>Chelma Sliep (AFL)</athleteName>
+		<runtime>03:46.12</runtime>
+		<swimtime>01:36.99</swimtime>
+	</result>
+	<result>
+		<athleteNo>6341</athleteNo>
+		<athleteName>Isabelle Botha</athleteName>
+		<runtime>03:27.37</runtime>
+		<swimtime>01:15.87</swimtime>
+	</result>
+	<result>
+		<athleteNo>7383</athleteNo>
+		<athleteName>Surae De Klerk (AFL)</athleteName>
+		<runtime>03:15.20</runtime>
+		<swimtime>01:42.24</swimtime>
+	</result>
+	<result>
+		<athleteNo>6801</athleteNo>
+		<athleteName>Suzanne Pienaar (AFL)</athleteName>
+		<runtime>03:16.31</runtime>
+		<swimtime>02:02.24</swimtime>
+	</result>
+	<result>
+		<athleteNo>7130</athleteNo>
+		<athleteName>Christelle Combrink (AFL)</athleteName>
+		<runtime>03:07.56</runtime>
+		<swimtime>01:30.57</swimtime>
+	</result>
+	<result>
+		<athleteNo>8208</athleteNo>
+		<athleteName>Janco Abbott (TO)</athleteName>
+		<runtime>02:49.54</runtime>
+		<swimtime>01:17.17</swimtime>
+	</result>
+	<result>
+		<athleteNo>8125</athleteNo>
+		<athleteName>Johan Ferreira (AFL)</athleteName>
+		<runtime>03:06.37</runtime>
+		<swimtime>01:36.13</swimtime>
+	</result>
+	<result>
+		<athleteNo>3214</athleteNo>
+		<athleteName>Christie Lourens (AFL)</athleteName>
+		<runtime>03:35.44</runtime>
+		<swimtime>01:33.98</swimtime>
+	</result>
+	<result>
+		<athleteNo>5063</athleteNo>
+		<athleteName>Trevor Botha (TO)</athleteName>
+		<runtime>02:55.61</runtime>
+		<swimtime>01:04.84</swimtime>
+	</result>
+	<result>
+		<athleteNo>4831</athleteNo>
+		<athleteName>Wynand Viljoen</athleteName>
+		<runtime>03:07.31</runtime>
+		<swimtime>01:14.18</swimtime>
+	</result>
+	<result>
+		<athleteNo>3180</athleteNo>
+		<athleteName>Willem De Beer (AFL)</athleteName>
+		<runtime>02:29.50</runtime>
+		<swimtime>01:11.59</swimtime>
+	</result>
+	<result>
+		<athleteNo>3175</athleteNo>
+		<athleteName>Pierre Spies (AFL)</athleteName>
+		<runtime>02:30.15</runtime>
+		<swimtime>01:02.87</swimtime>
+	</result>
+	<result>
+		<athleteNo>8085</athleteNo>
+		<athleteName>Amorey Rossouw (AFL)</athleteName>
+		<runtime>03:31.33</runtime>
+		<swimtime>00:49.64</swimtime>
+	</result>
+	<result>
+		<athleteNo>8103</athleteNo>
+		<athleteName>Mare van Schalkwyk (AFL)</athleteName>
+		<runtime>03:37.70</runtime>
+		<swimtime>00:51.12</swimtime>
+	</result>
+	<result>
+		<athleteNo>6692</athleteNo>
+		<athleteName>Minay Boshoff (AFL)</athleteName>
+		<runtime>03:12.62</runtime>
+		<swimtime>00:44.04</swimtime>
+	</result>
+	<result>
+		<athleteNo>8593</athleteNo>
+		<athleteName>Lea-Helena Malan (AFL)</athleteName>
+		<runtime>03:24.17</runtime>
+		<swimtime>01:23.86</swimtime>
+	</result>
+	<result>
+		<athleteNo>5377</athleteNo>
+		<athleteName>Jeane Smith (AFL)</athleteName>
+		<runtime>02:55.61</runtime>
+		<swimtime>01:11.34</swimtime>
+	</result>
+	<result>
+		<athleteNo>6709</athleteNo>
+		<athleteName>Lana van Schalkwyk (AFL)</athleteName>
+		<runtime>03:02.40</runtime>
+		<swimtime>01:20.49</swimtime>
+	</result>
+	<result>
+		<athleteNo>6424</athleteNo>
+		<athleteName>Kayla Botha (AFL)</athleteName>
+		<runtime>02:39.98</runtime>
+		<swimtime>01:36.05</swimtime>
+	</result>
+	<result>
+		<athleteNo>8438</athleteNo>
+		<athleteName>Mianke Strydom (AFL)</athleteName>
+		<runtime>03:10.50</runtime>
+		<swimtime>00:49.31</swimtime>
+	</result>
+	<result>
+		<athleteNo>3182</athleteNo>
+		<athleteName>Amelie Richard</athleteName>
+		<runtime>03:21.44</runtime>
+		<swimtime>00:38.31</swimtime>
+	</result>
+	<result>
+		<athleteNo>8093</athleteNo>
+		<athleteName>Thuo Monnanyana (AFL)</athleteName>
+		<runtime>03:19.55</runtime>
+		<swimtime>01:02.57</swimtime>
+	</result>
+	<result>
+		<athleteNo>8090</athleteNo>
+		<athleteName>Conrad Smith (AFL)</athleteName>
+		<runtime>03:15.74</runtime>
+		<swimtime>00:36.89</swimtime>
+	</result>
+	<result>
+		<athleteNo>6697</athleteNo>
+		<athleteName>Dane Combrink (AFL)</athleteName>
+		<runtime>03:13.97</runtime>
+		<swimtime>00:42.09</swimtime>
+	</result>
+	<result>
+		<athleteNo>3427</athleteNo>
+		<athleteName>Emma Vorster</athleteName>
+		<runtime>03:03.69</runtime>
+		<swimtime>00:37.54</swimtime>
+	</result>
+	<result>
+		<athleteNo>5365</athleteNo>
+		<athleteName>Eben Human (AFL)</athleteName>
+		<runtime>03:09.20</runtime>
+		<swimtime>00:35.40</swimtime>
+	</result>
+	<result>
+		<athleteNo>4926</athleteNo>
+		<athleteName>Emma Roets (AFL)</athleteName>
+		<runtime>02:58.74</runtime>
+		<swimtime>00:34.89</swimtime>
+	</result>
+	<result>
+		<athleteNo>6748</athleteNo>
+		<athleteName>Lemay van der Westhuizen (AFL)</athleteName>
+		<runtime>02:41.85</runtime>
+		<swimtime>00:49.57</swimtime>
+	</result>
+	<result>
+		<athleteNo>5404</athleteNo>
+		<athleteName>Emma Cox (AFL)</athleteName>
+		<runtime>02:41.65</runtime>
+		<swimtime>00:36.49</swimtime>
+	</result>
+	<result>
+		<athleteNo>8096</athleteNo>
+		<athleteName>Herman Brink (AFL)</athleteName>
+		<runtime>03:39.10</runtime>
+		<swimtime>00:37.59</swimtime>
+	</result>
+	<result>
+		<athleteNo>8563</athleteNo>
+		<athleteName>Blake Solomons (TO)</athleteName>
+		<runtime>02:52.25</runtime>
+		<swimtime>00:37.47</swimtime>
+	</result>
+	<result>
+		<athleteNo>8101</athleteNo>
+		<athleteName>Jana van Schalkwyk (AFL)</athleteName>
+		<runtime>03:15.96</runtime>
+		<swimtime>00:48.65</swimtime>
+	</result>
+	<result>
+		<athleteNo>3181</athleteNo>
+		<athleteName>Ryan Richard</athleteName>
+		<runtime>02:59.20</runtime>
+		<swimtime>00:41.85</swimtime>
+	</result>
+	<result>
+		<athleteNo>6746</athleteNo>
+		<athleteName>Caylem Van Nieuwenhuizen</athleteName>
+		<runtime>03:16.95</runtime>
+		<swimtime>00:41.81</swimtime>
+	</result>
+	<result>
+		<athleteNo>6723</athleteNo>
+		<athleteName>Gerhard Blaeser (AFL)</athleteName>
+		<runtime>03:18.40</runtime>
+		<swimtime>00:50.90</swimtime>
+	</result>
+	<result>
+		<athleteNo>7254</athleteNo>
+		<athleteName>Reuben Ferreira (AFL)</athleteName>
+		<runtime>03:18.06</runtime>
+		<swimtime>00:59.28</swimtime>
+	</result>
+	<result>
+		<athleteNo>7575</athleteNo>
+		<athleteName>Janko Ritchie (AFL)</athleteName>
+		<runtime>03:17.60</runtime>
+		<swimtime>00:37.91</swimtime>
+	</result>
+	<result>
+		<athleteNo>8447</athleteNo>
+		<athleteName>Ivan Pretorius (AFL)</athleteName>
+		<runtime>02:55.47</runtime>
+		<swimtime>01:09.80</swimtime>
+	</result>
+	<result>
+		<athleteNo>4902</athleteNo>
+		<athleteName>Anrich Kruger</athleteName>
+		<runtime>02:49.43</runtime>
+		<swimtime>01:30.17</swimtime>
+	</result>
+	<result>
+		<athleteNo>8108</athleteNo>
+		<athleteName>Markus du Toit (AFL)</athleteName>
+		<runtime>03:00.39</runtime>
+		<swimtime>01:25.31</swimtime>
+	</result>
+	<result>
+		<athleteNo>6343</athleteNo>
+		<athleteName>Adriaan Janse van Rensburg (AFL)</athleteName>
+		<runtime>02:50.38</runtime>
+		<swimtime>01:24.77</swimtime>
+	</result>
+	<result>
+		<athleteNo>8157</athleteNo>
+		<athleteName>Oliver Henstock (AFL)</athleteName>
+		<runtime>03:05.32</runtime>
+		<swimtime>02:05.35</swimtime>
+	</result>
+	<result>
+		<athleteNo>5461</athleteNo>
+		<athleteName>Stiaan Buys (AFL)</athleteName>
+		<runtime>02:35.75</runtime>
+		<swimtime>01:03.05</swimtime>
+	</result>
+	<result>
+		<athleteNo>5979</athleteNo>
+		<athleteName>Ruhan Buys (AFL)</athleteName>
+		<runtime>02:59.19</runtime>
+		<swimtime>01:16.11</swimtime>
+	</result>
+	<result>
+		<athleteNo>6209</athleteNo>
+		<athleteName>Johan Ferreira (AFL)</athleteName>
+		<runtime>02:56.26</runtime>
+		<swimtime>01:21.84</swimtime>
+	</result>
+	<result>
+		<athleteNo>5478</athleteNo>
+		<athleteName>Heinrich von Wielligh (AFL)</athleteName>
+		<runtime>02:35.52</runtime>
+		<swimtime>01:27.39</swimtime>
+	</result>
+</results>

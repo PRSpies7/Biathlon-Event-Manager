@@ -1,0 +1,415 @@
+:root {
+    --gn-navy: #1B2A4A;
+    --gn-red: #C8102E;
+    --gn-orange: #D97706;
+    --gn-orange-dark: #B45309;
+    --gn-bg: #EEF1F5;
+    --gn-surface: #FFFFFF;
+    --gn-border: #CBD5E1;
+    --gn-text: #172033;
+    --gn-muted: #475569;
+    --gn-sidebar: #E2E8F0;
+}
+
+/* --------------------------------------------------------------------------
+   Core application surfaces
+   -------------------------------------------------------------------------- */
+.stApp { background: var(--gn-bg); }
+.block-container {
+    max-width: 1180px;
+    padding-top: 1.25rem;
+    padding-bottom: 2rem;
+}
+
+/* Sidebar remains visually distinct from the main page. */
+[data-testid="stSidebar"] > div:first-child { background: var(--gn-sidebar); }
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p { color: var(--gn-text); }
+
+/* --------------------------------------------------------------------------
+   Typography: do not globally force widget text with !important. Streamlit's
+   native theme owns standard foreground/background colours.
+   -------------------------------------------------------------------------- */
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stCaptionContainer"] p,
+[data-testid="stText"] p,
+[data-testid="stWidgetLabel"] p {
+    color: var(--gn-text);
+    font-size: 1rem;
+}
+[data-testid="stCaptionContainer"] p { color: var(--gn-muted); }
+
+/* --------------------------------------------------------------------------
+   Workflow stepper
+   -------------------------------------------------------------------------- */
+.workflow-stepper {
+    width: 100%;
+    margin: .15rem 0 1.15rem;
+    padding-top: 2px;
+    overflow: visible;
+}
+.step-item {
+    min-height: 3.1rem;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: .75rem .35rem;
+    font-size: 1rem;
+    line-height: 1.25;
+    font-weight: 650;
+    color: var(--gn-muted);
+    background: var(--gn-surface);
+    border: 1px solid var(--gn-border);
+    border-bottom: 3px solid var(--gn-border);
+    border-radius: 3px 3px 0 0;
+}
+.step-item.active {
+    color: var(--gn-navy);
+    border-bottom-color: var(--gn-red);
+    font-weight: 800;
+}
+
+/* --------------------------------------------------------------------------
+   Inputs and selectors. Light theme gets white functional surfaces; dark
+   theme gets Streamlit's native surface with an explicit border.
+   -------------------------------------------------------------------------- */
+[data-testid="stTextInput"] input,
+[data-testid="stNumberInput"] input,
+[data-testid="stDateInput"] input {
+    background: var(--gn-surface);
+    color: var(--gn-text);
+    border-color: var(--gn-border);
+}
+[data-baseweb="select"] > div {
+    background: var(--gn-surface);
+    color: var(--gn-text);
+    border-color: var(--gn-border);
+}
+[data-baseweb="select"] [role="combobox"] { color: var(--gn-text); }
+
+/* --------------------------------------------------------------------------
+   Tables
+   Streamlit's native dataframe/editor surfaces are intentionally left to the
+   Streamlit theme for their actual grid canvas. The theme config sets a white
+   dataframe canvas and a white header; these container rules add the visible
+   application-level border without fighting Glide's generated CSS.
+   -------------------------------------------------------------------------- */
+div[data-testid="stDataFrame"],
+div[data-testid="stDataEditor"] {
+    border: 1px solid var(--gn-border);
+    border-radius: 7px;
+    overflow: hidden;
+    background: #FFFFFF;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+/* --------------------------------------------------------------------------
+   Buttons: retain established palette.
+   -------------------------------------------------------------------------- */
+div.stButton > button {
+    min-height: 2.5rem;
+    border-radius: 6px;
+    font-weight: 700;
+    white-space: nowrap;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+div.stButton > button[kind="primary"] {
+    background: var(--gn-navy);
+    color: #FFFFFF;
+    border: 1px solid var(--gn-navy);
+}
+div.stButton > button[kind="primary"] p,
+div.stButton > button[kind="primary"] span,
+div.stButton > button[kind="primary"] div { color: #FFFFFF; }
+div.stButton > button[kind="primary"]:hover {
+    background: var(--gn-red);
+    border-color: var(--gn-red);
+}
+div.stButton > button[kind="secondary"] {
+    background: var(--gn-surface);
+    color: var(--gn-navy);
+    border: 1px solid var(--gn-border);
+}
+div.stButton > button[kind="secondary"] p,
+div.stButton > button[kind="secondary"] span,
+div.stButton > button[kind="secondary"] div { color: var(--gn-navy); }
+
+/* Red action buttons. */
+div.stButton > button.red-action,
+.red-action button {
+    background: var(--gn-red);
+    color: #FFFFFF;
+    border-color: var(--gn-red);
+}
+div.stButton > button.red-action p,
+.red-action button p,
+.red-action button span,
+.red-action button div { color: #FFFFFF; }
+
+/* Warning actions. */
+.warning-action button,
+.warning-action button[kind="primary"],
+.warning-action button[kind="secondary"],
+.phase4-reset-action button {
+    background: var(--gn-orange);
+    color: #FFFFFF;
+    border: 1px solid var(--gn-orange);
+    font-weight: 800;
+}
+.warning-action button p,
+.warning-action button span,
+.warning-action button div,
+.phase4-reset-action button p,
+.phase4-reset-action button span,
+.phase4-reset-action button div { color: #FFFFFF; }
+.warning-action button:hover,
+.phase4-reset-action button:hover {
+    background: var(--gn-orange-dark);
+    border-color: var(--gn-orange-dark);
+}
+
+/* --------------------------------------------------------------------------
+   Upload controls: brand-red instructional text, preserved from V1.11.
+   -------------------------------------------------------------------------- */
+[data-testid="stFileUploader"] label,
+[data-testid="stFileUploader"] label *,
+[data-testid="stFileUploader"] section p,
+[data-testid="stFileUploader"] section span,
+[data-testid="stFileUploader"] section small {
+    color: var(--gn-red);
+    -webkit-text-fill-color: var(--gn-red);
+}
+[data-testid="stFileUploader"] button,
+[data-testid="stFileUploader"] button p,
+[data-testid="stFileUploader"] button span,
+[data-testid="stFileUploader"] button div {
+    color: var(--gn-red);
+    -webkit-text-fill-color: var(--gn-red);
+}
+
+/* --------------------------------------------------------------------------
+   Event information cards
+   -------------------------------------------------------------------------- */
+.event-info-card {
+    min-height: 88px;
+    height: 100%;
+    box-sizing: border-box;
+    padding: .9rem 1rem;
+    border: 1px solid var(--gn-border);
+    border-radius: 7px;
+    background: var(--gn-surface);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: .2rem;
+}
+
+/* --------------------------------------------------------------------------
+   Phase 2 confirmation: the container itself is right-aligned so the warning
+   and button share one clean right edge.
+   -------------------------------------------------------------------------- */
+.phase2-confirm-message {
+    text-align: right;
+    color: var(--gn-orange-dark);
+    font-weight: 700;
+    font-size: .95rem;
+    margin: 0 0 .45rem;
+    white-space: nowrap;
+}
+.st-key-phase2_confirm_action {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    width: 100%;
+}
+.st-key-phase2_confirm_action div.stButton {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+}
+.st-key-phase2_confirm_action div.stButton > button {
+    width: auto;
+    min-width: 220px;
+    min-height: 2.5rem;
+    background: var(--gn-orange);
+    color: #FFFFFF;
+    border: 1px solid var(--gn-orange);
+    border-radius: 6px;
+    font-weight: 800;
+}
+.st-key-phase2_confirm_action div.stButton > button p,
+.st-key-phase2_confirm_action div.stButton > button span,
+.st-key-phase2_confirm_action div.stButton > button div { color: #FFFFFF; }
+
+/* --------------------------------------------------------------------------
+   Phase 2 / Phase 4 compact actions
+   -------------------------------------------------------------------------- */
+.phase4-reset-action { display: inline-block; width: auto; }
+.phase4-reset-description {
+    color: var(--gn-muted);
+    font-size: .9rem;
+    margin-top: .35rem;
+    margin-bottom: .7rem;
+}
+
+/* --------------------------------------------------------------------------
+   Bottom navigation
+   -------------------------------------------------------------------------- */
+.bottom-phase-navigation {
+    width: 100%;
+    margin-top: 1.15rem;
+    padding-top: .85rem;
+    border-top: 1px solid var(--gn-border);
+}
+.bottom-phase-navigation div.stButton > button {
+    min-height: 2.5rem;
+    text-align: center;
+}
+.bottom-phase-step {
+    text-align: center;
+    color: var(--gn-muted);
+    font-size: 1rem;
+    font-weight: 700;
+    padding-top: .7rem;
+    white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Sidebar branding and workflow buttons
+   -------------------------------------------------------------------------- */
+.sidebar-brand { margin-bottom: .35rem; }
+[data-testid="stSidebar"] div.stButton > button[kind="primary"] {
+    background: var(--gn-navy);
+    color: #FFFFFF;
+    border-color: var(--gn-navy);
+}
+[data-testid="stSidebar"] div.stButton > button[kind="primary"] p,
+[data-testid="stSidebar"] div.stButton > button[kind="primary"] span,
+[data-testid="stSidebar"] div.stButton > button[kind="primary"] div { color: #FFFFFF; }
+[data-testid="stSidebar"] div.stButton > button[kind="secondary"] {
+    background: var(--gn-surface);
+    color: var(--gn-navy);
+    border-color: var(--gn-border);
+}
+[data-testid="stSidebar"] div.stButton > button[kind="secondary"] p,
+[data-testid="stSidebar"] div.stButton > button[kind="secondary"] span,
+[data-testid="stSidebar"] div.stButton > button[kind="secondary"] div { color: var(--gn-navy); }
+
+/* Available Sessions closed control: red selected text in both themes. */
+[data-testid="stSidebar"] [data-baseweb="select"] > div {
+    background: var(--gn-navy);
+    border-color: var(--gn-navy);
+}
+[data-testid="stSidebar"] [data-baseweb="select"] span,
+[data-testid="stSidebar"] [data-baseweb="select"] input,
+[data-testid="stSidebar"] [data-baseweb="select"] [role="combobox"] {
+    color: var(--gn-red);
+    -webkit-text-fill-color: var(--gn-red);
+}
+[data-testid="stSidebar"] [data-baseweb="select"] svg {
+    fill: var(--gn-red);
+    color: var(--gn-red);
+}
+[data-baseweb="popover"] [role="option"] { color: var(--gn-text); }
+
+/* --------------------------------------------------------------------------
+   Processing summaries / alerts
+   -------------------------------------------------------------------------- */
+.processing-summary {
+    padding: .45rem .7rem;
+    margin: .35rem 0 .55rem;
+    border: 1px solid var(--gn-border);
+    border-radius: 6px;
+    background: var(--gn-surface);
+    color: var(--gn-text);
+    font-size: .92rem;
+}
+[data-testid="stAlert"] { border-radius: 7px; }
+
+/* --------------------------------------------------------------------------
+   Targeted dark-mode overrides. These are deliberately narrow: standard
+   Streamlit widgets are allowed to use native theme colours.
+   -------------------------------------------------------------------------- */
+[data-theme="dark"] [data-testid="stSidebar"] [data-baseweb="select"] > div {
+    background: var(--gn-navy);
+    border-color: #52627D;
+}
+[data-theme="dark"] [data-testid="stSidebar"] [data-baseweb="select"] span,
+[data-theme="dark"] [data-testid="stSidebar"] [data-baseweb="select"] input,
+[data-theme="dark"] [data-testid="stSidebar"] [data-baseweb="select"] [role="combobox"] {
+    color: var(--gn-red);
+    -webkit-text-fill-color: var(--gn-red);
+}
+[data-theme="dark"] [data-testid="stSidebar"] [data-baseweb="select"] svg {
+    fill: var(--gn-red);
+    color: var(--gn-red);
+}
+
+[data-theme="dark"] [data-testid="stFileUploader"] label,
+[data-theme="dark"] [data-testid="stFileUploader"] label *,
+[data-theme="dark"] [data-testid="stFileUploader"] section p,
+[data-theme="dark"] [data-testid="stFileUploader"] section span,
+[data-theme="dark"] [data-testid="stFileUploader"] section small,
+[data-theme="dark"] [data-testid="stFileUploader"] button,
+[data-theme="dark"] [data-testid="stFileUploader"] button * {
+    color: var(--gn-red);
+    -webkit-text-fill-color: var(--gn-red);
+}
+
+/* Streamlit-owned top bar: only targeted foreground elements are accented. */
+[data-theme="dark"] header[data-testid="stHeader"] [data-testid="stToolbar"] button,
+[data-theme="dark"] header[data-testid="stHeader"] [data-testid="stToolbar"] button * {
+    color: var(--gn-red);
+    fill: var(--gn-red);
+}
+
+[data-theme="dark"] [data-testid="stAlert"] p { color: var(--gn-red); }
+
+/* In dark mode, phase-step text must remain readable. */
+[data-theme="dark"] .step-item { color: #FFFFFF; }
+[data-theme="dark"] .step-item.active { color: #FFFFFF; }
+
+
+/* --------------------------------------------------------------------------
+   V1.14 targeted corrections
+   -------------------------------------------------------------------------- */
+
+/* Download/export controls are red actions with explicit white foreground.
+   Streamlit download buttons do not use the same DOM hooks as stButton. */
+[data-testid="stDownloadButton"] button {
+    background: var(--gn-red);
+    color: #FFFFFF;
+    border: 1px solid var(--gn-red);
+    font-weight: 700;
+}
+[data-testid="stDownloadButton"] button *,
+[data-testid="stDownloadButton"] button p,
+[data-testid="stDownloadButton"] button span,
+[data-testid="stDownloadButton"] button div {
+    color: #FFFFFF;
+    -webkit-text-fill-color: #FFFFFF;
+}
+[data-testid="stDownloadButton"] button:hover:not(:disabled) {
+    background: var(--gn-navy);
+    border-color: var(--gn-navy);
+}
+
+/* Phase 4 reset uses the same warning treatment as Phase 2 confirmation. */
+.st-key-phase4_reset_container div.stButton > button {
+    background: var(--gn-orange);
+    color: #FFFFFF;
+    border: 1px solid var(--gn-orange);
+    font-weight: 800;
+}
+.st-key-phase4_reset_container div.stButton > button p,
+.st-key-phase4_reset_container div.stButton > button span,
+.st-key-phase4_reset_container div.stButton > button div {
+    color: #FFFFFF;
+}
+.st-key-phase4_reset_container div.stButton > button:hover {
+    background: var(--gn-orange-dark);
+    border-color: var(--gn-orange-dark);
+}
