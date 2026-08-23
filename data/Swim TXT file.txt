@@ -1,0 +1,330 @@
+
+
+Meet Program was updated  04 Nov 2025 09:00:30
+
+
+Event 1 Heat 1 Race 3 started at 05:28:44.31
+
+
+Event #1   Heat 1    Race 3      Open 25 LC Meter Freestyle    (Start: 17:28:44)
+
+LANE  PLACE  NAME                                TIME        A         B         C        
+
+   1      2  Lisa Boshoff  (7128)               34.15    34.15                      
+   2      4  Nicholas Rudolph Nel  (8124)       40.15    40.15                      
+   3      3  Zuvanieke James  (8442)            35.50    35.50                      
+   4      1  Elke Vorster (7409)                27.66    27.66                      
+   5      0  NS                                  0.00                               
+   6      0  NS                                  0.00                               
+   7      0  NS                                  0.00                               
+   8      0  NS                                  0.00                               
+
+
+Event 2 Heat 2 Race 4 started at 05:30:47.59
+
+
+Event #2   Heat 2    Race 4      Open 50 LC Meter Freestyle    (Start: 17:30:47)
+
+LANE  PLACE  NAME                                TIME        A         B         C        
+
+   1      4  Carel Snyman  (7276)               41.68    41.68                      
+   2      0  Isabella von Wielligh  (6473)       0.00                               
+   3      1  Andrew Van Delden  (3233)          33.99    33.99                      
+   4      3  Schalk Van Heerden  (5861)         41.21    41.21                      
+   5      2  Marieke Bouwer  (4911)             36.41    36.41                      
+   6      7  Johan Potgieter (6382)             56.99    56.99                      
+   7      6  Carl Homveld  (6814)               48.02    48.02                      
+   8      5  Hans Sliep  (3235)                 47.55    47.55                      
+
+
+Event 2 Heat 3 Race 5 started at 05:32:50.36
+
+
+Event #2   Heat 3    Race 5      Open 50 LC Meter Freestyle    (Start: 17:32:50)
+
+LANE  PLACE  NAME                                TIME        A         B         C        
+
+   1      6  Jozua Blom  (8554)               1:39.86  1:39.86                      
+   2      5  Nico Barnard  (8459)             1:24.96  1:24.96                      
+   3      4  Ariel Lombard  (8104)            1:22.93  1:22.93                      
+   4      3  Ehan Human  (6729)               1:05.94  1:05.94                      
+   5      0  Zoe Gauche  (6721)                  0.00                               
+   6      0  Stian van Wyngaard  (8092)          0.00                               
+   7      2  Logan Andrews  (8207)            1:04.40  1:04.40                      
+   8      1  Nicholas Rudolph  (8158)           58.97    58.97                      
+
+
+Event 2 Heat 4 Race 6 started at 05:35:10.21
+
+
+Event #2   Heat 4    Race 6      Open 50 LC Meter Freestyle    (Start: 17:35:10)
+
+LANE  PLACE  NAME                                TIME        A         B         C        
+
+   1      4  Juno van Rooy  (8465)            1:15.09  1:15.09                      
+   2      3  Ellie Combrink  (7131)           1:14.48  1:14.48                      
+   3      5  Lara van der Merwe  (8209)       1:17.97  1:17.97                      (a:     0.17)  
+   4      7  Taylor Vlotman (6805)            1:28.74  1:28.74                      
+   5      6  Milla Liebetrau  (8445)          1:27.62  1:27.62                      
+   6      2  Zarime James  (8441)             1:13.62  1:13.62                      
+   7      0  Emily Esterhuysen  (8107)           0.00                               
+   8      1  Isabella Esterhuysen  (8106)     1:04.36  1:04.36                      
+
+
+Event 2 Heat 5 Race 7 started at 05:37:30.56
+
+
+Event #2   Heat 5    Race 7      Open 50 LC Meter Freestyle    (Start: 17:37:30)
+
+LANE  PLACE  NAME                                TIME        A         B         C        
+
+   1      2  Gizelle Roelofse  (8089)           55.03    55.03                      
+   2      0  Santa Wagner  (6686)                0.00                               
+   3      0  Lizette Botha  (6687)               0.00                               
+   4      1  Elaine Jacobs  (5350)              44.96    44.96                      
+   5      0  Mika Holder  (7718)                 0.00                               
+   6      5  Isabelle Barnard  (7210)         1:10.98  1:10.98                      
+   7      3  Zoané Liebetrau  (8444)            55.12    55.12                      
+   8      4  Ené de Vos  (8098)               1:04.28  1:04.28                      
+
+
+Event 2 Heat 6 Race 8 started at 05:39:08.64
+
+
+Event #2   Heat 6    Race 8      Open 50 LC Meter Freestyle    (Start: 17:39:08)
+
+LANE  PLACE  NAME                                TIME        A         B         C        
+
+   1      8  Zanay Harmse  (8080)               57.81    57.81                      
+   2      2  Lily Andrews  (8206)               44.38    44.38                      
+   3      4  Zoey Fouche  (7465)                46.36    46.36                      
+   4      1  Amelie Smith  (5115)               40.05    40.05                      
+   5      3  Zara Lombard  (5025)               45.70    45.70                      
+   6      7  Lene Nel  (8114)                   54.29    54.29                      
+   7      5  Elri Vorster (5449)                49.79    49.79                      
+   8      6  Stephanie Roma Lewies  (8434)      50.78    50.78                      
+
+
+Event 2 Heat 7 Race 9 started at 05:40:55.43
+
+
+Event #2   Heat 7    Race 9      Open 50 LC Meter Freestyle    (Start: 17:40:55)
+
+LANE  PLACE  NAME                                TIME        A         B         C        
+
+   1      0  Jan van Zyl  (8083)                 0.00                               
+   2      3  Cayson Coetsee (8590)            1:20.70  1:20.70                      
+   3      2  Dawid Klopper  (8433)            1:15.04  1:15.04                      
+   4      0  Kian Gauche  (6722)                 0.00                               
+   5      0  Gerber Schoeman  (8564)             0.00                               
+   6      1  Sienna Solomons  (8460)            45.28    45.28                      
+   7      0  Henro Van der Walt  (8435)          0.00                               
+   8      4  Janu Korff  (8099)               1:28.45  1:28.45                      
+
+
+Event 2 Heat 8 Race 10 started at 05:43:01.18
+
+
+Event #2   Heat 8    Race 10      Open 50 LC Meter Freestyle    (Start: 17:43:01)
+
+LANE  PLACE  NAME                                TIME        A         B         C        
+
+   1      4  MJ Mostert  (8081)                 47.00    47.00                      
+   2      7  Christoff Cronjé  (8569)         1:06.57  1:06.57                      
+   3      0  Matthew Prinsloo  (5344)            0.00                               
+   4      1  Blake Truter  (6518)               40.66    40.66                      
+   5      3  Justin Vlotman  (6804)             44.95    44.95                      
+   6      6  JJ van der Westhuizen  (6749)    1:02.52  1:02.52                      
+   7      5  Louwrens Brink  (8097)             51.30    51.30                      
+   8      2  Alex Venter  (7372)                43.19    43.19                      
+
+
+Event 2 Heat 9 Race 11 started at 05:44:33.18
+
+
+Event #2   Heat 9    Race 11      Open 50 LC Meter Freestyle    (Start: 17:44:33)
+
+LANE  PLACE  NAME                                TIME        A         B         C        
+
+   1      5  Dane Combrink  (6697)              42.09    42.09                      
+   2      3  Emma Vorster (3427)                37.54    37.54                      
+   3      1  Emma Roets  (4926)                 34.89    34.89                      
+   4      0  Aria Perdijk  (7460)                0.00                               
+   5      2  Emma Cox  (5404)                   36.49    36.49                      
+   6      0  Janke Bresler  (7587)               0.00                               
+   7      0  Nienke van Wyngaard (5481)          0.00                               
+   8      4  Amelie Richard (3182)              38.31    38.31                      
+
+
+Event 2 Heat 10 Race 12 started at 05:45:41.88
+
+
+Event #2   Heat 10    Race 12      Open 50 LC Meter Freestyle    (Start: 17:45:41)
+
+LANE  PLACE  NAME                                TIME        A         B         C        
+
+   1      0  Lea Schoeman  (8565)                0.00                               
+   2      0  Latika Botha  (8562)                0.00                               
+   3      0  Zoey Zovitzkey (7475)               0.00                               
+   4      1  Minay Boshoff  (6692)              44.04    44.04                      
+   5      0  Kara Holder  (7717)                 0.00                               
+   6      2  Jana van Schalkwyk  (8101)         48.65    48.65                      
+   7      0  Aimee van Zyl  (8082)               0.00                               
+   8      0  Ava Bekker  (8217)                  0.00                               
+
+
+Event 2 Heat 11 Race 13 started at 05:47:08.51
+
+
+Event #2   Heat 11    Race 13      Open 50 LC Meter Freestyle    (Start: 17:47:08)
+
+LANE  PLACE  NAME                                TIME        A         B         C        
+
+   1      5  Amorey Rossouw  (8085)             49.64    49.64                      
+   2      1  Emily Holtzhausen  (8123)          46.13    46.13                      
+   3      3  Lemay van der Westhuizen  (6748)   49.57    49.57                      
+   4      2  Mianke Strydom  (8438)             49.31    49.31                      
+   5      4  Mare van Schalkwyk  (8103)         51.12    51.12                      
+   6      0  Licah Olivier  (8109)               0.00                               
+   7      0  NS                                  0.00                               
+   8      0  NS                                  0.00                               
+
+
+Event 2 Heat 12 Race 14 started at 05:48:43.42
+
+
+Event #2   Heat 12    Race 14      Open 50 LC Meter Freestyle    (Start: 17:48:43)
+
+LANE  PLACE  NAME                                TIME        A         B         C        
+
+   1      2  Herman Brink  (8096)               37.59    37.59                      
+   2      6  Reuben Ferreira  (7254)            59.28    59.28                      
+   3      0  Christoff Botha  (6691)             0.00                               
+   4      3  Ernst Nel  (7567)                  39.10    39.10                      
+   5      4  Caylem Van Nieuwenhuizen (6746)    41.81    41.81                      
+   6      5  Gerhard Blaeser  (6723)            50.90    50.90                      
+   7      1  Blake Solomons  (8563)             37.47    37.47                      
+   8      7  Thuo Monnanyana  (8093)          1:02.57  1:02.57                      
+
+
+Event 2 Heat 13 Race 15 started at 05:50:17.65
+
+
+Event #2   Heat 13    Race 15      Open 50 LC Meter Freestyle    (Start: 17:50:17)
+
+LANE  PLACE  NAME                                TIME        A         B         C        
+
+   1      2  Conrad Smith  (8090)               36.89    36.89                      
+   2      0  Owen Ahlschlager  (6813)            0.00                               
+   3      3  Janko Ritchie  (7575)              37.91    37.91                      
+   4      0  James Prinsloo  (5361)              0.00                               
+   5      1  Eben Human  (5365)                 35.40    35.40                      
+   6      0  Johan Naude  (5973)                 0.00                               
+   7      4  Ryan Richard (3181)                41.85    41.85                      
+   8      0  NS                                  0.00                               
+
+
+Event 3 Heat 14 Race 16 started at 05:51:48.32
+
+
+Event #3   Heat 14    Race 16      Open 100 LC Meter Freestyle    (Start: 17:51:48)
+
+LANE  PLACE  NAME                                TIME        A         B         C        
+
+   1      3  Chelma Sliep  (8204)             1:36.99  1:36.99                      
+   2      4  Surae De Klerk  (7383)           1:42.24  1:42.24                      
+   3      2  Christelle Combrink  (7130)      1:30.57  1:30.57                      
+   4      0  Jenny Cairns  (6868)                0.00                               
+   5      0  Marili Munnik  (7716)               0.00                               
+   6      1  Isabelle Botha (6341)            1:15.87  1:15.87                      
+   7      5  Suzanne Pienaar  (6801)          2:02.24  2:02.24                      
+   8      0  Melissa Blom  (8555)                0.00                               
+
+
+Event 3 Heat 15 Race 17 started at 05:54:24.18
+
+
+Event #3   Heat 15    Race 17      Open 100 LC Meter Freestyle    (Start: 17:54:24)
+
+LANE  PLACE  NAME                                TIME        A         B         C        
+
+   1      2  Janco Abbott  (8208)             1:17.17  1:17.17                      
+   2      4  Heinrich von Wielligh  (5478)    1:27.39  1:27.39                      
+   3      0  Pieter Naude  (5986)                0.00                               
+   4      1  Wynand Viljoen (4831)            1:14.18  1:14.18                      
+   5      5  Christie Lourens  (3214)         1:33.98  1:33.98                      
+   6      0  Ian Tait  (6869)                    0.00                               
+   7      3  Adriaan jv Rensburg  (6343)      1:24.77  1:24.77                      
+   8      6  Johan Ferreira  (8125)           1:36.13  1:36.13                      
+
+
+Event 3 Heat 16 Race 18 started at 05:56:36.55
+
+
+Event #3   Heat 16    Race 18      Open 100 LC Meter Freestyle    (Start: 17:56:36)
+
+LANE  PLACE  NAME                                TIME        A         B         C        
+
+   1      5  Ivan Pretorius  (8447)           1:09.80  1:09.80                      
+   2      3  Trevor Botha  (5063)             1:04.84  1:04.84                      
+   3      0  Ewan Vorster (3428)                 0.00                               
+   4      1  Pierre Spies  (3175)             1:02.87  1:02.87                      
+   5      0  Jaydin Bresler  (7586)              0.00                               
+   6      2  Stiaan Buys  (5461)              1:03.05  1:03.05                      
+   7      6  Willem De Beer  (3180)           1:11.59  1:11.59                      
+   8      4  Johanna Buys (5387)              1:05.71  1:05.71                      
+
+
+Event 3 Heat 17 Race 19 started at 05:58:25.70
+
+
+Event #3   Heat 17    Race 19      Open 100 LC Meter Freestyle    (Start: 17:58:25)
+
+LANE  PLACE  NAME                                TIME        A         B         C        
+
+   1      4  Oliver Henstock  (8157)          2:05.35  2:05.35                      
+   2      0  Kara Breed  (8436)                  0.00                               
+   3      2  Markus du Toit  (8108)           1:25.31  1:25.31                      
+   4      3  Kayla Botha  (6424)              1:36.05  1:36.05                      
+   5      1  Lea-Helena Malan  (8593)         1:23.86  1:23.86                      
+   6      0  Maya Sissing  (8112)                0.00                               
+   7      0  Mila Bekker  (8216)                 0.00                               
+   8      0  NS                                  0.00                               
+
+
+Event 3 Heat 18 Race 20 started at 06:01:07.40
+
+
+Event #3   Heat 18    Race 20      Open 100 LC Meter Freestyle    (Start: 18:01:07)
+
+LANE  PLACE  NAME                                TIME        A         B         C        
+
+   1      5  Anrich Kruger (4902)             1:30.17  1:30.17                      
+   2      4  Johan Ferreira  (6209)           1:21.84  1:21.84                      
+   3      0  Jaco Fouche  (6702)                 0.00                               
+   4      0  Abigail Goodchild  (7572)           0.00                               
+   5      2  Ruhan Buys  (5979)               1:16.11  1:16.11                      
+   6      3  Lana van Schalkwyk  (6709)       1:20.49  1:20.49                      
+   7      0  Dunay Zovitzkey (7474)              0.00                               
+   8      1  Jeane Smith  (5377)              1:11.34  1:11.34                      
+
+
+
+
+(REVISED FROM EARLIER - USE WITH CAUTION)
+Event #3   Heat 18    Race 20      Open 100 LC Meter Freestyle    (Start: 18:01:07)
+
+LANE  PLACE  NAME                                TIME        A         B         C        
+
+   1      5  Anrich Kruger (4902)             1:30.17  1:30.17                      
+   2      4  Johan Ferreira  (6209)           1:21.84  1:21.84                      
+   3      6  Jaco Fouche  (6702)              3:55.05  3:55.05                      
+   4      0  Abigail Goodchild  (7572)           0.00                               
+   5      2  Ruhan Buys  (5979)               1:16.11  1:16.11                      
+   6      3  Lana van Schalkwyk  (6709)       1:20.49  1:20.49                      
+   7      0  Dunay Zovitzkey (7474)              0.00                               
+   8      1  Jeane Smith  (5377)              1:11.34  1:11.34                      
+
+
+Time Drops Console version 2025.01.884+a.20435
+Time Drops Console version 2025.01.884+a.20435

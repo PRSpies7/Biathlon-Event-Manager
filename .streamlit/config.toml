@@ -1,0 +1,11 @@
+[theme]
+primaryColor = "#C8102E"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F8FAFC"
+textColor = "#172033"
+font = "sans serif"
+borderColor = "#CBD5E1"
+dataframeBorderColor = "#CBD5E1"
+dataframeHeaderBackgroundColor = "#FFFFFF"
+showWidgetBorder = true
+showSidebarBorder = true

@@ -1,0 +1,2285 @@
+{
+    "meetName": "GN LEAGUE 4_Heats_2025-11-04",
+    "meetProgramVersion": 1,
+    "meetProgramDateTime": null,
+    "meetHostTeamName": "Gauteng North Biathlon",
+    "meetStartDate": "2026-08-17",
+    "meetEndDate": null,
+    "meetEvents": [
+        {
+            "eventNumber": "1",
+            "eventStrokeCode": 1,
+            "eventStroke": "FREE",
+            "eventIsRelay": false,
+            "eventRelaylegs": 1,
+            "eventDistance": 25,
+            "eventGender": null,
+            "eventMinAge": 0,
+            "eventMaxAge": 0,
+            "eventDescription": "",
+            "eventShortLabel": "",
+            "eventFullLabel": "",
+            "eventStartTime": ""
+        },
+        {
+            "eventNumber": "2",
+            "eventStrokeCode": 1,
+            "eventStroke": "FREE",
+            "eventIsRelay": false,
+            "eventRelaylegs": 1,
+            "eventDistance": 50,
+            "eventGender": null,
+            "eventMinAge": 0,
+            "eventMaxAge": 0,
+            "eventDescription": "",
+            "eventShortLabel": "",
+            "eventFullLabel": "",
+            "eventStartTime": ""
+        },
+        {
+            "eventNumber": "3",
+            "eventStrokeCode": 1,
+            "eventStroke": "FREE",
+            "eventIsRelay": false,
+            "eventRelaylegs": 1,
+            "eventDistance": 100,
+            "eventGender": null,
+            "eventMinAge": 0,
+            "eventMaxAge": 0,
+            "eventDescription": "",
+            "eventShortLabel": "",
+            "eventFullLabel": "",
+            "eventStartTime": ""
+        }
+    ],
+    "meetSessions": [
+        {
+            "sessionNumber": 1,
+            "sessionId": "1",
+            "sessionName": "Session 1",
+            "sessionBeginAt": "2026-08-17T00:00:00+02:00",
+            "sessionEndAt": null,
+            "sessionRaces": [
+                {
+                    "raceEventNumber": "1",
+                    "raceNumber": 1,
+                    "raceHeatType": "F",
+                    "raceHeatNumber": 1,
+                    "raceTotalHeats": 1,
+                    "raceLanes": [
+                        {
+                            "laneNumber": 1,
+                            "isEmpty": false,
+                            "laneEventNumber": "1",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7128",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 2,
+                            "isEmpty": false,
+                            "laneEventNumber": "1",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8124",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 3,
+                            "isEmpty": false,
+                            "laneEventNumber": "1",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8442",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 4,
+                            "isEmpty": false,
+                            "laneEventNumber": "1",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7409",
+                            "laneTeamId": "1"
+                        }
+                    ]
+                },
+                {
+                    "raceEventNumber": "2",
+                    "raceNumber": 2,
+                    "raceHeatType": "F",
+                    "raceHeatNumber": 2,
+                    "raceTotalHeats": 12,
+                    "raceLanes": [
+                        {
+                            "laneNumber": 1,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7276",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 2,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6473",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 3,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "3233",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 4,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "5861",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 5,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "4911",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 6,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6382",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 7,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6814",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 8,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "3235",
+                            "laneTeamId": "1"
+                        }
+                    ]
+                },
+                {
+                    "raceEventNumber": "2",
+                    "raceNumber": 3,
+                    "raceHeatType": "F",
+                    "raceHeatNumber": 3,
+                    "raceTotalHeats": 12,
+                    "raceLanes": [
+                        {
+                            "laneNumber": 1,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8554",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 2,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8459",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 3,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8104",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 4,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6729",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 5,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6721",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 6,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8092",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 7,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8207",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 8,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8158",
+                            "laneTeamId": "1"
+                        }
+                    ]
+                },
+                {
+                    "raceEventNumber": "2",
+                    "raceNumber": 4,
+                    "raceHeatType": "F",
+                    "raceHeatNumber": 4,
+                    "raceTotalHeats": 12,
+                    "raceLanes": [
+                        {
+                            "laneNumber": 1,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8465",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 2,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7131",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 3,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8209",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 4,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6805",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 5,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8445",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 6,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8441",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 7,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8107",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 8,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8106",
+                            "laneTeamId": "1"
+                        }
+                    ]
+                },
+                {
+                    "raceEventNumber": "2",
+                    "raceNumber": 5,
+                    "raceHeatType": "F",
+                    "raceHeatNumber": 5,
+                    "raceTotalHeats": 12,
+                    "raceLanes": [
+                        {
+                            "laneNumber": 1,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8089",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 2,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6686",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 3,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6687",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 4,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "5350",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 5,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7718",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 6,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7210",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 7,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8444",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 8,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8098",
+                            "laneTeamId": "1"
+                        }
+                    ]
+                },
+                {
+                    "raceEventNumber": "2",
+                    "raceNumber": 6,
+                    "raceHeatType": "F",
+                    "raceHeatNumber": 6,
+                    "raceTotalHeats": 12,
+                    "raceLanes": [
+                        {
+                            "laneNumber": 1,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8080",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 2,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8206",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 3,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7465",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 4,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "5115",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 5,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "5025",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 6,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8114",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 7,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "5449",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 8,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8434",
+                            "laneTeamId": "1"
+                        }
+                    ]
+                },
+                {
+                    "raceEventNumber": "2",
+                    "raceNumber": 7,
+                    "raceHeatType": "F",
+                    "raceHeatNumber": 7,
+                    "raceTotalHeats": 12,
+                    "raceLanes": [
+                        {
+                            "laneNumber": 1,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8083",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 2,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8590",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 3,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8433",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 4,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6722",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 5,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8564",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 6,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8460",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 7,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8435",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 8,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8099",
+                            "laneTeamId": "1"
+                        }
+                    ]
+                },
+                {
+                    "raceEventNumber": "2",
+                    "raceNumber": 8,
+                    "raceHeatType": "F",
+                    "raceHeatNumber": 8,
+                    "raceTotalHeats": 12,
+                    "raceLanes": [
+                        {
+                            "laneNumber": 1,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8081",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 2,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8569",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 3,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "5344",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 4,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6518",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 5,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6804",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 6,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6749",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 7,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8097",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 8,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7372",
+                            "laneTeamId": "1"
+                        }
+                    ]
+                },
+                {
+                    "raceEventNumber": "2",
+                    "raceNumber": 9,
+                    "raceHeatType": "F",
+                    "raceHeatNumber": 9,
+                    "raceTotalHeats": 12,
+                    "raceLanes": [
+                        {
+                            "laneNumber": 1,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6697",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 2,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "3427",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 3,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "4926",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 4,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7460",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 5,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "5404",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 6,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7587",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 7,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "5481",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 8,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "3182",
+                            "laneTeamId": "1"
+                        }
+                    ]
+                },
+                {
+                    "raceEventNumber": "2",
+                    "raceNumber": 10,
+                    "raceHeatType": "F",
+                    "raceHeatNumber": 10,
+                    "raceTotalHeats": 12,
+                    "raceLanes": [
+                        {
+                            "laneNumber": 1,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8565",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 2,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8562",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 3,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7475",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 4,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6692",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 5,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7717",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 6,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8101",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 7,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8082",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 8,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8217",
+                            "laneTeamId": "1"
+                        }
+                    ]
+                },
+                {
+                    "raceEventNumber": "2",
+                    "raceNumber": 11,
+                    "raceHeatType": "F",
+                    "raceHeatNumber": 11,
+                    "raceTotalHeats": 12,
+                    "raceLanes": [
+                        {
+                            "laneNumber": 1,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8085",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 2,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8123",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 3,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6748",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 4,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8438",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 5,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8103",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 6,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8109",
+                            "laneTeamId": "1"
+                        }
+                    ]
+                },
+                {
+                    "raceEventNumber": "2",
+                    "raceNumber": 12,
+                    "raceHeatType": "F",
+                    "raceHeatNumber": 12,
+                    "raceTotalHeats": 12,
+                    "raceLanes": [
+                        {
+                            "laneNumber": 1,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8096",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 2,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7254",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 3,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6691",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 4,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7567",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 5,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6746",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 6,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6723",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 7,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8563",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 8,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8093",
+                            "laneTeamId": "1"
+                        }
+                    ]
+                },
+                {
+                    "raceEventNumber": "2",
+                    "raceNumber": 13,
+                    "raceHeatType": "F",
+                    "raceHeatNumber": 13,
+                    "raceTotalHeats": 12,
+                    "raceLanes": [
+                        {
+                            "laneNumber": 1,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8090",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 2,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6813",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 3,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7575",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 4,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "5361",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 5,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "5365",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 6,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "5973",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 7,
+                            "isEmpty": false,
+                            "laneEventNumber": "2",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "3181",
+                            "laneTeamId": "1"
+                        }
+                    ]
+                },
+                {
+                    "raceEventNumber": "3",
+                    "raceNumber": 14,
+                    "raceHeatType": "F",
+                    "raceHeatNumber": 14,
+                    "raceTotalHeats": 5,
+                    "raceLanes": [
+                        {
+                            "laneNumber": 1,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8204",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 2,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7383",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 3,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7130",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 4,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6868",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 5,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7716",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 6,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6341",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 7,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6801",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 8,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8555",
+                            "laneTeamId": "1"
+                        }
+                    ]
+                },
+                {
+                    "raceEventNumber": "3",
+                    "raceNumber": 15,
+                    "raceHeatType": "F",
+                    "raceHeatNumber": 15,
+                    "raceTotalHeats": 5,
+                    "raceLanes": [
+                        {
+                            "laneNumber": 1,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8208",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 2,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "5478",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 3,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "5986",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 4,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "4831",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 5,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "3214",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 6,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6869",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 7,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6343",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 8,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8125",
+                            "laneTeamId": "1"
+                        }
+                    ]
+                },
+                {
+                    "raceEventNumber": "3",
+                    "raceNumber": 16,
+                    "raceHeatType": "F",
+                    "raceHeatNumber": 16,
+                    "raceTotalHeats": 5,
+                    "raceLanes": [
+                        {
+                            "laneNumber": 1,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8447",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 2,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "5063",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 3,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "3428",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 4,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "3175",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 5,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7586",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 6,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "5461",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 7,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "3180",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 8,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "5387",
+                            "laneTeamId": "1"
+                        }
+                    ]
+                },
+                {
+                    "raceEventNumber": "3",
+                    "raceNumber": 17,
+                    "raceHeatType": "F",
+                    "raceHeatNumber": 17,
+                    "raceTotalHeats": 5,
+                    "raceLanes": [
+                        {
+                            "laneNumber": 1,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8157",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 2,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8436",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 3,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8108",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 4,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6424",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 5,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8593",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 6,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8112",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 7,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "8216",
+                            "laneTeamId": "1"
+                        }
+                    ]
+                },
+                {
+                    "raceEventNumber": "3",
+                    "raceNumber": 18,
+                    "raceHeatType": "F",
+                    "raceHeatNumber": 18,
+                    "raceTotalHeats": 5,
+                    "raceLanes": [
+                        {
+                            "laneNumber": 1,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "4902",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 2,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6209",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 3,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6702",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 4,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7572",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 5,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "5979",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 6,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "6709",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 7,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "7474",
+                            "laneTeamId": "1"
+                        },
+                        {
+                            "laneNumber": 8,
+                            "isEmpty": false,
+                            "laneEventNumber": "3",
+                            "laneSeedTime": 0,
+                            "laneSwimmerId": "5377",
+                            "laneTeamId": "1"
+                        }
+                    ]
+                }
+            ],
+            "sessionPool": {
+                "poolNumberOfLanes": 8,
+                "poolCourse": "LCM",
+                "poolFirstLaneNumber": 1
+            },
+            "sessionIsCurrent": true
+        }
+    ],
+    "meetTeams": [
+        {
+            "teamId": "1",
+            "teamAbbreviation": "",
+            "teamShortName": "Gauteng North Biathlon",
+            "teamFullName": "Gauteng North Biathlon",
+            "teamMascot": null
+        }
+    ],
+    "meetSwimmers": [
+        {
+            "swimmerId": "3175",
+            "swimmerName": "Pierre Spies (AFL) (3175)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "3180",
+            "swimmerName": "Willem De Beer (AFL) (3180)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "3181",
+            "swimmerName": "Ryan Richard (3181)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "3182",
+            "swimmerName": "Amelie Richard (3182)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "3214",
+            "swimmerName": "Christie Lourens (AFL) (3214)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "3233",
+            "swimmerName": "Andrew Van Delden (AFL) (3233)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "3235",
+            "swimmerName": "Hans Sliep (AFL) (3235)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "3427",
+            "swimmerName": "Emma Vorster (3427)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "3428",
+            "swimmerName": "Ewan Vorster (3428)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "4831",
+            "swimmerName": "Wynand Viljoen (4831)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "4902",
+            "swimmerName": "Anrich Kruger (4902)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "4911",
+            "swimmerName": "Marieke Bouwer (AFL) (4911)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "4926",
+            "swimmerName": "Emma Roets (AFL) (4926)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "5025",
+            "swimmerName": "Zara Lombard (AFL) (5025)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "5063",
+            "swimmerName": "Trevor Botha (TO) (5063)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "5115",
+            "swimmerName": "Amelie Smith (AFL) (5115)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "5344",
+            "swimmerName": "Matthew Prinsloo (AFL) (5344)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "5350",
+            "swimmerName": "Elaine Jacobs (AFL) (5350)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "5361",
+            "swimmerName": "James Prinsloo (AFL) (5361)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "5365",
+            "swimmerName": "Eben Human (AFL) (5365)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "5377",
+            "swimmerName": "Jeane Smith (AFL) (5377)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "5387",
+            "swimmerName": "Johanna Buys (5387)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "5404",
+            "swimmerName": "Emma Cox (AFL) (5404)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "5449",
+            "swimmerName": "Elri Vorster (5449)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "5461",
+            "swimmerName": "Stiaan Buys (AFL) (5461)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "5478",
+            "swimmerName": "Heinrich von Wielligh (AFL) (5478)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "5481",
+            "swimmerName": "Nienke van Wyngaard (5481)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "5861",
+            "swimmerName": "Schalk Van Heerden (AFL) (5861)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "5973",
+            "swimmerName": "Johan Naude (AFL) (5973)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "5979",
+            "swimmerName": "Ruhan Buys (AFL) (5979)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "5986",
+            "swimmerName": "Pieter Naude (AFL) (5986)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6209",
+            "swimmerName": "Johan Ferreira (AFL) (6209)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6341",
+            "swimmerName": "Isabelle Botha (6341)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6343",
+            "swimmerName": "Adriaan Janse van Rensburg (AFL) (6343)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6382",
+            "swimmerName": "Johan Potgieter (6382)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6424",
+            "swimmerName": "Kayla Botha (AFL) (6424)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6473",
+            "swimmerName": "Isabella von Wielligh (AFL) (6473)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6518",
+            "swimmerName": "Blake Truter (AFL) (6518)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6686",
+            "swimmerName": "Santa Wagner (AFL) (6686)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6687",
+            "swimmerName": "Lizette Botha (AFL) (6687)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6691",
+            "swimmerName": "Christoff Botha (AFL) (6691)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6692",
+            "swimmerName": "Minay Boshoff (AFL) (6692)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6697",
+            "swimmerName": "Dane Combrink (AFL) (6697)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6702",
+            "swimmerName": "Jaco Fouche (AFL) (6702)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6709",
+            "swimmerName": "Lana van Schalkwyk (AFL) (6709)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6721",
+            "swimmerName": "Zoe Gauche (AFL) (6721)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6722",
+            "swimmerName": "Kian Gauche (AFL) (6722)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6723",
+            "swimmerName": "Gerhard Blaeser (AFL) (6723)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6729",
+            "swimmerName": "Ehan Human (AFL) (6729)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6746",
+            "swimmerName": "Caylem Van Nieuwenhuizen (6746)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6748",
+            "swimmerName": "Lemay van der Westhuizen (AFL) (6748)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6749",
+            "swimmerName": "JJ van der Westhuizen (AFL) (6749)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6801",
+            "swimmerName": "Suzanne Pienaar (AFL) (6801)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6804",
+            "swimmerName": "Justin Vlotman (AFL) (6804)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6805",
+            "swimmerName": "Taylor Vlotman (6805)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6813",
+            "swimmerName": "Owen Ahlschlager (AFL) (6813)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6814",
+            "swimmerName": "Carl Homveld (AFL) (6814)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6868",
+            "swimmerName": "Jenny Cairns (AFL) (6868)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "6869",
+            "swimmerName": "Ian Tait (AFL) (6869)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7128",
+            "swimmerName": "Lisa Boshoff (AFL) (7128)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7130",
+            "swimmerName": "Christelle Combrink (AFL) (7130)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7131",
+            "swimmerName": "Ellie Combrink (AFL) (7131)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7210",
+            "swimmerName": "Isabelle Barnard (AFL) (7210)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7254",
+            "swimmerName": "Reuben Ferreira (AFL) (7254)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7276",
+            "swimmerName": "Carel Snyman (AFL) (7276)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7372",
+            "swimmerName": "Alex Venter (AFL) (7372)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7383",
+            "swimmerName": "Surae De Klerk (AFL) (7383)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7409",
+            "swimmerName": "Elke Vorster (7409)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7460",
+            "swimmerName": "Aria Perdijk (AFL) (7460)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7465",
+            "swimmerName": "Zoey Fouche (AFL) (7465)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7474",
+            "swimmerName": "Dunay Zovitzkey (7474)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7475",
+            "swimmerName": "Zoey Zovitzkey (7475)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7567",
+            "swimmerName": "Ernst Nel (AFL) (7567)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7572",
+            "swimmerName": "Abigail Goodchild (AFL) (7572)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7575",
+            "swimmerName": "Janko Ritchie (AFL) (7575)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7586",
+            "swimmerName": "Jaydin Bresler (AFL) (7586)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7587",
+            "swimmerName": "Janke Bresler (AFL) (7587)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7716",
+            "swimmerName": "Marili Munnik (AFL) (7716)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7717",
+            "swimmerName": "Kara Holder (AFL) (7717)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "7718",
+            "swimmerName": "Mika Holder (AFL) (7718)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8080",
+            "swimmerName": "Zanay Harmse (AFL) (8080)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8081",
+            "swimmerName": "MJ Mostert (AFL) (8081)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8082",
+            "swimmerName": "Aimee van Zyl (AFL) (8082)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8083",
+            "swimmerName": "Jan van Zyl (AFL) (8083)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8085",
+            "swimmerName": "Amorey Rossouw (AFL) (8085)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8089",
+            "swimmerName": "Gizelle Roelofse (AFL) (8089)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8090",
+            "swimmerName": "Conrad Smith (AFL) (8090)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8092",
+            "swimmerName": "Stian van Wyngaard (TO) (8092)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8093",
+            "swimmerName": "Thuo Monnanyana (AFL) (8093)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8096",
+            "swimmerName": "Herman Brink (AFL) (8096)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8097",
+            "swimmerName": "Louwrens Brink (AFL) (8097)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8098",
+            "swimmerName": "Ené de Vos (AFL) (8098)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8099",
+            "swimmerName": "Janu Korff (AFL) (8099)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8101",
+            "swimmerName": "Jana van Schalkwyk (AFL) (8101)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8103",
+            "swimmerName": "Mare van Schalkwyk (AFL) (8103)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8104",
+            "swimmerName": "Ariel Lombard (AFL) (8104)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8106",
+            "swimmerName": "Isabella Esterhuysen (AFL) (8106)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8107",
+            "swimmerName": "Emily Esterhuysen (AFL) (8107)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8108",
+            "swimmerName": "Markus du Toit (AFL) (8108)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8109",
+            "swimmerName": "Licah Olivier (AFL) (8109)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8112",
+            "swimmerName": "Maya Sissing (AFL) (8112)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8114",
+            "swimmerName": "Lene Nel (AFL) (8114)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8123",
+            "swimmerName": "Emily Holtzhausen (AFL) (8123)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8124",
+            "swimmerName": "Nicholas Rudolph Nel (AFL) (8124)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8125",
+            "swimmerName": "Johan Ferreira (AFL) (8125)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8157",
+            "swimmerName": "Oliver Henstock (AFL) (8157)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8158",
+            "swimmerName": "Nicholas Rudolph (AFL) (8158)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8204",
+            "swimmerName": "Chelma Sliep (AFL) (8204)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8206",
+            "swimmerName": "Lily Andrews (AFL) (8206)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8207",
+            "swimmerName": "Logan Andrews (AFL) (8207)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8208",
+            "swimmerName": "Janco Abbott (TO) (8208)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8209",
+            "swimmerName": "Lara van der Merwe (AFL) (8209)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8216",
+            "swimmerName": "Mila Bekker (AFL) (8216)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8217",
+            "swimmerName": "Ava Bekker (AFL) (8217)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8433",
+            "swimmerName": "Dawid Klopper (AFL) (8433)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8434",
+            "swimmerName": "Stephanie Roma Lewies (AFL) (8434)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8435",
+            "swimmerName": "Henro Van der Walt (TO) (8435)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8436",
+            "swimmerName": "Kara Breed (AFL) (8436)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8438",
+            "swimmerName": "Mianke Strydom (AFL) (8438)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8441",
+            "swimmerName": "Zarime James (AFL) (8441)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8442",
+            "swimmerName": "Zuvanieke James (AFL) (8442)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8444",
+            "swimmerName": "Zoané Liebetrau (AFL) (8444)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8445",
+            "swimmerName": "Milla Liebetrau (AFL) (8445)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8447",
+            "swimmerName": "Ivan Pretorius (AFL) (8447)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8459",
+            "swimmerName": "Nico Barnard (AFL) (8459)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8460",
+            "swimmerName": "Sienna Solomons (TO) (8460)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8465",
+            "swimmerName": "Juno van Rooy (AFL) (8465)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8554",
+            "swimmerName": "Jozua Blom (TO) (8554)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8555",
+            "swimmerName": "Melissa Blom (TO) (8555)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8562",
+            "swimmerName": "Latika Botha (TO) (8562)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8563",
+            "swimmerName": "Blake Solomons (TO) (8563)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8564",
+            "swimmerName": "Gerber Schoeman (TO) (8564)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8565",
+            "swimmerName": "Lea Schoeman (TO) (8565)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8569",
+            "swimmerName": "Christoff Cronjé (TO) (8569)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8590",
+            "swimmerName": "Cayson Coetsee (8590)",
+            "swimmerGender": "M",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        },
+        {
+            "swimmerId": "8593",
+            "swimmerName": "Lea-Helena Malan (AFL) (8593)",
+            "swimmerGender": "F",
+            "swimmerAge": 0,
+            "swimmerTeamId": "1"
+        }
+    ]
+}

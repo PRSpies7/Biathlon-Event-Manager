@@ -1,0 +1,31 @@
+BIATHLON EVENT MANAGER v1.9
+=============================
+
+NORMAL USE
+----------
+Double-click:
+
+    run_app.bat
+
+The launcher will:
+1. Check for Python.
+2. Create the application's private .venv automatically.
+3. Ask permission to install required packages if needed.
+4. Start Streamlit.
+5. Open the application in your browser.
+
+IF PYTHON IS NOT INSTALLED
+--------------------------
+Open PowerShell or Command Prompt and run:
+
+    winget install Python.Python.3.12
+
+When installation is complete, close the terminal and double-click
+run_app.bat again.
+
+You do NOT need to manually activate .venv.
+
+IMPORTANT
+---------
+Keep the terminal window open while the application is running.
+Closing it stops the local Streamlit server.
