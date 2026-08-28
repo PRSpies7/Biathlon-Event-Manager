@@ -34,5 +34,5 @@ def test_pdf_defaults():
     defaults = infer_pdf_event_defaults("GN LEAGUE 4_Heats_2025-11-04.pdf")
     assert defaults["meet_name"] == "GN LEAGUE 4"
     assert defaults["start_date"] == "2025-11-04"
-    assert defaults["course"] == "LCM"
+    assert defaults["course"] == "SCM"
     assert defaults["timezone"] == "+02:00"

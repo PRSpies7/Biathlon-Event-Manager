@@ -193,6 +193,6 @@ def infer_pdf_event_defaults(filename: str) -> dict[str, Any]:
         "meet_name": meet_name,
         "host_team": "Gauteng North Biathlon",
         "start_date": start_date,
-        "course": "LCM",
+        "course": "SCM",
         "timezone": "+02:00",
     }

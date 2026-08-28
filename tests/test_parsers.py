@@ -4,7 +4,7 @@ import json
 
 from openpyxl import Workbook, load_workbook
 
-from exporters.filenames import event_results_filename
+from exporters.filenames import event_filename, event_results_filename
 from exporters.master_excel import build_master_import_xlsx
 from exporters.swim_timekeeper import build_swim_timekeeper_xlsx
 from exporters.timedrops_json import _timedrops_swimmer_name, generate_timedrops_json
@@ -156,3 +156,4 @@ def test_master_excel_duplicates_athlete_name_into_athlete_surname():
 def test_event_results_filename_uses_a_sanitised_event_name():
     assert event_results_filename("Gauteng North Championships 2026", "xlsx") == "Gauteng North Championships 2026 Master Results.xlsx"
     assert event_results_filename('GN: Finals / 2026', ".xml") == "GN_ Finals _ 2026 Master Results.xml"
+    assert event_filename('GN: Finals / 2026', "Athlete List", "xlsx") == "GN_ Finals _ 2026 Athlete List.xlsx"

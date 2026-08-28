@@ -76,7 +76,13 @@ def get_athletes(db_path: str, event_id: int) -> list[dict[str, Any]]:
 def get_running_heats(db_path: str, event_id: int) -> list[int]:
     with get_conn(db_path) as conn:
         rows = conn.execute("SELECT DISTINCT running_heat FROM athletes WHERE event_id = ? AND running_heat IS NOT NULL ORDER BY running_heat", (event_id,)).fetchall()
-    return [int(r[0]) for r in rows]
+        group_rows = conn.execute(
+            "SELECT heat_numbers FROM run_groups WHERE event_id = ?", (event_id,)
+        ).fetchall()
+    heats = {int(r[0]) for r in rows}
+    for row in group_rows:
+        heats.update(int(number) for number in json.loads(row[0]))
+    return sorted(heats)
 
 
 def get_swimming_heats(db_path: str, event_id: int) -> list[int]:
@@ -109,6 +115,56 @@ def assign_athlete_to_run_heat(db_path: str, event_id: int, athlete_number: str,
         )
         _touch_event(conn, event_id)
     audit(db_path, event_id, "ATHLETE_RUN_HEAT_CHANGED", f"athlete={athlete_number}, heat={running_heat}")
+    return True
+
+
+def remove_athlete_from_run_heat(
+    db_path: str,
+    event_id: int,
+    athlete_number: str,
+    selected_heats: Iterable[int],
+) -> bool:
+    """Clear one athlete's run assignment without deleting the athlete record."""
+    athlete_number = str(athlete_number).strip()
+    allowed_heats = {int(heat) for heat in selected_heats}
+    if not allowed_heats:
+        raise ValueError("Select a run heat before removing an athlete.")
+
+    with get_conn(db_path) as conn:
+        athlete = conn.execute(
+            "SELECT running_heat FROM athletes WHERE event_id = ? AND athlete_number = ?",
+            (event_id, athlete_number),
+        ).fetchone()
+        if athlete is None:
+            raise ValueError(f"Athlete {athlete_number} was not found in this event.")
+        if athlete["running_heat"] is None:
+            return False
+        running_heat = int(athlete["running_heat"])
+        if running_heat not in allowed_heats:
+            raise ValueError(f"Athlete {athlete_number} is no longer assigned to the selected run heat.")
+
+        # Keep an emptied heat available in Phase 2 navigation without adding a
+        # new table or changing the schema. Existing combined groups already do this.
+        group_rows = conn.execute(
+            "SELECT heat_numbers FROM run_groups WHERE event_id = ?", (event_id,)
+        ).fetchall()
+        if not any(running_heat in {int(n) for n in json.loads(row[0])} for row in group_rows):
+            group_key = str(running_heat)
+            conn.execute(
+                "INSERT OR IGNORE INTO run_groups(event_id, group_key, heat_numbers, saved_at) "
+                "VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+                (event_id, group_key, json.dumps([running_heat])),
+            )
+
+        conn.execute(
+            """UPDATE athletes
+               SET running_heat = NULL, running_lane = NULL,
+                   run_group_key = NULL, run_position = NULL
+               WHERE event_id = ? AND athlete_number = ?""",
+            (event_id, athlete_number),
+        )
+        _touch_event(conn, event_id)
+    audit(db_path, event_id, "ATHLETE_REMOVED_FROM_RUN_HEAT", f"athlete={athlete_number}, heat={running_heat}")
     return True
 
 

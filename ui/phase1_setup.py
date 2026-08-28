@@ -7,6 +7,8 @@ import pandas as pd
 import streamlit as st
 
 from database.repository import create_event, replace_athletes, get_event, get_athletes
+from exporters.athlete_event_mapping import build_printable_athlete_mapping_xlsx
+from exporters.filenames import event_filename
 from exporters.swim_timekeeper import build_swim_timekeeper_xlsx
 from exporters.timedrops_json import generate_timedrops_json, dumps_json
 from parsers.master_entries import parse_master_entries
@@ -54,7 +56,8 @@ def _render_persistent_event(db_path: str, event_id: int):
         event["name"],
         int(event["pool_lanes"]),
     )
-    col1, col2 = st.columns(2)
+    athlete_mapping_xlsx = build_printable_athlete_mapping_xlsx(athletes)
+    col1, col2, col3 = st.columns(3)
     with col1:
         st.download_button(
             "Download meet_program.json",
@@ -73,6 +76,15 @@ def _render_persistent_event(db_path: str, event_id: int):
             file_name=f'{event["name"].strip() or "Event"} Swim Lanes.xlsx',
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             key=f"download_swim_lanes_{event_id}",
+        )
+    with col3:
+        st.download_button(
+            "Download Printable Athlete List",
+            data=athlete_mapping_xlsx,
+            type="primary",
+            file_name=event_filename(event["name"], "Athlete List", "xlsx"),
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key=f"download_athlete_list_{event_id}",
         )
     return True
 
@@ -146,7 +158,7 @@ def render(db_path: str, reference_json: dict):
         course = st.selectbox(
             "Pool course",
             ["LCM", "SCM"],
-            index=0 if (pdf_defaults or {}).get("course", "LCM") == "LCM" else 1,
+            index=0 if (pdf_defaults or {}).get("course", "SCM") == "LCM" else 1,
         )
     with col3:
         pool_lanes = st.number_input("Pool lanes", min_value=1, max_value=12, value=inferred_lanes, step=1)
@@ -196,7 +208,7 @@ def render(db_path: str, reference_json: dict):
         st.divider()
         st.subheader("Phase 1 Exports")
         json_data = st.session_state.get("timedrops_json", "")
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         with col1:
             st.download_button(
                 "Download meet_program.json", data=json_data, file_name="meet_program.json",
@@ -208,5 +220,12 @@ def render(db_path: str, reference_json: dict):
             st.download_button(
                 "Download Swim Timekeeper Sheets", data=swim_xlsx, type="primary",
                 file_name=f"{safe_name} Swim Lanes.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        with col3:
+            athlete_mapping_xlsx = build_printable_athlete_mapping_xlsx(athletes)
+            st.download_button(
+                "Download Printable Athlete List", data=athlete_mapping_xlsx, type="primary",
+                file_name=event_filename(meet_name.strip(), "Athlete List", "xlsx"),
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )

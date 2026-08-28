@@ -9,6 +9,7 @@ from database.repository import (
     get_athletes,
     get_run_groups,
     get_running_heats,
+    remove_athlete_from_run_heat,
     restore_run_position_mappings,
     save_run_positions,
 )
@@ -122,8 +123,8 @@ def save_current_mapping(db_path: str, event_id: int) -> list[str]:
     return []
 
 
-def _render_compact_add_athlete(db_path: str, event_id: int, athletes: list[dict], selected: list[int]) -> None:
-    """Render the small Phase 2 add/move control below the position table."""
+def _render_compact_athlete_controls(db_path: str, event_id: int, athletes: list[dict], selected: list[int]) -> None:
+    """Render compact run-heat athlete controls below the position table."""
     if len(selected) != 1:
         st.caption("Select one run heat to add an athlete.")
         return
@@ -131,16 +132,51 @@ def _render_compact_add_athlete(db_path: str, event_id: int, athletes: list[dict
     heat = selected[0]
     lookup_key = f"phase2_add_athlete_{event_id}_{heat}"
     pending_key = f"phase2_new_athlete_{event_id}_{heat}"
-    input_col, button_col, _spacer = st.columns([3.4, 1.35, 5.25], vertical_alignment="bottom")
-    with input_col:
+    assigned = [a for a in athletes if a.get("running_heat") == heat]
+    with st.container(horizontal=True, horizontal_alignment="right", vertical_alignment="bottom"):
         lookup = st.text_input(
             "Add athlete",
             key=lookup_key,
             placeholder="Insert Athlete Number or Exact Athlete Name",
             label_visibility="collapsed",
+            width=340,
         ).strip()
-    with button_col:
-        add_clicked = st.button("Add Athlete", key=f"phase2_add_btn_{event_id}_{heat}", use_container_width=True)
+        add_clicked = st.button(
+            "Add to Heat",
+            width=160,
+            key=f"phase2_add_btn_{event_id}_{heat}",
+        )
+    with st.container(horizontal=True, horizontal_alignment="right", vertical_alignment="bottom"):
+        remove_number = st.selectbox(
+            "Athlete to remove from run heat",
+            options=[str(a["athlete_number"]) for a in assigned],
+            index=None,
+            format_func=lambda number: next(
+                f"{a['athlete_name']} ({a['athlete_number']})"
+                for a in assigned if str(a["athlete_number"]) == number
+            ),
+            placeholder="Select athlete to remove",
+            label_visibility="collapsed",
+            width=340,
+            key=f"phase2_remove_athlete_{event_id}_{heat}",
+        )
+        remove_clicked = st.button(
+            "Remove from Heat",
+            width=160,
+            disabled=remove_number is None,
+            key=f"phase2_remove_btn_{event_id}_{heat}",
+        )
+
+    if remove_clicked and remove_number is not None:
+        try:
+            changed = remove_athlete_from_run_heat(db_path, event_id, remove_number, selected)
+        except ValueError as exc:
+            st.error(str(exc))
+        else:
+            if changed:
+                st.success(f"Athlete {remove_number} removed from Heat {heat}. The athlete remains in the event.")
+                st.rerun()
+            st.info("That athlete does not currently have a run heat assignment.")
 
     if add_clicked:
         by_number = [a for a in athletes if str(a["athlete_number"]).strip() == lookup]
@@ -176,17 +212,15 @@ def _render_compact_add_athlete(db_path: str, event_id: int, athletes: list[dict
         st.caption(
             f"Athlete number {athlete_number} is not currently recorded. Confirm the number, then enter the athlete name."
         )
-        name_col, confirm_col, cancel_col, _spacer = st.columns([3.4, 1.35, 1.0, 4.25], vertical_alignment="bottom")
-        with name_col:
+        with st.container(horizontal=True, horizontal_alignment="right", vertical_alignment="bottom"):
             athlete_name = st.text_input(
                 "New athlete name",
                 key=f"phase2_new_athlete_name_{event_id}_{heat}",
                 placeholder="Athlete name",
                 label_visibility="collapsed",
+                width=340,
             )
-        with confirm_col:
-            confirmed = st.button("Confirm", key=f"phase2_new_athlete_confirm_{event_id}_{heat}", use_container_width=True)
-        with cancel_col:
+            confirmed = st.button("Confirm", key=f"phase2_new_athlete_confirm_{event_id}_{heat}")
             cancelled = st.button("Cancel", key=f"phase2_new_athlete_cancel_{event_id}_{heat}")
         if cancelled:
             st.session_state.pop(pending_key, None)
@@ -396,31 +430,15 @@ def render(db_path: str, event_id: int):
             st.session_state[key] = min(target_unit)
             st.rerun()
 
-    _render_compact_add_athlete(db_path, event_id, athletes, selected)
+    _controls_left, controls_middle, _controls_right = st.columns([1.55, 8.9, 1.55])
+    with controls_middle:
+        _render_compact_athlete_controls(db_path, event_id, athletes, selected)
 
     # Phase 2 export: available at any point, based only on mappings already
     # persisted to SQLite.
     st.divider()
     st.subheader("Run Position Export")
     st.caption("Export all run-position mappings persisted so far. The export includes the heat or combined-heat group for each athlete.")
-
-    imported_file = st.file_uploader(
-        "Restore a Run Position Export",
-        type=["xlsx"],
-        key=f"import_run_positions_{event_id}",
-    )
-    if imported_file and st.button("Restore Run Positions", key=f"restore_run_positions_{event_id}"):
-        try:
-            restored = restore_run_position_mappings(
-                db_path,
-                event_id,
-                parse_run_positions_excel(imported_file),
-            )
-        except Exception as exc:
-            st.error(f"Run Position Export could not be restored: {exc}")
-        else:
-            st.success(f"Restored {restored} run-position mapping(s).")
-            st.rerun()
 
     export_athletes = get_athletes(db_path, event_id)
     export_groups = get_run_groups(db_path, event_id)
@@ -446,3 +464,22 @@ def render(db_path: str, event_id: int):
         )
     else:
         st.info("No run positions have been persisted yet. Complete a heat and use Next Heat or Previous Heat to save its positions.")
+
+    st.subheader("Restore Run Position Export")
+    imported_file = st.file_uploader(
+        "Restore a Run Position Export",
+        type=["xlsx"],
+        key=f"import_run_positions_{event_id}",
+    )
+    if imported_file and st.button("Restore Run Positions", key=f"restore_run_positions_{event_id}"):
+        try:
+            restored = restore_run_position_mappings(
+                db_path,
+                event_id,
+                parse_run_positions_excel(imported_file),
+            )
+        except Exception as exc:
+            st.error(f"Run Position Export could not be restored: {exc}")
+        else:
+            st.success(f"Restored {restored} run-position mapping(s).")
+            st.rerun()

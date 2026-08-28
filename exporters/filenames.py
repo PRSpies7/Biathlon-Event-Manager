@@ -11,9 +11,14 @@ _WINDOWS_RESERVED_NAMES = {
 }
 
 
-def event_results_filename(event_name: object, extension: str) -> str:
-    """Return a Windows-safe final-results filename using the stored event name."""
+def event_filename(event_name: object, descriptor: str, extension: str) -> str:
+    """Return a Windows-safe filename using the authoritative stored event name."""
     name = _INVALID_FILENAME_CHARS.sub("_", str(event_name or "")).strip(" .")
     if not name or name.upper() in _WINDOWS_RESERVED_NAMES:
         name = "Event"
-    return f"{name} Master Results.{extension.lstrip('.')}"
+    return f"{name} {descriptor}.{extension.lstrip('.')}"
+
+
+def event_results_filename(event_name: object, extension: str) -> str:
+    """Return a Windows-safe final-results filename using the stored event name."""
+    return event_filename(event_name, "Master Results", extension)

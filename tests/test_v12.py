@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from openpyxl import load_workbook
+
 from database.db import init_db
 from database.repository import (
     add_athlete_to_run_heat,
@@ -7,10 +9,13 @@ from database.repository import (
     create_event,
     get_athletes,
     get_run_groups,
+    get_running_heats,
     replace_athletes,
+    remove_athlete_from_run_heat,
     restore_run_position_mappings,
     save_run_positions,
 )
+from exporters.athlete_event_mapping import build_printable_athlete_mapping_xlsx
 from exporters.run_positions import build_run_positions_xlsx
 from parsers.run_positions_excel import parse_run_positions_excel
 from parsers.master_entries import parse_master_entries
@@ -134,6 +139,49 @@ def test_new_numbered_athlete_is_added_to_selected_run_heat(tmp_path):
     else:
         raise AssertionError("A duplicate athlete number was accepted")
     assert len(get_athletes(str(db), event_id)) == 2
+
+
+def test_remove_athlete_clears_only_run_assignment_and_preserves_empty_heat(tmp_path):
+    db = tmp_path / "event.sqlite"
+    init_db(db)
+    event_id = create_event(str(db), "Test", "GN", "2026-08-14", "SCM", 8)
+    replace_athletes(str(db), event_id, [
+        {"sort_order": 1, "athlete_number": "0011", "athlete_name": "Athlete A", "group_name": "U/19 MEN", "running_heat": 7, "running_lane": 2, "swimming_heat": 3, "swimming_lane": 4},
+    ])
+    save_run_positions(str(db), event_id, [7], {"0011": 1})
+
+    assert remove_athlete_from_run_heat(str(db), event_id, "0011", [7]) is True
+    athlete = get_athletes(str(db), event_id)[0]
+    assert athlete["athlete_number"] == "0011"
+    assert athlete["athlete_name"] == "Athlete A"
+    assert athlete["running_heat"] is None
+    assert athlete["running_lane"] is None
+    assert athlete["run_group_key"] is None
+    assert athlete["run_position"] is None
+    assert athlete["swimming_heat"] == 3
+    assert athlete["swimming_lane"] == 4
+    assert get_running_heats(str(db), event_id) == [7]
+
+
+def test_printable_athlete_mapping_is_sorted_and_configured_for_portrait_printing():
+    workbook = build_printable_athlete_mapping_xlsx([
+        {"athlete_number": "20", "athlete_name": "Zulu Athlete", "group_name": "Senior", "running_heat": 2, "swimming_heat": 4, "swimming_lane": 5},
+        {"athlete_number": "0011", "athlete_name": "Alpha Athlete", "group_name": "Junior", "running_heat": 1, "swimming_heat": 3, "swimming_lane": 2},
+    ])
+    ws = load_workbook(workbook).active
+
+    assert [cell.value for cell in ws[1]] == [
+        "Athlete Number", "Athlete Name", "Age Group", "Run Heat", "Swim Heat", "Swim Lane"
+    ]
+    assert [ws.cell(2, column).value for column in range(1, 7)] == [
+        "0011", "Alpha Athlete", "Junior", 1, 3, 2
+    ]
+    assert ws["A2"].number_format == "@"
+    assert ws.row_dimensions[2].height == 19
+    assert ws.page_setup.orientation == "portrait"
+    assert ws.page_setup.fitToWidth == 1
+    assert ws.page_setup.fitToHeight == 0
+    assert ws.print_title_rows == "$1:$1"
 
 
 def test_run_position_export_import_restores_group_and_positions(tmp_path):
