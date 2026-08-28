@@ -85,6 +85,159 @@ def get_swimming_heats(db_path: str, event_id: int) -> list[int]:
     return [int(r[0]) for r in rows]
 
 
+def assign_athlete_to_run_heat(db_path: str, event_id: int, athlete_number: str, running_heat: int) -> bool:
+    """Move an existing athlete into a selected run heat without creating a new record.
+
+    Returns ``False`` when the athlete is already in that heat. A move clears the
+    athlete's old position/group mapping, which belongs to the previous heat.
+    """
+    athlete_number = str(athlete_number).strip()
+    with get_conn(db_path) as conn:
+        athlete = conn.execute(
+            "SELECT running_heat FROM athletes WHERE event_id = ? AND athlete_number = ?",
+            (event_id, athlete_number),
+        ).fetchone()
+        if athlete is None:
+            raise ValueError(f"Athlete {athlete_number} was not found in this event.")
+        if athlete["running_heat"] == int(running_heat):
+            return False
+        conn.execute(
+            """UPDATE athletes
+               SET running_heat = ?, running_lane = NULL, run_group_key = NULL, run_position = NULL
+               WHERE event_id = ? AND athlete_number = ?""",
+            (int(running_heat), event_id, athlete_number),
+        )
+        _touch_event(conn, event_id)
+    audit(db_path, event_id, "ATHLETE_RUN_HEAT_CHANGED", f"athlete={athlete_number}, heat={running_heat}")
+    return True
+
+
+def add_athlete_to_run_heat(
+    db_path: str,
+    event_id: int,
+    athlete_number: str,
+    athlete_name: str,
+    running_heat: int,
+) -> None:
+    """Create one numbered athlete and place them in a run heat.
+
+    The event-scoped unique constraint remains the final duplicate safeguard.
+    New Phase 2 athletes have no inferred swim assignment or age group.
+    """
+    athlete_number = str(athlete_number).strip()
+    athlete_name = str(athlete_name).strip()
+    if not athlete_number:
+        raise ValueError("A new athlete must have an athlete number.")
+    if not athlete_name:
+        raise ValueError("Enter the athlete name to add this new athlete.")
+
+    with get_conn(db_path) as conn:
+        existing = conn.execute(
+            "SELECT 1 FROM athletes WHERE event_id = ? AND athlete_number = ?",
+            (event_id, athlete_number),
+        ).fetchone()
+        if existing:
+            raise ValueError(f"Athlete number {athlete_number} already exists in this event.")
+        next_sort_order = conn.execute(
+            "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM athletes WHERE event_id = ?",
+            (event_id,),
+        ).fetchone()[0]
+        conn.execute(
+            """INSERT INTO athletes(
+                event_id, sort_order, athlete_number, athlete_name, group_name,
+                running_heat, running_lane, swimming_heat, swimming_lane
+            ) VALUES (?, ?, ?, ?, NULL, ?, NULL, NULL, NULL)""",
+            (event_id, next_sort_order, athlete_number, athlete_name, int(running_heat)),
+        )
+        _touch_event(conn, event_id)
+    audit(db_path, event_id, "ATHLETE_ADDED_TO_RUN_HEAT", f"athlete={athlete_number}, heat={running_heat}")
+
+
+def restore_run_position_mappings(
+    db_path: str,
+    event_id: int,
+    mappings: list[dict[str, Any]],
+) -> int:
+    """Replace Phase 2 group/position mappings from a Run Position Export.
+
+    Validation occurs before any mutation so a malformed export cannot leave a
+    partially restored event. Athlete numbers are the only identity used.
+    """
+    if not mappings:
+        raise ValueError("The Run Position Export does not contain any mappings.")
+
+    with get_conn(db_path) as conn:
+        known_athletes = {
+            str(row[0]) for row in conn.execute(
+                "SELECT athlete_number FROM athletes WHERE event_id = ?", (event_id,)
+            ).fetchall()
+        }
+        known_heats = {
+            int(row[0]) for row in conn.execute(
+                "SELECT DISTINCT running_heat FROM athletes WHERE event_id = ? AND running_heat IS NOT NULL",
+                (event_id,),
+            ).fetchall()
+        }
+        seen_athletes: set[str] = set()
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for mapping in mappings:
+            athlete_number = str(mapping.get("athlete_number", "")).strip()
+            heat_numbers = sorted({int(n) for n in mapping.get("heat_numbers", [])})
+            position = mapping.get("run_position")
+            if not athlete_number:
+                raise ValueError("The Run Position Export contains a blank athlete number.")
+            if athlete_number not in known_athletes:
+                raise ValueError(f"Athlete number {athlete_number} is not in this event.")
+            if athlete_number in seen_athletes:
+                raise ValueError(f"Athlete number {athlete_number} appears more than once in the export.")
+            if not heat_numbers or any(h not in known_heats for h in heat_numbers):
+                raise ValueError(f"Invalid heat mapping for athlete number {athlete_number}.")
+            if position is not None and (not isinstance(position, int) or position < 1):
+                raise ValueError(f"Invalid run position for athlete number {athlete_number}.")
+            seen_athletes.add(athlete_number)
+            group_key = "+".join(str(h) for h in heat_numbers)
+            grouped.setdefault(group_key, []).append({
+                "athlete_number": athlete_number,
+                "heat_numbers": heat_numbers,
+                "run_position": position,
+            })
+
+        for group_key, rows in grouped.items():
+            positions = [r["run_position"] for r in rows if r["run_position"] is not None]
+            if len(positions) != len(set(positions)):
+                raise ValueError(f"Run Position Export has duplicate positions in Heat {group_key.replace('+', ' + ')}.")
+
+        conn.execute(
+            "UPDATE athletes SET run_group_key = NULL, run_position = NULL WHERE event_id = ?",
+            (event_id,),
+        )
+        conn.execute("DELETE FROM run_groups WHERE event_id = ?", (event_id,))
+        for group_key, rows in grouped.items():
+            heat_numbers = rows[0]["heat_numbers"]
+            conn.execute(
+                "INSERT INTO run_groups(event_id, group_key, heat_numbers, saved_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+                (event_id, group_key, json.dumps(heat_numbers)),
+            )
+            for row in rows:
+                conn.execute(
+                    """UPDATE athletes
+                       SET run_group_key = ?, run_position = ?,
+                           running_heat = CASE WHEN ? = 1 THEN ? ELSE running_heat END
+                       WHERE event_id = ? AND athlete_number = ?""",
+                    (
+                        group_key,
+                        row["run_position"],
+                        len(heat_numbers),
+                        heat_numbers[0],
+                        event_id,
+                        row["athlete_number"],
+                    ),
+                )
+        _touch_event(conn, event_id)
+    audit(db_path, event_id, "RUN_POSITIONS_RESTORED", f"records={len(mappings)}")
+    return len(mappings)
+
+
 def save_run_positions(db_path: str, event_id: int, heat_numbers: list[int], positions: dict[str, int | None]) -> None:
     group_key = "+".join(str(x) for x in sorted(heat_numbers))
     with get_conn(db_path) as conn:

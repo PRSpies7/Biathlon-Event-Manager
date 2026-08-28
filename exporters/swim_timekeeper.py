@@ -76,7 +76,9 @@ def build_swim_timekeeper_xlsx(athletes: list[dict[str, Any]], event_name: str, 
                     cell.alignment = Alignment(vertical="center", horizontal="center" if col in (1, 2, 5, 6) else "left", wrap_text=True)
                     if col == 6:
                         cell.font = Font(bold=True, size=12)
-                ws.row_dimensions[row].height = 24
+                # Excel stores row heights in points. Apply the required value
+                # to every generated heat row, including empty lane/heat rows.
+                ws.row_dimensions[row].height = 30
                 row += 1
 
         last_row = max(row - 1, 7)

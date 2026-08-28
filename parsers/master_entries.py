@@ -11,6 +11,11 @@ from .master_entries_pdf import parse_master_entries_pdf
 HEAT_RE = re.compile(r"^Heat\s*(\d+)\s*-\s*(.*)$", re.IGNORECASE)
 
 
+def normalize_uploaded_athlete_name(value: object) -> str:
+    """Remove the Meet Program AFL marker without otherwise changing a name."""
+    return str(value).replace("(AFL)", "").strip()
+
+
 def _as_int(value):
     if value is None or value == "":
         return None
@@ -75,7 +80,7 @@ def parse_master_entries(path_or_file) -> dict[str, Any]:
                 "discipline": discipline,
                 "heat": current_heat,
                 "athlete_number": str(athlete_number),
-                "athlete_name": str(b).strip(),
+                "athlete_name": normalize_uploaded_athlete_name(b),
                 "group_name": str(c).strip(),
                 "lane": lane,
                 "row": row_num,

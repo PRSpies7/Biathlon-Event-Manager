@@ -11,7 +11,7 @@ def build_master_import_xlsx(athletes: list[dict[str, Any]]) -> BytesIO:
     wb = Workbook()
     ws = wb.active
     ws.title = "FOR IMPORT"
-    headers = ["Athlete nr", "Athlete Name", "runtime", "swimtime"]
+    headers = ["Athlete nr", "Athlete Name", "athleteSurname", "runtime", "swimtime"]
     ws.append(headers)
     for cell in ws[1]:
         cell.font = Font(bold=True)
@@ -25,13 +25,14 @@ def build_master_import_xlsx(athletes: list[dict[str, Any]]) -> BytesIO:
         ws.append([
             str(a["athlete_number"]),
             str(a["athlete_name"]),
+            str(a["athlete_name"]),
             str(a["run_time"]),
             str(a["swim_time"]),
         ])
         for c in ws[ws.max_row]:
             c.number_format = "@"
 
-    widths = {"A": 14, "B": 34, "C": 16, "D": 16}
+    widths = {"A": 14, "B": 34, "C": 34, "D": 16, "E": 16}
     for col, width in widths.items():
         ws.column_dimensions[col].width = width
 

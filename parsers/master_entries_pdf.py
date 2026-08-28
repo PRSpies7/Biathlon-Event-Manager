@@ -10,6 +10,11 @@ HEAT_RE = re.compile(r"\bHeat\s+(\d+)\s*-", re.IGNORECASE)
 DATE_RE = re.compile(r"(?<!\d)(20\d{2})[-_](\d{2})[-_](\d{2})(?!\d)")
 
 
+def _clean_athlete_name(text: str) -> str:
+    """Remove the literal AFL marker found in uploaded Meet Program names."""
+    return text.replace("(AFL)", "").strip()
+
+
 def _clean_group(text: str) -> str:
     """Normalize PDF group labels to the same group representation as Excel."""
     text = re.sub(r"\s*\(\d+\s*m\)\s*$", "", text, flags=re.IGNORECASE)
@@ -90,7 +95,7 @@ def parse_master_entries_pdf(path_or_file) -> dict[str, Any]:
                     if 180 <= float(word["x0"]) < float(lane_word["x0"])
                 ]
 
-                athlete_name = " ".join(name_words).strip()
+                athlete_name = _clean_athlete_name(" ".join(name_words))
                 group_name = _clean_group(" ".join(group_words))
                 if not athlete_name or not group_name:
                     continue

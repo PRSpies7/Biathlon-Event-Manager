@@ -16,9 +16,9 @@ def parse_heat_numbers(label: str) -> tuple[int, ...]:
 
 def parse_run_results_excel(path_or_file) -> dict[str, Any]:
     wb = openpyxl.load_workbook(path_or_file, read_only=True, data_only=True)
-    if "Run times" not in wb.sheetnames:
-        raise ValueError("Run Results workbook must contain a 'Run times' worksheet.")
-    ws = wb["Run times"]
+    if not wb.sheetnames:
+        raise ValueError("Run Results workbook contains no worksheets.")
+    ws = wb[wb.sheetnames[0]]
 
     blocks: list[dict[str, Any]] = []
     current = None

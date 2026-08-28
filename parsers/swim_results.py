@@ -5,7 +5,10 @@ from collections import OrderedDict
 from typing import Any
 
 HEADER_RE = re.compile(r"^Event\s+#(\d+)\s+Heat\s+(\d+)\s+Race\s+(\d+)", re.IGNORECASE)
-ROW_RE = re.compile(r"^\s*(\d+)\s+(\d+)\s+(.*?)\s+((?:\d+:)?\d{1,2}:\d{2}\.\d{2}|\d+\.\d{2})\s+.*$")
+ROW_RE = re.compile(
+    r"^\s*(\d+)\s+(\d+)\s+(.*?)\s+(NS|(?:\d+:)?\d{1,2}:\d{2}\.\d{2}|\d+\.\d{2})(?:\s+.*)?$",
+    re.IGNORECASE,
+)
 ATHLETE_ID_RE = re.compile(r"\((\d+)\)\s*$")
 
 
@@ -60,6 +63,10 @@ def parse_swim_results(path_or_file) -> dict[str, Any]:
         place = int(m.group(2))
         name = m.group(3).strip()
         raw_time = m.group(4)
+        # No Start is a status, not a missing or invalid swim result. Do not
+        # include it in the result list, reconciliation count, or matching.
+        if name.casefold() == "ns" or raw_time.upper() == "NS":
+            continue
         id_match = ATHLETE_ID_RE.search(name)
         athlete_number = id_match.group(1) if id_match else None
         clean_name = ATHLETE_ID_RE.sub("", name).strip() if id_match else name
@@ -89,21 +96,25 @@ def parse_swim_results(path_or_file) -> dict[str, Any]:
 
     # Convert selected sections to athlete-centric results. Later/revised sections win.
     athlete_results: dict[str, dict[str, Any]] = {}
+    result_records: list[dict[str, Any]] = []
     for sec in selected.values():
         for record in sec["records"]:
             aid = record["athlete_number"]
-            if not aid:
-                continue
-            athlete_results[aid] = {
+            result = {
                 **record,
                 "event": sec["event"],
                 "heat": sec["heat"],
                 "race": sec["race"],
             }
+            result_records.append(result)
+            if aid:
+                athlete_results[aid] = result
 
     return {
         "sections": list(selected.values()),
         "revisions": revisions,
         "athlete_results": athlete_results,
+        "result_records": result_records,
+        "source_result_count": len(result_records),
         "raw_section_count": len(sections),
     }

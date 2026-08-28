@@ -2,8 +2,21 @@ from __future__ import annotations
 
 import copy
 import json
+import unicodedata
 from datetime import date
 from typing import Any
+
+
+def _timedrops_swimmer_name(value: object, athlete_number: object) -> str:
+    """Build TimeDrops' conventional ``Name (ID)`` label within 30 characters."""
+    suffix = f" ({athlete_number})"
+    available_name_length = max(0, 30 - len(suffix))
+    # TimeDrops consumes this generated JSON, not the SQLite master name.  Use
+    # Unicode decomposition so ordinary accented characters become ASCII while
+    # preserving the existing AFL removal and the mandatory numeric suffix.
+    name = unicodedata.normalize("NFKD", str(value).replace("(AFL)", ""))
+    name = name.encode("ascii", "ignore").decode("ascii").strip()
+    return f"{name[:available_name_length]}{suffix}"
 
 
 def infer_gender(group: str | None) -> str:
@@ -137,8 +150,7 @@ def generate_timedrops_json(reference: dict[str, Any], athletes: list[dict[str, 
         seen.add(aid)
         s = copy.deepcopy(swimmer_template)
         s["swimmerId"] = aid
-        # Match reference behaviour: include the athlete number in the TimeDrops swimmer name.
-        s["swimmerName"] = f"{a['athlete_name']} ({aid})"
+        s["swimmerName"] = _timedrops_swimmer_name(a["athlete_name"], aid)
         s["swimmerGender"] = infer_gender(a.get("group_name"))
         s["swimmerAge"] = 0
         s["swimmerTeamId"] = "1"

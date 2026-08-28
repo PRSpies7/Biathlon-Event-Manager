@@ -8,7 +8,7 @@ import streamlit as st
 from database.db import init_db
 from database.repository import get_event, get_events
 from ui.phase1_setup import render as render_phase1
-from ui.phase2_positions import render as render_phase2
+from ui.phase2_positions import render as render_phase2, save_current_mapping
 from ui.phase3_processing import render as render_phase3
 from ui.phase4_export import render as render_phase4
 
@@ -65,6 +65,12 @@ def go_next_phase():
     if st.session_state.current_phase < TOTAL_PHASES:
         if st.session_state.current_phase > 1 and not st.session_state.event_id:
             return
+        if st.session_state.current_phase == 2:
+            issues = save_current_mapping(str(DB_PATH), st.session_state.event_id)
+            if issues:
+                st.session_state[f"phase2_next_errors_{st.session_state.event_id}"] = issues
+                return
+            st.session_state.pop(f"phase2_next_errors_{st.session_state.event_id}", None)
         st.session_state.current_phase += 1
         st.session_state.active_phase = st.session_state.current_phase
 

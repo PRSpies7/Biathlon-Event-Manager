@@ -44,13 +44,13 @@ def test_manual_time_survives_reimport_and_reset(tmp_path):
     assert a["running_heat"] == 1
 
 
-def test_swim_workbook_has_lane_tabs_and_print_headers():
+def test_swim_workbook_has_lane_tabs_and_print_headers(tmp_path):
     athletes = [
         {"sort_order": 1, "athlete_number": "1011", "athlete_name": "John Doe", "group_name": "U/19 MEN", "swimming_heat": 1, "swimming_lane": 2},
         {"sort_order": 2, "athlete_number": "1012", "athlete_name": "Jane Doe", "group_name": "U/19 WOMEN", "swimming_heat": 2, "swimming_lane": 2},
     ]
     data = build_swim_timekeeper_xlsx(athletes, "Test Event", 6)
-    path = Path("/tmp/test_swim_lanes.xlsx")
+    path = tmp_path / "test_swim_lanes.xlsx"
     path.write_bytes(data.getvalue())
     wb = load_workbook(path)
     assert wb.sheetnames == ["Lane1", "Lane2", "Lane3", "Lane4", "Lane5", "Lane6"]

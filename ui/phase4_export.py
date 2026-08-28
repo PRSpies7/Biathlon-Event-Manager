@@ -3,7 +3,8 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from database.repository import clear_results, get_athletes, update_manual_time
+from database.repository import clear_results, get_athletes, get_event, update_manual_time
+from exporters.filenames import event_results_filename
 from exporters.master_excel import build_master_import_xlsx
 from exporters.results_xml import build_results_xml
 from validation.validators import normalize_time, validate_times
@@ -15,6 +16,8 @@ def _dataset_for_editor(athletes):
             "Athlete No.": a["athlete_number"],
             "Athlete Name": a["athlete_name"],
             "Age Group": a.get("group_name") or "",
+            "Run Heat": a.get("running_heat") or "",
+            "Swim Heat": a.get("swimming_heat") or "",
             "Runtime": a.get("run_time") or "",
             "Swimtime": a.get("swim_time") or "",
         }
@@ -97,6 +100,8 @@ def render(db_path: str, event_id: int):
             "Athlete No.": st.column_config.TextColumn("Athlete No.", disabled=True, width="small"),
             "Athlete Name": st.column_config.TextColumn("Athlete Name", disabled=True, width="medium"),
             "Age Group": st.column_config.TextColumn("Age Group", disabled=True, width="small"),
+            "Run Heat": st.column_config.TextColumn("Run Heat", disabled=True, width="small"),
+            "Swim Heat": st.column_config.TextColumn("Swim Heat", disabled=True, width="small"),
             "Runtime": st.column_config.TextColumn("Runtime", width="small", help="Accepts common punctuation variants and normalizes to MM:SS.ss."),
             "Swimtime": st.column_config.TextColumn("Swimtime", width="small", help="Accepts common punctuation variants and normalizes to MM:SS.ss."),
         },
@@ -144,15 +149,17 @@ def render(db_path: str, event_id: int):
 
     xlsx = build_master_import_xlsx(athletes)
     xml = build_results_xml(athletes)
+    event = get_event(db_path, event_id)
+    event_name = event["name"] if event else "Event"
     col1, col2 = st.columns(2)
     with col1:
         st.download_button(
-            "Download Master Excel", data=xlsx, file_name="Master_Results_FOR_IMPORT.xlsx",
+            "Download Master Excel", data=xlsx, file_name=event_results_filename(event_name, "xlsx"),
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="primary", disabled=not complete
         )
     with col2:
         st.download_button(
-            "Download Results XML", data=xml, file_name="Master_Results.xml",
+            "Download Results XML", data=xml, file_name=event_results_filename(event_name, "xml"),
             mime="application/xml", type="primary", disabled=not complete
         )
 

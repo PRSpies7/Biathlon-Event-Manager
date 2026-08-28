@@ -1,10 +1,51 @@
 from __future__ import annotations
 
-from collections import defaultdict
+import re
+import unicodedata
 from typing import Any
 
 from database.repository import get_athletes, get_run_groups, update_run_times, update_swim_times
 from validation.validators import normalize_time
+
+
+def _swim_name_key(value: object) -> str:
+    """Normalize names for deterministic TimeDrops comparison."""
+    text = re.sub(r"\(AFL\)", "", str(value), flags=re.IGNORECASE)
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"[^a-z0-9]+", "", text.casefold())
+
+
+def _is_timedrops_name_truncation(value: object) -> bool:
+    """TimeDrops' result name field has a known 24-character source limit."""
+    text = re.sub(r"\(AFL\)", "", str(value), flags=re.IGNORECASE)
+    return len(" ".join(text.split())) >= 24
+
+
+def _match_swim_athlete(record: dict[str, Any], athletes: list[dict[str, Any]]) -> tuple[str | None, str | None]:
+    """Prefer athlete number, then allow one unambiguous normalized-name match."""
+    athlete_by_id = {str(a["athlete_number"]).strip(): str(a["athlete_number"]).strip() for a in athletes}
+    source_id = str(record.get("athlete_number") or "").strip()
+    if source_id in athlete_by_id:
+        return athlete_by_id[source_id], None
+
+    source_name = _swim_name_key(record.get("athlete_name", ""))
+    if not source_name:
+        return None, "Swim result has no usable athlete number or athlete name."
+    source_was_truncated = _is_timedrops_name_truncation(record.get("athlete_name", ""))
+    candidates = []
+    for athlete in athletes:
+        athlete_name = _swim_name_key(athlete.get("athlete_name", ""))
+        is_exact = athlete_name == source_name
+        # Prefix matching applies only at TimeDrops' known truncation limit;
+        # a shorter prefix-like name is never guessed.
+        is_limited_prefix = source_was_truncated and athlete_name.startswith(source_name)
+        if is_exact or is_limited_prefix:
+            candidates.append(str(athlete["athlete_number"]))
+    if len(candidates) == 1:
+        return candidates[0], None
+    if len(candidates) > 1:
+        return None, f"Swim result name '{record.get('athlete_name', '')}' matches multiple athletes."
+    return None, f"Swim result for unknown athlete {source_id or record.get('athlete_name', '')}."
 
 
 def resolve_group_for_block(block: dict[str, Any], athletes: list[dict[str, Any]], run_groups: list[dict[str, Any]]) -> tuple[str | None, list[str]]:
@@ -120,16 +161,17 @@ def process_run_results(db_path: str, event_id: int, run_data: dict[str, Any]) -
 
 
 def process_swim_results(db_path: str, event_id: int, swim_data: dict[str, Any]) -> dict[str, Any]:
-    """Process swim results independently and commit valid athlete-number matches to SQLite."""
+    """Process swim results, preferring athlete IDs and safely falling back to names."""
     athletes = get_athletes(db_path, event_id)
-    master_ids = {str(a["athlete_number"]).strip() for a in athletes}
     issues: list[str] = []
     matched_swim: dict[str, str] = {}
 
-    for aid, record in swim_data.get("athlete_results", {}).items():
-        aid = str(aid).strip()
-        if aid not in master_ids:
-            issues.append(f"Swim result for unknown athlete {aid}.")
+    records = swim_data.get("result_records") or list(swim_data.get("athlete_results", {}).values())
+    for record in records:
+        aid, match_issue = _match_swim_athlete(record, athletes)
+        if not aid:
+            if match_issue:
+                issues.append(match_issue)
             continue
         swimtime = normalize_time(record.get("swim_time"))
         if swimtime is None:
@@ -146,7 +188,7 @@ def process_swim_results(db_path: str, event_id: int, swim_data: dict[str, Any])
     source_swim_count = int(
         swim_data.get(
             "source_result_count",
-            len(swim_data.get("athlete_results", {})),
+            len(records),
         )
     )
     return {

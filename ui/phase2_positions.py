@@ -4,12 +4,16 @@ import pandas as pd
 import streamlit as st
 
 from database.repository import (
+    add_athlete_to_run_heat,
+    assign_athlete_to_run_heat,
     get_athletes,
     get_run_groups,
     get_running_heats,
+    restore_run_position_mappings,
     save_run_positions,
 )
 from exporters.run_positions import build_run_positions_xlsx
+from parsers.run_positions_excel import parse_run_positions_excel
 from validation.validators import validate_positions
 
 
@@ -85,8 +89,123 @@ def _label(unit: list[int], total_heats: int) -> str:
     return f"Heat {unit[0]} of {total_heats}"
 
 
+def save_current_mapping(db_path: str, event_id: int) -> list[str]:
+    """Persist the visible Phase 2 mapping before the application changes phase."""
+    athletes = get_athletes(db_path, event_id)
+    heats = get_running_heats(db_path, event_id)
+    run_groups = get_run_groups(db_path, event_id)
+    if not heats:
+        return []
+
+    current_heat = int(st.session_state.get(f"phase2_heat_{event_id}", min(heats)))
+    current_unit = _unit_for_heat(current_heat, _navigation_units(heats, run_groups))
+    combine_key = f"phase2_combine_{event_id}_{_selected_key(current_unit)}"
+    selected = sorted({int(x) for x in st.session_state.get(combine_key, current_unit)})
+    if not selected:
+        return ["Select at least one heat before continuing."]
+    if len(selected) > 1 and not st.session_state.get(
+        f"confirm_combined_{event_id}_{_selected_key(selected)}", False
+    ):
+        return ["Confirm the combined heats before continuing."]
+
+    current = sorted(
+        [a for a in athletes if a.get("running_heat") in selected],
+        key=lambda a: a["sort_order"],
+    )
+    positions = _read_editor_positions(
+        current, selected, f"phase2_editor_{event_id}_{_selected_key(selected)}"
+    )
+    issues = validate_positions(current, positions)
+    if issues:
+        return issues
+    save_run_positions(db_path, event_id, selected, positions)
+    return []
+
+
+def _render_compact_add_athlete(db_path: str, event_id: int, athletes: list[dict], selected: list[int]) -> None:
+    """Render the small Phase 2 add/move control below the position table."""
+    if len(selected) != 1:
+        st.caption("Select one run heat to add an athlete.")
+        return
+
+    heat = selected[0]
+    lookup_key = f"phase2_add_athlete_{event_id}_{heat}"
+    pending_key = f"phase2_new_athlete_{event_id}_{heat}"
+    input_col, button_col, _spacer = st.columns([3.4, 1.35, 5.25], vertical_alignment="bottom")
+    with input_col:
+        lookup = st.text_input(
+            "Add athlete",
+            key=lookup_key,
+            placeholder="Insert Athlete Number or Exact Athlete Name",
+            label_visibility="collapsed",
+        ).strip()
+    with button_col:
+        add_clicked = st.button("Add Athlete", key=f"phase2_add_btn_{event_id}_{heat}", use_container_width=True)
+
+    if add_clicked:
+        by_number = [a for a in athletes if str(a["athlete_number"]).strip() == lookup]
+        by_name = [
+            a for a in athletes
+            if " ".join(str(a["athlete_name"]).split()).casefold()
+            == " ".join(lookup.split()).casefold()
+        ] if lookup and not by_number else []
+        matches = by_number or by_name
+        if not lookup:
+            st.error("Enter an athlete number or exact athlete name.")
+        elif len(matches) > 1:
+            st.error("That athlete name is ambiguous. Enter the athlete number instead.")
+        elif matches:
+            athlete = matches[0]
+            try:
+                changed = assign_athlete_to_run_heat(db_path, event_id, athlete["athlete_number"], heat)
+            except ValueError as exc:
+                st.error(str(exc))
+            else:
+                if changed:
+                    st.success(f"Athlete {athlete['athlete_number']} moved to Heat {heat}.")
+                    st.rerun()
+                st.info("That athlete is already assigned to this heat.")
+        elif lookup.isdecimal():
+            st.session_state[pending_key] = lookup
+            st.rerun()
+        else:
+            st.error("No athlete matches that name. A new athlete must be added with an athlete number.")
+
+    athlete_number = st.session_state.get(pending_key)
+    if athlete_number:
+        st.caption(
+            f"Athlete number {athlete_number} is not currently recorded. Confirm the number, then enter the athlete name."
+        )
+        name_col, confirm_col, cancel_col, _spacer = st.columns([3.4, 1.35, 1.0, 4.25], vertical_alignment="bottom")
+        with name_col:
+            athlete_name = st.text_input(
+                "New athlete name",
+                key=f"phase2_new_athlete_name_{event_id}_{heat}",
+                placeholder="Athlete name",
+                label_visibility="collapsed",
+            )
+        with confirm_col:
+            confirmed = st.button("Confirm", key=f"phase2_new_athlete_confirm_{event_id}_{heat}", use_container_width=True)
+        with cancel_col:
+            cancelled = st.button("Cancel", key=f"phase2_new_athlete_cancel_{event_id}_{heat}")
+        if cancelled:
+            st.session_state.pop(pending_key, None)
+            st.rerun()
+        if confirmed:
+            try:
+                add_athlete_to_run_heat(db_path, event_id, athlete_number, athlete_name, heat)
+            except ValueError as exc:
+                st.error(str(exc))
+            else:
+                st.session_state.pop(pending_key, None)
+                st.success(f"Athlete {athlete_number} added to Heat {heat}.")
+                st.rerun()
+
+
 def render(db_path: str, event_id: int):
     st.header("Phase 2 · Run Position Mapping")
+    for issue in st.session_state.pop(f"phase2_next_errors_{event_id}", []):
+        st.error(issue)
     athletes = get_athletes(db_path, event_id)
     heats = get_running_heats(db_path, event_id)
     run_groups = get_run_groups(db_path, event_id)
@@ -277,11 +396,31 @@ def render(db_path: str, event_id: int):
             st.session_state[key] = min(target_unit)
             st.rerun()
 
+    _render_compact_add_athlete(db_path, event_id, athletes, selected)
+
     # Phase 2 export: available at any point, based only on mappings already
     # persisted to SQLite.
     st.divider()
     st.subheader("Run Position Export")
     st.caption("Export all run-position mappings persisted so far. The export includes the heat or combined-heat group for each athlete.")
+
+    imported_file = st.file_uploader(
+        "Restore a Run Position Export",
+        type=["xlsx"],
+        key=f"import_run_positions_{event_id}",
+    )
+    if imported_file and st.button("Restore Run Positions", key=f"restore_run_positions_{event_id}"):
+        try:
+            restored = restore_run_position_mappings(
+                db_path,
+                event_id,
+                parse_run_positions_excel(imported_file),
+            )
+        except Exception as exc:
+            st.error(f"Run Position Export could not be restored: {exc}")
+        else:
+            st.success(f"Restored {restored} run-position mapping(s).")
+            st.rerun()
 
     export_athletes = get_athletes(db_path, event_id)
     export_groups = get_run_groups(db_path, event_id)
