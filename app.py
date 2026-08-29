@@ -6,7 +6,7 @@ from pathlib import Path
 import streamlit as st
 
 from database.db import init_db
-from database.repository import get_event, get_events
+from database.repository import delete_all_events, get_event, get_events
 from ui.phase1_setup import render as render_phase1
 from ui.phase2_positions import render as render_phase2, save_current_mapping
 from ui.phase3_processing import render as render_phase3
@@ -126,6 +126,16 @@ def start_new_session():
     st.session_state.new_session_token += 1
 
 
+def reset_saved_sessions():
+    """Delete all saved events, then return this browser session to clean Phase 1."""
+    delete_all_events(str(DB_PATH))
+    start_new_session()
+    for key in list(st.session_state.keys()):
+        if key.startswith(("phase2_", "phase3_", "phase4_")):
+            st.session_state.pop(key, None)
+    st.session_state.pop("confirm_reset_sessions", None)
+
+
 def open_event(event_id: int):
     st.session_state.event_id = event_id
     st.session_state.current_phase = 1
@@ -190,17 +200,31 @@ with st.sidebar:
         start_new_session()
         st.rerun()
 
+    if st.button(
+        "Reset Sessions",
+        key="reset_sessions",
+        disabled=not bool(events),
+        width="stretch",
+    ):
+        st.session_state.confirm_reset_sessions = True
+
+    if st.session_state.get("confirm_reset_sessions"):
+        st.warning("Delete all saved sessions and their event data?")
+        confirm_col, cancel_col = st.columns(2)
+        with confirm_col:
+            if st.button("Confirm reset", key="confirm_reset_sessions_button", type="primary", width="stretch"):
+                reset_saved_sessions()
+                st.rerun()
+        with cancel_col:
+            if st.button("Cancel", key="cancel_reset_sessions_button", width="stretch"):
+                st.session_state.pop("confirm_reset_sessions", None)
+                st.rerun()
+
     if st.session_state.event_id:
         ev = get_event(str(DB_PATH), st.session_state.event_id)
         if ev:
             st.divider()
             st.caption(f"Session ID: {ev['id']}")
-
-    st.divider()
-    st.caption(
-        f"{VERSION} supports Run Excel + Swim TXT. "
-        "Run TXT timing-button import is reserved for a future enhancement."
-    )
 
 # ============================================================================
 # WORKFLOW STEPPER

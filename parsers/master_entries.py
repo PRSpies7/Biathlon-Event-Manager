@@ -9,11 +9,20 @@ import openpyxl
 from .master_entries_pdf import parse_master_entries_pdf
 
 HEAT_RE = re.compile(r"^Heat\s*(\d+)\s*-\s*(.*)$", re.IGNORECASE)
+INTERPROVINCIAL_DISTANCE_SUFFIX_RE = re.compile(
+    r"\s*\(\s*\d+\s*m\s*\)\s*$",
+    re.IGNORECASE,
+)
 
 
 def normalize_uploaded_athlete_name(value: object) -> str:
     """Remove the Meet Program AFL marker without otherwise changing a name."""
     return str(value).replace("(AFL)", "").strip()
+
+
+def _clean_interprovincial_group_name(value: object) -> str:
+    """Remove only the source format's trailing discipline-distance suffix."""
+    return INTERPROVINCIAL_DISTANCE_SUFFIX_RE.sub("", str(value)).strip()
 
 
 def _as_int(value):
@@ -25,20 +34,26 @@ def _as_int(value):
         return None
 
 
-def parse_master_entries(path_or_file) -> dict[str, Any]:
-    """Parse an Excel or PDF Master Entries source into the canonical structure."""
-    if isinstance(path_or_file, (str, Path)):
-        suffix = Path(path_or_file).suffix.lower()
-    else:
-        suffix = Path(getattr(path_or_file, "name", "")).suffix.lower()
-    if suffix == ".pdf":
-        return parse_master_entries_pdf(path_or_file)
+INTERPROVINCIAL_HEADERS = (
+    "lane",
+    "heat number",
+    "group name",
+    "athlete",
+    "athlete number",
+    "province",
+)
 
-    wb = openpyxl.load_workbook(path_or_file, read_only=True, data_only=True)
-    if not wb.sheetnames:
-        raise ValueError("Workbook contains no worksheets.")
-    ws = wb[wb.sheetnames[0]]
 
+def _is_interprovincial_layout(ws) -> bool:
+    """Detect the supplied repeated-header format without relying on row numbers."""
+    for row in ws.iter_rows(values_only=True):
+        values = tuple(str(value or "").strip().casefold() for value in row[:6])
+        if values == INTERPROVINCIAL_HEADERS:
+            return True
+    return False
+
+
+def _parse_local_excel_records(ws) -> list[dict[str, Any]]:
     discipline = None
     current_heat = None
     records: list[dict[str, Any]] = []
@@ -59,12 +74,10 @@ def parse_master_entries(path_or_file) -> dict[str, Any]:
             discipline = "swimming"
             current_heat = None
             continue
-        m = HEAT_RE.match(s)
-        if m:
-            current_heat = int(m.group(1))
+        heat_match = HEAT_RE.match(s)
+        if heat_match:
+            current_heat = int(heat_match.group(1))
             continue
-
-        # Ignore repeated headers and blank/separator rows.
         if s == "#" or not s or discipline not in {"running", "swimming"}:
             continue
 
@@ -72,7 +85,6 @@ def parse_master_entries(path_or_file) -> dict[str, Any]:
         lane = _as_int(d)
         if athlete_number is None or b is None or c is None or current_heat is None:
             continue
-
         source_order += 1
         records.append(
             {
@@ -82,10 +94,77 @@ def parse_master_entries(path_or_file) -> dict[str, Any]:
                 "athlete_number": str(athlete_number),
                 "athlete_name": normalize_uploaded_athlete_name(b),
                 "group_name": str(c).strip(),
+                "province": None,
                 "lane": lane,
                 "row": row_num,
             }
         )
+    return records
+
+
+def _parse_interprovincial_excel_records(ws) -> list[dict[str, Any]]:
+    discipline = None
+    records: list[dict[str, Any]] = []
+    source_order = 0
+
+    for row_num, row in enumerate(ws.iter_rows(values_only=True), start=1):
+        values = list(row) + [None] * max(0, 6 - len(row))
+        lane_value, heat_value, group_value, name_value, number_value, province_value = values[:6]
+        first_text = str(lane_value).strip() if lane_value is not None else ""
+        if first_text.casefold() == "running heats":
+            discipline = "running"
+            continue
+        if first_text.casefold() == "swimming heats":
+            discipline = "swimming"
+            continue
+        if discipline not in {"running", "swimming"}:
+            continue
+
+        lane = _as_int(lane_value)
+        heat = _as_int(heat_value)
+        athlete_number = _as_int(number_value)
+        if lane is None or heat is None or athlete_number is None or not group_value or not name_value:
+            continue
+        source_order += 1
+        records.append(
+            {
+                "source_order": source_order,
+                "discipline": discipline,
+                "heat": heat,
+                "athlete_number": str(athlete_number),
+                "athlete_name": normalize_uploaded_athlete_name(name_value),
+                "group_name": _clean_interprovincial_group_name(group_value),
+                "province": str(province_value).strip() if province_value not in (None, "") else None,
+                "lane": lane,
+                "row": row_num,
+            }
+        )
+    return records
+
+
+def parse_master_entries(path_or_file) -> dict[str, Any]:
+    """Parse an Excel or PDF Master Entries source into the canonical structure."""
+    if isinstance(path_or_file, (str, Path)):
+        suffix = Path(path_or_file).suffix.lower()
+    else:
+        suffix = Path(getattr(path_or_file, "name", "")).suffix.lower()
+    if suffix == ".pdf":
+        return parse_master_entries_pdf(path_or_file)
+
+    wb = openpyxl.load_workbook(path_or_file, read_only=True, data_only=True)
+    if not wb.sheetnames:
+        raise ValueError("Workbook contains no worksheets.")
+    ws = wb[wb.sheetnames[0]]
+
+    try:
+        is_interprovincial = _is_interprovincial_layout(ws)
+        records = (
+            _parse_interprovincial_excel_records(ws)
+            if is_interprovincial
+            else _parse_local_excel_records(ws)
+        )
+    finally:
+        wb.close()
 
     if not records:
         raise ValueError("No athlete records were found in the Master Entries workbook.")
@@ -104,6 +183,7 @@ def parse_master_entries(path_or_file) -> dict[str, Any]:
             "athlete_number": aid,
             "athlete_name": rec["athlete_name"],
             "group_name": rec["group_name"],
+            "province": rec.get("province"),
             "running_heat": rec["heat"],
             "running_lane": rec["lane"],
             "swimming_heat": None,
@@ -120,6 +200,7 @@ def parse_master_entries(path_or_file) -> dict[str, Any]:
                 "athlete_number": aid,
                 "athlete_name": rec["athlete_name"],
                 "group_name": rec["group_name"],
+                "province": rec.get("province"),
                 "running_heat": None,
                 "running_lane": None,
                 "swimming_heat": rec["heat"],
@@ -130,11 +211,20 @@ def parse_master_entries(path_or_file) -> dict[str, Any]:
         existing = by_athlete[aid]
         if existing["swimming_heat"] is not None:
             raise ValueError(f"Duplicate athlete number in swimming entries: {aid}")
+        running_province = existing.get("province")
+        swimming_province = rec.get("province")
+        if running_province and swimming_province and running_province != swimming_province:
+            raise ValueError(
+                f"Athlete {aid} has conflicting Province abbreviations: "
+                f"{running_province} in Running Heats and {swimming_province} in Swimming Heats."
+            )
+        if not running_province and swimming_province:
+            existing["province"] = swimming_province
         existing["swimming_heat"] = rec["heat"]
         existing["swimming_lane"] = rec["lane"]
 
     return {
-        "source_type": "xlsx",
+        "source_type": "xlsx_interprovincial" if is_interprovincial else "xlsx",
         "athletes": list(by_athlete.values()),
         "running_records": run_records,
         "swimming_records": swim_records,

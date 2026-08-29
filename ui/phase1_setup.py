@@ -10,7 +10,7 @@ from database.repository import create_event, replace_athletes, get_event, get_a
 from exporters.athlete_event_mapping import build_printable_athlete_mapping_xlsx
 from exporters.filenames import event_filename
 from exporters.swim_timekeeper import build_swim_timekeeper_xlsx
-from exporters.timedrops_json import generate_timedrops_json, dumps_json
+from exporters.timedrops_json import TIMEDROPS_UTC_OFFSET, generate_timedrops_json, dumps_json
 from parsers.master_entries import parse_master_entries
 from parsers.master_entries_pdf import infer_pdf_event_defaults
 from validation.validators import validate_master
@@ -79,10 +79,10 @@ def _render_persistent_event(db_path: str, event_id: int):
         )
     with col3:
         st.download_button(
-            "Download Printable Athlete List",
+            "Download Athlete Heat and Lanes List",
             data=athlete_mapping_xlsx,
             type="primary",
-            file_name=event_filename(event["name"], "Athlete List", "xlsx"),
+            file_name=event_filename(event["name"], "Athlete Heat and Lanes List", "xlsx"),
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             key=f"download_athlete_list_{event_id}",
         )
@@ -162,16 +162,16 @@ def render(db_path: str, reference_json: dict):
         )
     with col3:
         pool_lanes = st.number_input("Pool lanes", min_value=1, max_value=12, value=inferred_lanes, step=1)
-        timezone = st.text_input(
-            "TimeDrops UTC offset",
-            value=(pdf_defaults["timezone"] if pdf_defaults else "+02:00"),
-        )
+        meet_type = st.selectbox("Meet type", ["Local", "Interprovincial"], index=0)
 
     st.subheader("Imported Master Dataset")
-    preview = pd.DataFrame(athletes)[[
-        "athlete_number", "athlete_name", "group_name", "running_heat", "running_lane", "swimming_heat", "swimming_lane"
-    ]].rename(columns={
+    preview_columns = ["athlete_number", "athlete_name", "group_name"]
+    if any(athlete.get("province") for athlete in athletes):
+        preview_columns.append("province")
+    preview_columns.extend(["running_heat", "running_lane", "swimming_heat", "swimming_lane"])
+    preview = pd.DataFrame(athletes)[preview_columns].rename(columns={
         "athlete_number": "Athlete Number", "athlete_name": "Athlete Name", "group_name": "Age Group",
+        "province": "Province",
         "running_heat": "Run Heat", "running_lane": "Run Lane", "swimming_heat": "Swim Heat", "swimming_lane": "Swim Lane"
     })
     st.dataframe(preview, use_container_width=True, hide_index=True)
@@ -185,13 +185,16 @@ def render(db_path: str, reference_json: dict):
             st.error("Meet name and host/team name are required.")
             return
         try:
-            event_id = create_event(db_path, meet_name.strip(), host_team.strip(), start_date.isoformat(), course, int(pool_lanes))
-            replace_athletes(db_path, event_id, athletes)
             json_data = generate_timedrops_json(
                 reference_json, athletes, meet_name=meet_name.strip(), host_team=host_team.strip(),
                 start_date=start_date.isoformat(), course=course, pool_lanes=int(pool_lanes),
-                timezone_offset=timezone.strip() or "+02:00",
+                timezone_offset=TIMEDROPS_UTC_OFFSET, meet_type=meet_type,
             )
+            event_id = create_event(
+                db_path, meet_name.strip(), host_team.strip(), start_date.isoformat(), course,
+                int(pool_lanes), meet_type=meet_type,
+            )
+            replace_athletes(db_path, event_id, athletes)
             st.session_state.event_id = event_id
             st.session_state.timedrops_json = dumps_json(json_data)
             generated_dir = _generated_dir(db_path)
@@ -225,7 +228,7 @@ def render(db_path: str, reference_json: dict):
         with col3:
             athlete_mapping_xlsx = build_printable_athlete_mapping_xlsx(athletes)
             st.download_button(
-                "Download Printable Athlete List", data=athlete_mapping_xlsx, type="primary",
-                file_name=event_filename(meet_name.strip(), "Athlete List", "xlsx"),
+                "Download Athlete Heat and Lanes List", data=athlete_mapping_xlsx, type="primary",
+                file_name=event_filename(meet_name.strip(), "Athlete Heat and Lanes List", "xlsx"),
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )

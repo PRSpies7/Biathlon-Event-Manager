@@ -10,11 +10,19 @@ def _touch_event(conn, event_id: int) -> None:
     conn.execute("UPDATE events SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (event_id,))
 
 
-def create_event(db_path: str, name: str, host_team: str, start_date: str, course: str, pool_lanes: int) -> int:
+def create_event(
+    db_path: str,
+    name: str,
+    host_team: str,
+    start_date: str,
+    course: str,
+    pool_lanes: int,
+    meet_type: str = "Local",
+) -> int:
     with get_conn(db_path) as conn:
         cur = conn.execute(
-            "INSERT INTO events(name, host_team, start_date, course, pool_lanes) VALUES (?, ?, ?, ?, ?)",
-            (name, host_team, start_date, course, pool_lanes),
+            "INSERT INTO events(name, host_team, start_date, course, pool_lanes, meet_type) VALUES (?, ?, ?, ?, ?, ?)",
+            (name, host_team, start_date, course, pool_lanes, meet_type),
         )
         event_id = int(cur.lastrowid)
     audit(db_path, event_id, "EVENT_CREATED", name)
@@ -32,8 +40,16 @@ def get_events(db_path: str) -> list[dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
+def delete_all_events(db_path: str) -> int:
+    """Delete all saved event sessions and their cascading related records."""
+    with get_conn(db_path) as conn:
+        event_count = int(conn.execute("SELECT COUNT(*) FROM events").fetchone()[0])
+        conn.execute("DELETE FROM events")
+    return event_count
+
+
 def update_event(db_path: str, event_id: int, **fields: Any) -> None:
-    allowed = {"name", "host_team", "start_date", "course", "pool_lanes"}
+    allowed = {"name", "host_team", "start_date", "course", "pool_lanes", "meet_type"}
     updates = {k: v for k, v in fields.items() if k in allowed}
     if not updates:
         return
@@ -54,12 +70,12 @@ def replace_athletes(db_path: str, event_id: int, athletes: Iterable[dict[str, A
         conn.executemany(
             """
             INSERT INTO athletes(
-                event_id, sort_order, athlete_number, athlete_name, group_name,
+                event_id, sort_order, athlete_number, athlete_name, group_name, province,
                 running_heat, running_lane, swimming_heat, swimming_lane
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [
-                (event_id, r["sort_order"], r["athlete_number"], r["athlete_name"], r.get("group_name"),
+                (event_id, r["sort_order"], r["athlete_number"], r["athlete_name"], r.get("group_name"), r.get("province"),
                  r.get("running_heat"), r.get("running_lane"), r.get("swimming_heat"), r.get("swimming_lane"))
                 for r in rows
             ],

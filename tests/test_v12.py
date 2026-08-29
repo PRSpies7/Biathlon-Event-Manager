@@ -171,12 +171,15 @@ def test_printable_athlete_mapping_is_sorted_and_configured_for_portrait_printin
     ws = load_workbook(workbook).active
 
     assert [cell.value for cell in ws[1]] == [
-        "Athlete Number", "Athlete Name", "Age Group", "Run Heat", "Swim Heat", "Swim Lane"
+        "Athlete Hash", "Athlete Name", "Age Group", "Run Heat", "Swim Heat", "Swim Lane"
     ]
     assert [ws.cell(2, column).value for column in range(1, 7)] == [
         "0011", "Alpha Athlete", "Junior", 1, 3, 2
     ]
     assert ws["A2"].number_format == "@"
+    assert ws.column_dimensions["A"].width == 13
+    assert ws.column_dimensions["B"].width == 38
+    assert ws.column_dimensions["C"].width == 22
     assert ws.row_dimensions[2].height == 19
     assert ws.page_setup.orientation == "portrait"
     assert ws.page_setup.fitToWidth == 1

@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS events (
     start_date TEXT NOT NULL,
     course TEXT NOT NULL DEFAULT 'LCM',
     pool_lanes INTEGER NOT NULL DEFAULT 8,
+    meet_type TEXT NOT NULL DEFAULT 'Local',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -26,6 +27,7 @@ CREATE TABLE IF NOT EXISTS athletes (
     athlete_number TEXT NOT NULL,
     athlete_name TEXT NOT NULL,
     group_name TEXT,
+    province TEXT,
     running_heat INTEGER,
     running_lane INTEGER,
     swimming_heat INTEGER,
@@ -77,12 +79,17 @@ def init_db(db_path: str | Path) -> None:
     try:
         conn.executescript(SCHEMA)
         # V1.1 migration for databases created by V1.0.
+        event_columns = {row[1] for row in conn.execute("PRAGMA table_info(events)").fetchall()}
+        if "meet_type" not in event_columns:
+            conn.execute("ALTER TABLE events ADD COLUMN meet_type TEXT NOT NULL DEFAULT 'Local'")
+
         columns = {row[1] for row in conn.execute("PRAGMA table_info(athletes)").fetchall()}
         migrations = {
             "run_time_imported": "ALTER TABLE athletes ADD COLUMN run_time_imported TEXT",
             "swim_time_imported": "ALTER TABLE athletes ADD COLUMN swim_time_imported TEXT",
             "run_time_manual": "ALTER TABLE athletes ADD COLUMN run_time_manual INTEGER NOT NULL DEFAULT 0",
             "swim_time_manual": "ALTER TABLE athletes ADD COLUMN swim_time_manual INTEGER NOT NULL DEFAULT 0",
+            "province": "ALTER TABLE athletes ADD COLUMN province TEXT",
         }
         for column, sql in migrations.items():
             if column not in columns:

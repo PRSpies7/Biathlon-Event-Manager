@@ -18,7 +18,7 @@ def build_printable_athlete_mapping_xlsx(athletes: list[dict[str, Any]]) -> Byte
     ws = wb.active
     ws.title = "Athlete Event Mapping"
     ws.append([
-        "Athlete Number",
+        "Athlete Hash",
         "Athlete Name",
         "Age Group",
         "Run Heat",
@@ -51,9 +51,9 @@ def build_printable_athlete_mapping_xlsx(athletes: list[dict[str, Any]]) -> Byte
         ws.cell(row=row_number, column=1).number_format = "@"
 
     for column, width in {
-        "A": 18,
-        "B": 32,
-        "C": 18,
+        "A": 13,
+        "B": 38,
+        "C": 22,
         "D": 12,
         "E": 12,
         "F": 12,
