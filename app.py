@@ -16,7 +16,7 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 DB_PATH = DATA_DIR / "biathlon_events.sqlite"
 TIMEDROPS_REF = DATA_DIR / "TimeDrops JSON example.json"
-VERSION = "v1.15.1"
+VERSION = "2.0.0"
 TOTAL_PHASES = 4
 
 st.set_page_config(
@@ -149,7 +149,7 @@ def open_event(event_id: int):
 with st.sidebar:
     st.markdown(
         f'<div class="sidebar-brand"><div class="sidebar-brand-title">Biathlon Event Manager</div>'
-        f'<div class="sidebar-brand-version">{VERSION}</div></div>',
+        f'<div class="sidebar-brand-version">V{".".join(VERSION.split(".")[:2])}</div></div>',
         unsafe_allow_html=True,
     )
     st.divider()
