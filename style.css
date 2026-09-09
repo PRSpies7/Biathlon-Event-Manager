@@ -433,7 +433,8 @@ div.stButton > button.red-action p,
 }
 
 /* Phase 4 reset uses the same warning treatment as Phase 2 confirmation. */
-.st-key-phase4_reset_container div.stButton > button {
+.st-key-phase4_reset_container div.stButton > button,
+.st-key-season_reset_container div.stButton > button {
     background: var(--gn-orange);
     color: #FFFFFF;
     border: 1px solid var(--gn-orange);
@@ -441,10 +442,14 @@ div.stButton > button.red-action p,
 }
 .st-key-phase4_reset_container div.stButton > button p,
 .st-key-phase4_reset_container div.stButton > button span,
-.st-key-phase4_reset_container div.stButton > button div {
+.st-key-phase4_reset_container div.stButton > button div,
+.st-key-season_reset_container div.stButton > button p,
+.st-key-season_reset_container div.stButton > button span,
+.st-key-season_reset_container div.stButton > button div {
     color: #FFFFFF;
 }
-.st-key-phase4_reset_container div.stButton > button:hover {
+.st-key-phase4_reset_container div.stButton > button:hover,
+.st-key-season_reset_container div.stButton > button:hover {
     background: var(--gn-orange-dark);
     border-color: var(--gn-orange-dark);
 }

@@ -145,3 +145,12 @@ When a PDF is uploaded, Phase 1 does not initialize the event immediately. Inste
 ## Table theme
 
 The Streamlit theme configuration deliberately uses a white dataframe canvas and a white dataframe header with a navy application text colour. This is intentional because Streamlit's native dataframe/editor grid uses the theme configuration for its rendered grid canvas. The application page remains the light grey-blue `#EEF1F5`, so tables retain clear visual separation from the page.
+
+## Season Results Database
+
+The independent **Season Results Database** sidebar module imports published
+league, interprovincial and Gauteng North Championship results, tracks season
+affiliation and event awards, and provides seven Excel reports including school
+team rankings and qualification. See
+[Season Results Database V1](SEASON_RESULTS_DATABASE.md) for usage, persistent
+SQLite configuration, supported layouts and deployment limitations.

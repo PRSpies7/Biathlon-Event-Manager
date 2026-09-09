@@ -11,12 +11,13 @@ from ui.phase1_setup import render as render_phase1
 from ui.phase2_positions import render as render_phase2, save_current_mapping
 from ui.phase3_processing import render as render_phase3
 from ui.phase4_export import render as render_phase4
+from ui.season_results import VIEWS as SEASON_VIEWS, render as render_season_results
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 DB_PATH = DATA_DIR / "biathlon_events.sqlite"
 TIMEDROPS_REF = DATA_DIR / "TimeDrops JSON example.json"
-VERSION = "2.0.0"
+VERSION = "2.1"
 TOTAL_PHASES = 4
 
 st.set_page_config(
@@ -25,8 +26,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
-init_db(DB_PATH)
 
 # ============================================================================
 # VISUAL THEME
@@ -154,77 +153,89 @@ with st.sidebar:
     )
     st.divider()
 
-    st.subheader("Workflow Steps")
-    for phase_number, label in phases.items():
-        is_current = st.session_state.current_phase == phase_number
-        st.button(
-            label,
-            key=f"side_nav_{phase_number}",
-            on_click=set_phase,
-            args=(phase_number,),
-            type="primary" if is_current else "secondary",
-            use_container_width=True,
-        )
-
-    st.divider()
-    st.subheader("Sessions")
-    events = get_events(str(DB_PATH))
-
-    def _handle_session_change(event_options: dict[str, int]):
-        selected_label = st.session_state.get("session_selector")
-        if selected_label in event_options:
-            open_event(event_options[selected_label])
-
-    if events:
-        options = {
-            f"{e['name']} · {e['start_date']} · ID {e['id']}": e["id"]
-            for e in events
-        }
-        labels = list(options)
-        default_idx = next(
-            (i for i, label in enumerate(labels) if options[label] == st.session_state.event_id),
-            0,
-        )
-        st.selectbox(
-            "Available Sessions",
-            labels,
-            index=default_idx,
-            key="session_selector",
-            on_change=_handle_session_change,
-            args=(options,),
-        )
+    module = st.radio("Module", ("Event Management", "Season Results Database"), key="app_module")
+    if module == "Season Results Database":
+        renamed_views = {"Athletes": "Athlete Database", "Downloads": "Reports"}
+        if st.session_state.get("season_view") in renamed_views:
+            st.session_state.season_view = renamed_views[st.session_state.season_view]
+        st.radio("Season views", SEASON_VIEWS, key="season_view")
     else:
-        st.caption("No saved sessions yet.")
+        init_db(DB_PATH)
+        st.subheader("Workflow Steps")
+        for phase_number, label in phases.items():
+            is_current = st.session_state.current_phase == phase_number
+            st.button(
+                label,
+                key=f"side_nav_{phase_number}",
+                on_click=set_phase,
+                args=(phase_number,),
+                type="primary" if is_current else "secondary",
+                use_container_width=True,
+            )
 
-    if st.button("＋ Start New Session", use_container_width=True, key="start_new_session"):
-        start_new_session()
-        st.rerun()
+        st.divider()
+        st.subheader("Sessions")
+        events = get_events(str(DB_PATH))
 
-    if st.button(
-        "Reset Sessions",
-        key="reset_sessions",
-        disabled=not bool(events),
-        width="stretch",
-    ):
-        st.session_state.confirm_reset_sessions = True
+        def _handle_session_change(event_options: dict[str, int]):
+            selected_label = st.session_state.get("session_selector")
+            if selected_label in event_options:
+                open_event(event_options[selected_label])
 
-    if st.session_state.get("confirm_reset_sessions"):
-        st.warning("Delete all saved sessions and their event data?")
-        confirm_col, cancel_col = st.columns(2)
-        with confirm_col:
-            if st.button("Confirm reset", key="confirm_reset_sessions_button", type="primary", width="stretch"):
-                reset_saved_sessions()
-                st.rerun()
-        with cancel_col:
-            if st.button("Cancel", key="cancel_reset_sessions_button", width="stretch"):
-                st.session_state.pop("confirm_reset_sessions", None)
-                st.rerun()
+        if events:
+            options = {
+                f"{e['name']} · {e['start_date']} · ID {e['id']}": e["id"]
+                for e in events
+            }
+            labels = list(options)
+            default_idx = next(
+                (i for i, label in enumerate(labels) if options[label] == st.session_state.event_id),
+                0,
+            )
+            st.selectbox(
+                "Available Sessions",
+                labels,
+                index=default_idx,
+                key="session_selector",
+                on_change=_handle_session_change,
+                args=(options,),
+            )
+        else:
+            st.caption("No saved sessions yet.")
 
-    if st.session_state.event_id:
-        ev = get_event(str(DB_PATH), st.session_state.event_id)
-        if ev:
-            st.divider()
-            st.caption(f"Session ID: {ev['id']}")
+        if st.button("＋ Start New Session", use_container_width=True, key="start_new_session"):
+            start_new_session()
+            st.rerun()
+
+        if st.button(
+            "Reset Sessions",
+            key="reset_sessions",
+            disabled=not bool(events),
+            width="stretch",
+        ):
+            st.session_state.confirm_reset_sessions = True
+
+        if st.session_state.get("confirm_reset_sessions"):
+            st.warning("Delete all saved sessions and their event data?")
+            confirm_col, cancel_col = st.columns(2)
+            with confirm_col:
+                if st.button("Confirm reset", key="confirm_reset_sessions_button", type="primary", width="stretch"):
+                    reset_saved_sessions()
+                    st.rerun()
+            with cancel_col:
+                if st.button("Cancel", key="cancel_reset_sessions_button", width="stretch"):
+                    st.session_state.pop("confirm_reset_sessions", None)
+                    st.rerun()
+
+        if st.session_state.event_id:
+            ev = get_event(str(DB_PATH), st.session_state.event_id)
+            if ev:
+                st.divider()
+                st.caption(f"Session ID: {ev['id']}")
+
+if module == "Season Results Database":
+    render_season_results(BASE_DIR)
+    st.stop()
 
 # ============================================================================
 # WORKFLOW STEPPER
