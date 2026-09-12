@@ -94,6 +94,14 @@ information as described below.
   reports share the same event-count logic. Totals rank highest first across primary and high schools;
   equal totals share a rank. Qualification cells are green for Yes and red for No;
   qualified school names are also green, both on screen and in Excel.
+  The workbook also includes **Primary Schools** and **High Schools**, each ranked
+  independently by school points (ties share rank). Both tabs and **Qualified Schools**
+  separate **Full team** (Yes/No), **Missing team members** (e.g. 1 Under-15 athlete),
+  and **Qualification requirements** (e.g. Under-15: interprovincial or GN Championship
+  required). Qualification summaries state event types or a score requirement by age
+  group without athlete names or event counts; the full detail retains both.
+  A full team can still be unqualified. Columns fit content within reasonable limits; long
+  missing-requirement text wraps at a fixed width.
 - **Qualified athletes**: athlete summaries ranked by age group and highest total,
   with attendance count and two additional columns:
   `Qualified` (Yes/No) and `Missing to qualify`. Non-qualified athletes remain in

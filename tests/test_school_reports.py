@@ -173,12 +173,74 @@ def test_rank_and_workbook_colours():
     assert [r["School"] for r in summary] == ["Example Ps", "Second Hs"]
     assert [r["Rank"] for r in summary] == [1, 2]
     workbook = openpyxl.load_workbook(build_qualified_schools_xlsx(summary, headers, rows))
-    assert workbook.sheetnames == ["Qualified Schools", "School Athlete Scores"]
+    assert workbook.sheetnames == ["Qualified Schools", "School Athlete Scores", "Primary Schools", "High Schools"]
     sheet = workbook["Qualified Schools"]
     assert sheet["B2"].fill.fgColor.rgb == "00C6EFCE"
     assert sheet["E2"].value == "Yes" and sheet["E2"].fill.fgColor.rgb == "00C6EFCE"
     assert sheet["E3"].value == "No" and sheet["E3"].fill.fgColor.rgb == "00FFC7CE"
     assert sheet.auto_filter.ref == sheet.dimensions
+
+
+def test_school_type_tabs_rank_separately_and_summarize_missing_places():
+    summary, headers, athletes = qualified_schools_report(school_snapshot("Example Hs", (19, 19, 19, 19)))
+    assert summary[0]["Missing team members"] == "u/15; u/17"
+    base = summary[0]
+    summary.extend([
+        {**base, "School": "Top Ps", "School type": "Primary", "Total school points": 12000,
+         "Qualified": "Yes", "Qualification summary": "None", "Missing to qualify": "None"},
+        {**base, "School": "Second Ps", "School type": "Primary", "Total school points": 10000},
+        {**base, "School": "Tied Hs", "Total school points": base["Total school points"]},
+    ])
+    workbook = openpyxl.load_workbook(build_qualified_schools_xlsx(summary, headers, athletes))
+    primary, high = workbook["Primary Schools"], workbook["High Schools"]
+    assert list(next(high.values)) == [h.upper() for h in ["Rank", "School", "Total school points", "Qualified", "Full team", "Missing team members", "Missing Events", "Qualification requirements", "Missing to qualify detail"]]
+    assert all(c.value == c.value.upper() for c in primary[1])
+    assert primary["A2"].value == 1 and primary["A3"].value == 2
+    assert high["A2"].value == high["A3"].value == 1
+    assert high["E2"].value == "No"
+    assert high["F2"].value == "u/15; u/17"
+    assert "Missing mandatory athlete(s):" in high["I2"].value
+    assert primary["B2"].fill.fgColor.rgb == primary["D2"].fill.fgColor.rgb == "00C6EFCE"
+    assert high["D2"].fill.fgColor.rgb == "00FFC7CE"
+    assert primary.column_dimensions["A"].width < primary.column_dimensions["C"].width
+    assert high.column_dimensions["I"].width == 65
+    assert high["I2"].alignment.wrap_text
+    assert high.auto_filter.ref == high.dimensions
+    for name in ("Qualified Schools", "Primary Schools", "High Schools"):
+        assert {"FULL TEAM", "MISSING TEAM MEMBERS", "MISSING EVENTS", "QUALIFICATION REQUIREMENTS"}.issubset(h.upper() for h in next(workbook[name].values))
+
+
+def test_compact_team_members_and_event_shortfalls():
+    snapshot = school_snapshot(ages=(11, 15))
+    snapshot["results"] = [r for r in snapshot["results"] if r["event_id"] <= 2]
+    row = qualified_schools_report(snapshot)[0][0]
+    assert row["Missing team members"] == "u/09; u/13; + 2"
+    assert row["Missing Events"] == "1 x League; 1 x IP/Champs"
+    # Missing attendance is summarized across the team, not added per athlete.
+    assert "2 x IP" not in row["Missing Events"]
+
+
+def test_school_summary_separates_athlete_shortfalls_from_detail():
+    snapshot = school_snapshot()
+    snapshot["results"] = [r for r in snapshot["results"] if r["athlete_id"] != 1 or r["event_id"] == 1]
+    summary, _, _ = qualified_schools_report(snapshot)
+    row = summary[0]
+    assert row["Full team"] == "Yes"
+    assert row["Missing team members"] == "None"
+    assert "Under-9: interprovincial or GN Championship required" in row["Qualification requirements"]
+    assert "Under-9: more completed" in row["Qualification requirements"]
+    assert "Athlete 1" not in row["Qualification requirements"]
+    assert "Athlete 1" in row["Missing to qualify"]
+    assert "3 more completed events" in row["Missing to qualify"]
+
+
+def test_school_event_summary_does_not_require_extra_league_when_only_ip_is_missing():
+    snapshot = school_snapshot()
+    snapshot["results"] = [r for r in snapshot["results"] if r["athlete_id"] != 1 or r["event_id"] != 4]
+    row = qualified_schools_report(snapshot)[0][0]
+    assert row["Full team"] == "Yes"
+    assert row["Qualified"] == "No"
+    assert row["Qualification requirements"] == "Under-9: interprovincial or GN Championship required"
 
 
 @pytest.mark.parametrize("ip_layout", [False, True])

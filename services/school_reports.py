@@ -8,7 +8,8 @@ from services.season_reports import category_key, completed_result, numeric_poin
 
 SCHOOL_RULES = {"Primary": ((9, 11, 13, 15), 2), "High": ((15, 17, 19), 3)}
 SUMMARY_HEADERS = ["Rank", "School", "School type", "Total school points", "Qualified", "Missing to qualify",
-                   "Mandatory places filled", "Extra places filled", "Qualified selected athletes"]
+                   "Mandatory places filled", "Extra places filled", "Qualified selected athletes",
+                   "Full team", "Missing team members", "Missing Events", "Qualification requirements"]
 ATHLETE_HEADERS = ["School", "School type", "Selected", "Team place", "Athlete number", "Athlete name", "Age group",
                    "Affiliated", "Qualified", "Missing to qualify", "Completed league/championship meets", "Completed interprovincial or championship events",
                    "Completed distinct qualifying events",
@@ -112,9 +113,43 @@ def qualified_schools_report(snapshot):
             for candidate in team:
                 if candidate["missing"]:
                     missing.append(f"{candidate['athlete']['athlete_name']} ({candidate['athlete']['athlete_number']}): {candidate['missing']}")
+            short_missing = [f"u/{int(group.split('-')[1]):02d}" for group in missing_groups]
+            if not mandatory:
+                short_missing.append("School type not identified")
+            elif extra_filled < extras:
+                short_missing.append(f"+ {extras - extra_filled}")
+            # Summarize the largest outstanding attendance requirement, not a sum
+            # across athletes who can attend the same future meet.
+            event_count = max((max(0, 4 - c["distinct"]) for c in team), default=0)
+            ip_required = int(any(not c["other"] for c in team))
+            event_missing = []
+            if event_count > ip_required:
+                event_missing.append(f"{event_count - ip_required} x League")
+            if ip_required:
+                event_missing.append("1 x IP/Champs")
+            event_summary = "; ".join(event_missing) if event_missing else "None"
+            qualification_requirements = []
+            for candidate in team:
+                group = f"Under-{candidate['age']}" if candidate["age"] else candidate["category"]
+                requirements = []
+                if not candidate["other"]:
+                    requirements.append("interprovincial or GN Championship required")
+                if candidate["distinct"] < 4 and (candidate["other"] or candidate["distinct"] < 3):
+                    requirements.append("more completed league/interprovincial/championship events required")
+                if score_qualification(candidate["results"], candidate["category"]):
+                    requirements.append("qualifying score required")
+                for requirement in requirements:
+                    label = f"{group}: {requirement}"
+                    if label not in qualification_requirements:
+                        qualification_requirements.append(label)
             summaries.append({"Rank": "", "School": names[key], "School type": school_type,
                               "Total school points": float(sum((c["points"] for c in team), Decimal(0))) if mandatory else "",
                               "Qualified": "No" if missing else "Yes", "Missing to qualify": "; ".join(missing) or "None",
+                              "Qualification summary": "; ".join(short_missing) or "None",
+                              "Full team": "Yes" if mandatory and not missing_groups and extra_filled == extras else "No",
+                              "Missing team members": "; ".join(short_missing) or "None",
+                              "Missing Events": event_summary,
+                              "Qualification requirements": "; ".join(qualification_requirements) or "None",
                               "Mandatory places filled": f"{mandatory_filled}/{len(mandatory)}" if mandatory else "",
                               "Extra places filled": f"{extra_filled}/{extras}" if mandatory else "",
                               "Qualified selected athletes": f"{sum(c['qualified'] for c in team)}/6" if mandatory else ""})

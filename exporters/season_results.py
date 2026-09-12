@@ -139,10 +139,24 @@ def with_insights(stream, snapshot, *, affiliation_only=False):
 
 def build_qualified_schools_xlsx(summary, athlete_headers, athletes) -> BytesIO:
     from services.school_reports import SUMMARY_HEADERS
-    return _build_workbook([
+    datasets = [
         ("Qualified Schools", SUMMARY_HEADERS, [[r.get(h, "") for h in SUMMARY_HEADERS] for r in summary]),
         ("School Athlete Scores", athlete_headers, [[r.get(h, "") for h in athlete_headers] for r in athletes]),
-    ])
+    ]
+    headers = ["Rank", "School", "Total school points", "Qualified", "Full team", "Missing team members",
+               "Missing Events", "Qualification requirements", "Missing to qualify detail"]
+    for school_type, title in (("Primary", "Primary Schools"), ("High", "High Schools")):
+        schools = sorted((r for r in summary if r["School type"] == school_type),
+                         key=lambda r: (-r["Total school points"], r["School"].casefold()))
+        rows, previous, rank = [], None, 0
+        for index, row in enumerate(schools, 1):
+            if row["Total school points"] != previous:
+                rank = index
+            previous = row["Total school points"]
+            rows.append([rank, row["School"], row["Total school points"], row["Qualified"],
+                         row["Full team"], row["Missing team members"], row["Missing Events"], row["Qualification requirements"], row["Missing to qualify"]])
+        datasets.append((title, headers, rows))
+    return _build_workbook(datasets)
 
 
 def _build_workbook(datasets) -> BytesIO:
@@ -151,6 +165,7 @@ def _build_workbook(datasets) -> BytesIO:
     for name, headers, rows in datasets:
         season_matrix = name in {"Top Athletes", "Qualified Athletes"}
         school_matrix = name == "School Athlete Scores"
+        school_report = name in {"Qualified Schools", "School Athlete Scores", "Primary Schools", "High Schools"}
         sheet = workbook.create_sheet(name)
         sheet.append(headers)
         for row in rows:
@@ -168,6 +183,14 @@ def _build_workbook(datasets) -> BytesIO:
             width = 65 if label in {"Event awards", "Missing to qualify"} else 34 if any(t in label.casefold() for t in ("name", "school", "source")) else 23
             if season_matrix and i > 10:
                 width = 30
+            if school_report:
+                if label in {"Missing team members", "Missing Events", "Qualification requirements"}:
+                    width = 42 if label == "Missing team members" else 55
+                elif label.startswith("Missing to qualify"):
+                    width = 65 if label.endswith("detail") or name == "Qualified Schools" else 42
+                else:
+                    lengths = [len(str(row[i - 1])) for row in rows if row[i - 1] is not None]
+                    width = min(48, max(10, len(label) + 2, max(lengths, default=0) + 2))
             sheet.column_dimensions[get_column_letter(i)].width = width
         for row in sheet.iter_rows(min_row=2):
             for cell in row:
@@ -183,11 +206,14 @@ def _build_workbook(datasets) -> BytesIO:
                 cell.alignment = Alignment(vertical="top", wrap_text=True)
             longest = max((len(str(c.value or "")) / sheet.column_dimensions[c.column_letter].width for c in row), default=1)
             sheet.row_dimensions[row[0].row].height = max(30, 15 * (int(longest) + 1))
-            if name in {"Qualified Schools", "Qualified Athletes"}:
+            if name in {"Qualified Schools", "Qualified Athletes", "Primary Schools", "High Schools"}:
                 status = row[headers.index("Qualified")]
                 qualified = status.value == "Yes"
                 status.fill = PatternFill("solid", fgColor="C6EFCE" if qualified else "FFC7CE")
                 status.font = Font(bold=True, color="006100" if qualified else "9C0006")
+                if "Full team" in headers:
+                    full_team = row[headers.index("Full team")]
+                    full_team.fill = PatternFill("solid", fgColor="C6EFCE" if full_team.value == "Yes" else "FFC7CE")
                 if name == "Qualified Athletes":
                     athlete = row[headers.index("Athlete name")]
                     athlete.fill = PatternFill("solid", fgColor="C6EFCE" if qualified else "FFC7CE")
@@ -196,6 +222,9 @@ def _build_workbook(datasets) -> BytesIO:
                     school = row[headers.index("School")]
                     school.fill = PatternFill("solid", fgColor="C6EFCE")
                     school.font = Font(bold=True, color="006100")
+        if name in {"Primary Schools", "High Schools"}:
+            for cell in sheet[1]:
+                cell.value = str(cell.value).upper()
     output = BytesIO()
     workbook.save(output)
     output.seek(0)
