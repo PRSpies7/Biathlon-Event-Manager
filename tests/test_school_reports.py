@@ -48,13 +48,13 @@ def test_complete_teams_and_cross_event_best_scores(school, ages):
     assert snapshot == before
 
 
-def test_missing_mandatory_omits_all_extras():
+def test_missing_mandatory_still_counts_primary_extras():
     summary, _, details = qualified_schools_report(school_snapshot(ages=(11, 13, 15, 11, 13, 15)))
     assert summary[0]["Qualified"] == "No"
-    assert summary[0]["Extra places filled"] == "0/2"
+    assert summary[0]["Extra places filled"] == "2/2"
     assert "Under-9" in summary[0]["Missing to qualify"]
-    assert summary[0]["Total school points"] == 2450 + 2350 + 2250
-    assert sum(r["Selected"] == "Yes" for r in details) == 3
+    assert summary[0]["Total school points"] == 2450 + 2350 + 2250 + 2150 + 2050
+    assert sum(r["Selected"] == "Yes" for r in details) == 5
 
 
 def test_qualified_replacement_preferred_over_higher_score():
@@ -104,7 +104,7 @@ def test_special_needs_cannot_replace_mandatory_or_second_extra():
     assert summary[0]["Qualified"] == "No"
     snapshot["results"] = [r for r in snapshot["results"] if r["athlete_id"] != 1]
     summary, _, _ = qualified_schools_report(snapshot)
-    assert summary[0]["Extra places filled"] == "0/2"
+    assert summary[0]["Extra places filled"] == "1/2"
 
 
 def test_championship_detected_by_name_requires_four_distinct_events():
@@ -190,11 +190,33 @@ def test_championship_import(ip_layout, extension):
     assert event.results and event.awards
 
 
-def test_high_school_missing_group_blocks_all_three_extras():
+def test_high_school_missing_group_still_counts_three_extras():
     summary, _, details = qualified_schools_report(school_snapshot("Example Hs", (15, 17, 15, 17, 15, "SPECIAL NEEDS")))
     assert summary[0]["Mandatory places filled"] == "2/3"
-    assert summary[0]["Extra places filled"] == "0/3"
-    assert sum(r["Selected"] == "Yes" for r in details) == 2
+    assert summary[0]["Extra places filled"] == "3/3"
+    assert sum(r["Selected"] == "Yes" for r in details) == 5
+
+
+@pytest.mark.parametrize("ages,mandatory_count,extra_count,total", [
+    ((17, 19, 17, 19, 17, 19), 2, 3, 11250),
+    ((19, 19, 19, 19, 19, 19), 1, 3, 9200),
+    ((19, 19, 19, 19), 1, 3, 9200),
+    ((19, 19), 1, 1, 4800),
+])
+def test_high_school_partial_team_counts_only_available_places(ages, mandatory_count, extra_count, total):
+    summary, headers, athletes = qualified_schools_report(school_snapshot("Example Hs", ages))
+    row = summary[0]
+    assert row["Qualified"] == "No"
+    assert row["Mandatory places filled"] == f"{mandatory_count}/3"
+    assert row["Extra places filled"] == f"{extra_count}/3"
+    assert row["Total school points"] == total
+    selected = [a for a in athletes if a["Selected"] == "Yes"]
+    assert len(selected) == mandatory_count + extra_count
+    assert len({a["Athlete number"] for a in selected}) == len(selected)
+    assert {a["Team place"] for a in selected if a["Team place"].startswith("Extra")} == {f"Extra {i}" for i in range(1, extra_count + 1)}
+    assert sum(a["School contribution points"] for a in athletes) == total
+    workbook = openpyxl.load_workbook(build_qualified_schools_xlsx(summary, headers, athletes))
+    assert workbook["Qualified Schools"]["D2"].value == total
 
 
 def test_capped_score_used_for_selection_not_raw_special_score():

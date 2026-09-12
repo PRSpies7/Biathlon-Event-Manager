@@ -89,16 +89,16 @@ def qualified_schools_report(snapshot):
                 else:
                     missing_groups.append(f"Under-{age}")
             mandatory_filled = len(selected)
-            if mandatory and not missing_groups:
+            if mandatory:
                 pool = sorted([c for c in candidates if c["athlete"]["id"] not in selected and c["points"] is not None
                                and (c["age"] in mandatory or c["special"])], key=order)
                 special_used = False
                 for candidate in pool:
                     if candidate["special"] and special_used:
                         continue
-                    if len(selected) == len(mandatory) + extras:
+                    if len(selected) == mandatory_filled + extras:
                         break
-                    selected[candidate["athlete"]["id"]] = f"Extra {len(selected) - len(mandatory) + 1}"
+                    selected[candidate["athlete"]["id"]] = f"Extra {len(selected) - mandatory_filled + 1}"
                     special_used |= candidate["special"]
             team = [c for c in candidates if c["athlete"]["id"] in selected]
             extra_filled = len(team) - mandatory_filled
@@ -107,8 +107,7 @@ def qualified_schools_report(snapshot):
                 missing.append("School name must end in Ps (primary) or Hs (high) to determine team rules")
             if missing_groups:
                 missing.append("Missing mandatory athlete(s): " + ", ".join(missing_groups))
-                missing.append("Extra places omitted until all mandatory groups are filled")
-            elif mandatory and extra_filled < extras:
+            if mandatory and extra_filled < extras:
                 missing.append(f"{extras - extra_filled} more eligible extra athlete(s)")
             for candidate in team:
                 if candidate["missing"]:

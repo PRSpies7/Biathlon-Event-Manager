@@ -73,8 +73,10 @@ information as described below.
   three extras. Boys and girls share places. Each athlete occupies only one place.
   Qualified athletes take priority in each place; among them the highest score
   wins. When no qualified replacement exists, an unqualified athlete can contribute
-  but the school is not yet qualified. All mandatory groups must be filled before
-  any extras contribute. Missing groups still allow other mandatory scores to count.
+  but the school is not yet qualified. Missing mandatory groups leave only their own
+  places empty; eligible extras still contribute (two primary, three high). A high
+  school missing one mandatory group can count five athletes, or four when two are
+  missing. Extra athletes cannot fill the missing mandatory places.
   Extras come from the school's eligible age groups or Special Needs; at most one
   Special Needs athlete can be selected, capped at 2,000 for selection/contribution.
   Published scores remain unchanged in event columns. The best completed result
