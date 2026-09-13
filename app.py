@@ -17,7 +17,7 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 DB_PATH = DATA_DIR / "biathlon_events.sqlite"
 TIMEDROPS_REF = DATA_DIR / "TimeDrops JSON example.json"
-VERSION = "2.1"
+VERSION = "2.2"
 TOTAL_PHASES = 4
 
 st.set_page_config(

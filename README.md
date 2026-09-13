@@ -1,4 +1,4 @@
-# Biathlon Event Manager 2.0.0
+# Biathlon Event Manager 2.2
 
 A Streamlit + SQLite application for South African biathlon event operations.
 
