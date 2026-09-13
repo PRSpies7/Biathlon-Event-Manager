@@ -4,6 +4,7 @@ import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
+from .migrations import backup_database, execute_schema
 
 SCHEMA = """
 PRAGMA foreign_keys = ON;
@@ -16,6 +17,7 @@ CREATE TABLE IF NOT EXISTS events (
     course TEXT NOT NULL DEFAULT 'LCM',
     pool_lanes INTEGER NOT NULL DEFAULT 8,
     meet_type TEXT NOT NULL DEFAULT 'Local',
+    season_year INTEGER CHECK(season_year BETWEEN 1900 AND 9999),
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -75,13 +77,22 @@ def connect(db_path: str | Path) -> sqlite3.Connection:
 
 
 def init_db(db_path: str | Path) -> None:
+    path = Path(db_path).resolve()
+    if path.exists() and path.stat().st_size:
+        with sqlite3.connect(path.as_uri() + "?mode=ro", uri=True) as reader:
+            columns = {r[1] for r in reader.execute("PRAGMA table_info(events)")}
+        if columns and "season_year" not in columns:
+            backup_database(path)
     conn = connect(db_path)
     try:
-        conn.executescript(SCHEMA)
+        conn.execute("BEGIN IMMEDIATE")
+        execute_schema(conn, SCHEMA)
         # V1.1 migration for databases created by V1.0.
         event_columns = {row[1] for row in conn.execute("PRAGMA table_info(events)").fetchall()}
         if "meet_type" not in event_columns:
             conn.execute("ALTER TABLE events ADD COLUMN meet_type TEXT NOT NULL DEFAULT 'Local'")
+        if "season_year" not in event_columns:
+            conn.execute("ALTER TABLE events ADD COLUMN season_year INTEGER CHECK(season_year BETWEEN 1900 AND 9999)")
 
         columns = {row[1] for row in conn.execute("PRAGMA table_info(athletes)").fetchall()}
         migrations = {
@@ -95,6 +106,9 @@ def init_db(db_path: str | Path) -> None:
             if column not in columns:
                 conn.execute(sql)
         conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
 

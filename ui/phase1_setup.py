@@ -42,6 +42,10 @@ def _render_persistent_event(db_path: str, event_id: int):
         st.markdown(f'<div class="event-info-card event-info-course"><div class="event-info-label">Pool Lanes</div><div class="event-info-value">{event["pool_lanes"]}</div></div>', unsafe_allow_html=True)
 
     st.caption(f'{len(athletes)} athletes are stored in the persistent Master Dataset.')
+    if event["season_year"] is None:
+        st.warning("This legacy event has no confirmed Season. Its date has not been used to assign one automatically.")
+    else:
+        st.caption(f'Season: {event["season_year"]}')
     st.subheader("Phase 1 Exports")
 
     json_path = _json_path(db_path, event_id)
@@ -155,6 +159,9 @@ def render(db_path: str, reference_json: dict):
     with col2:
         default_start = date.fromisoformat(pdf_defaults["start_date"]) if pdf_defaults and pdf_defaults["start_date"] else date.today()
         start_date = st.date_input("Meet start date", value=default_start)
+        season_year = st.number_input("Season", min_value=1900, max_value=9999,
+            value=date.today().year, step=1,
+            help="Confirm the competition season independently of the meet date.")
         course = st.selectbox(
             "Pool course",
             ["LCM", "SCM"],
@@ -192,7 +199,7 @@ def render(db_path: str, reference_json: dict):
             )
             event_id = create_event(
                 db_path, meet_name.strip(), host_team.strip(), start_date.isoformat(), course,
-                int(pool_lanes), meet_type=meet_type,
+                int(pool_lanes), meet_type=meet_type, season_year=int(season_year),
             )
             replace_athletes(db_path, event_id, athletes)
             st.session_state.event_id = event_id

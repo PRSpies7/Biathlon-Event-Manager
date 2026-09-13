@@ -269,7 +269,7 @@ def test_manual_affiliation_can_correct_either_direction(db):
 
 
 def test_skip_has_no_side_effects_and_batch_duplicates_are_guarded(db):
-    event = sample_event()
+    event = replace(sample_event(), season_year=2026)
     assert import_event(db, event, "Skip") is None
     assert season_snapshot(db)["events"] == []
     import_event(db, event)

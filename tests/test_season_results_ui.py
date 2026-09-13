@@ -105,7 +105,8 @@ def test_season_start_and_confirmed_database_reset(tmp_path, monkeypatch):
     store_event(db, event)
     store_event(db, replace(event, name="Earlier event", event_date=date(2026, 7, 1)))
     app.radio(key="season_view").set_value("Imported Events").run()
-    assert any(c.value == "Current season starting 01 July 2026" for c in app.caption)
+    assert app.selectbox(key="season_selected_year").value is None
+    assert any("no confirmed season" in w.value for w in app.warning)
     assert app.button(key="season_continue").label == "Continue to Athlete Database →"
     app.button(key="season_continue").click().run()
     before = season_snapshot(db)
@@ -150,3 +151,21 @@ def test_reports_and_current_record_save(tmp_path, monkeypatch):
                for d in app.dataframe)
     # All seven reports plus the input template are available after records are saved.
     assert len(app.get("download_button")) == 8
+
+
+def test_reports_receive_only_selected_season(tmp_path, monkeypatch):
+    from dataclasses import replace
+    from database.season_repository import store_event
+
+    app = app_test(tmp_path, monkeypatch)
+    app.radio(key="app_module").set_value("Season Results Database").run()
+    db = tmp_path / "data" / "season_results.sqlite"
+    for year in (2026, 2027):
+        store_event(db, replace(sample_event(), season_year=year))
+    with patch("ui.season_results.render_reports") as reports:
+        app.radio(key="season_view").set_value("Reports").run()
+        assert not app.exception
+        assert {e["season_year"] for e in reports.call_args.args[1]["events"]} == {2027}
+        app.selectbox(key="season_selected_year").set_value(2026).run()
+        assert not app.exception
+        assert {r["season_year"] for r in reports.call_args.args[1]["results"]} == {2026}

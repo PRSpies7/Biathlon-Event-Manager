@@ -1,7 +1,4 @@
-"""Season-only schema and configuration using the application's SQLite layer.
-
-One file is one season. No season table is coupled to workflow sessions.
-"""
+"""Multi-season history in the existing configured SQLite database."""
 from __future__ import annotations
 
 import os
@@ -9,6 +6,7 @@ from pathlib import Path
 from urllib.parse import unquote
 
 from .db import get_conn
+from .migrations import backup_database, execute_schema
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS season_record_templates (
@@ -24,7 +22,8 @@ CREATE TABLE IF NOT EXISTS season_events (
     competition_type TEXT NOT NULL,
     source_filename TEXT NOT NULL,
     imported_at TEXT NOT NULL,
-    UNIQUE(identity, event_date, competition_type)
+    season_year INTEGER CHECK(season_year BETWEEN 1900 AND 9999),
+    UNIQUE(identity, event_date, competition_type, season_year)
 );
 CREATE TABLE IF NOT EXISTS season_athletes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,6 +52,8 @@ CREATE TABLE IF NOT EXISTS season_results (
     province TEXT NOT NULL,
     team TEXT NOT NULL,
     annotations TEXT NOT NULL,
+    run_distance INTEGER CHECK(run_distance > 0),
+    swim_distance INTEGER CHECK(swim_distance > 0),
     PRIMARY KEY(event_id, athlete_id)
 );
 CREATE TABLE IF NOT EXISTS season_awards (
@@ -65,6 +66,12 @@ CREATE TABLE IF NOT EXISTS season_awards (
 );
 CREATE INDEX IF NOT EXISTS season_results_athlete ON season_results(athlete_id);
 CREATE INDEX IF NOT EXISTS season_awards_athlete ON season_awards(athlete_id);
+CREATE TABLE IF NOT EXISTS athlete_seasons (
+    athlete_id INTEGER NOT NULL REFERENCES season_athletes(id) ON DELETE CASCADE,
+    season_year INTEGER NOT NULL CHECK(season_year BETWEEN 1900 AND 9999),
+    category TEXT NOT NULL,
+    PRIMARY KEY(athlete_id, season_year)
+);
 CREATE TABLE IF NOT EXISTS season_record_benchmarks (
     category_key TEXT PRIMARY KEY,
     category TEXT NOT NULL,
@@ -105,5 +112,43 @@ def init_season_db(db_path: str | Path) -> None:
     if str(db_path) == ":memory:":
         raise ValueError("Season results require a persistent SQLite file.")
     path.parent.mkdir(parents=True, exist_ok=True)
+    path = path.resolve()
+    # Inspect before using the normal connection, which enables WAL mode.
+    import sqlite3
+    legacy = False
+    if path.exists() and path.stat().st_size:
+        with sqlite3.connect(path.as_uri() + "?mode=ro", uri=True) as reader:
+            columns = {r[1] for r in reader.execute("PRAGMA table_info(season_events)")}
+            legacy = bool(columns) and "season_year" not in columns
+        if legacy:
+            backup_database(path)
     with get_conn(path) as conn:
-        conn.executescript(SCHEMA)
+        # Rebuild only the parent table to replace its old uniqueness constraint.
+        # Keep child references and IDs intact; verify them before committing.
+        conn.execute("PRAGMA foreign_keys = OFF")
+        conn.execute("BEGIN IMMEDIATE")
+        columns = {r[1] for r in conn.execute("PRAGMA table_info(season_events)")}
+        if columns and "season_year" not in columns:
+            sequence = conn.execute("SELECT seq FROM sqlite_sequence WHERE name='season_events'").fetchone()
+            definition = SCHEMA.split("CREATE TABLE IF NOT EXISTS season_events (", 1)[1].split(";", 1)[0]
+            conn.execute("CREATE TABLE season_events_new (" + definition)
+            conn.execute("""INSERT INTO season_events_new
+                (id, identity, name, event_date, competition_type, source_filename, imported_at)
+                SELECT id, identity, name, event_date, competition_type, source_filename, imported_at
+                FROM season_events""")
+            conn.execute("DROP TABLE season_events")
+            conn.execute("ALTER TABLE season_events_new RENAME TO season_events")
+            if sequence:
+                conn.execute("""INSERT INTO sqlite_sequence(name, seq)
+                    SELECT 'season_events', ? WHERE NOT EXISTS
+                    (SELECT 1 FROM sqlite_sequence WHERE name='season_events')""", (sequence[0],))
+                conn.execute("UPDATE sqlite_sequence SET seq=MAX(seq, ?) WHERE name='season_events'", (sequence[0],))
+            for discipline in ("run", "swim"):
+                conn.execute(f"ALTER TABLE season_results ADD COLUMN {discipline}_distance INTEGER CHECK({discipline}_distance > 0)")
+        execute_schema(conn, SCHEMA)
+        conn.execute("CREATE INDEX IF NOT EXISTS season_events_year ON season_events(season_year, id)")
+        # SQLite UNIQUE permits multiple NULL values; legacy imports must still deduplicate.
+        conn.execute("""CREATE UNIQUE INDEX IF NOT EXISTS season_events_unassigned
+            ON season_events(identity, event_date, competition_type) WHERE season_year IS NULL""")
+        if conn.execute("PRAGMA foreign_key_check").fetchone():
+            raise ValueError("Season migration found broken result links; migration rolled back.")

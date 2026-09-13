@@ -4,6 +4,7 @@ import json
 from typing import Any, Iterable
 
 from .db import get_conn, audit
+from .migrations import validate_season
 
 
 def _touch_event(conn, event_id: int) -> None:
@@ -18,11 +19,13 @@ def create_event(
     course: str,
     pool_lanes: int,
     meet_type: str = "Local",
+    season_year: int | None = None,
 ) -> int:
+    validate_season(season_year)
     with get_conn(db_path) as conn:
         cur = conn.execute(
-            "INSERT INTO events(name, host_team, start_date, course, pool_lanes, meet_type) VALUES (?, ?, ?, ?, ?, ?)",
-            (name, host_team, start_date, course, pool_lanes, meet_type),
+            "INSERT INTO events(name, host_team, start_date, course, pool_lanes, meet_type, season_year) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (name, host_team, start_date, course, pool_lanes, meet_type, season_year),
         )
         event_id = int(cur.lastrowid)
     audit(db_path, event_id, "EVENT_CREATED", name)
@@ -49,7 +52,9 @@ def delete_all_events(db_path: str) -> int:
 
 
 def update_event(db_path: str, event_id: int, **fields: Any) -> None:
-    allowed = {"name", "host_team", "start_date", "course", "pool_lanes", "meet_type"}
+    allowed = {"name", "host_team", "start_date", "course", "pool_lanes", "meet_type", "season_year"}
+    if "season_year" in fields:
+        validate_season(fields["season_year"])
     updates = {k: v for k, v in fields.items() if k in allowed}
     if not updates:
         return

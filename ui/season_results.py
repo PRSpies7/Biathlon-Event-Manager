@@ -9,7 +9,8 @@ import sqlite3
 import streamlit as st
 
 from database.season_db import init_season_db, season_database_path
-from database.season_repository import EventAlreadyExists, reset_season_database, season_snapshot, set_affiliation
+from database.season_repository import (EventAlreadyExists, reset_season_database,
+    season_snapshot, set_affiliation, available_seasons, assign_event_season)
 from parsers.season_results import parse_season_results
 from parsers.season_results.models import COMPETITION_TYPES
 from services.season_results_service import athlete_rows, import_event, import_summary
@@ -77,14 +78,18 @@ def _imports(db_path):
             with st.expander("Event details", expanded=bool(event.notes)):
                 name = st.text_input("Event name", event.name, key=f"season_name_{token}")
                 event_date = st.date_input("Event date", value=event.event_date, key=f"season_date_{token}")
+                season_year = st.number_input("Season", min_value=1900, max_value=9999,
+                    value=event.season_year or date.today().year, step=1, key=f"season_year_{token}",
+                    help="Confirm the competition season. It can differ from the event's calendar year.")
                 competition_type = st.selectbox("Competition type", COMPETITION_TYPES,
                     index=COMPETITION_TYPES.index(event.competition_type) if event.competition_type else None,
                     placeholder="Confirm competition type", key=f"season_type_{token}")
-            candidate = replace(event, name=name, event_date=event_date, competition_type=competition_type or "")
+            candidate = replace(event, name=name, event_date=event_date, competition_type=competition_type or "",
+                                season_year=int(season_year))
             summary = import_summary(db_path, candidate)
             from services.season_scope import gn_event
             candidate = gn_event(candidate)
-            identity = (candidate.identity, event_date, competition_type)
+            identity = (candidate.identity, event_date, competition_type, candidate.season_year)
             duplicate = summary["Status"] == "Already Imported" or identity in seen
             if identity in seen:
                 summary["Status"] = "Already Imported (earlier in this batch)"
@@ -123,10 +128,9 @@ def _events(snapshot):
     if not snapshot["events"]:
         st.info("No events imported yet.")
         return
-    first_event = min(e["event_date"] for e in snapshot["events"])
-    st.caption(f"Current season starting {date.fromisoformat(first_event).strftime('%d %B %Y')}")
     st.dataframe([{
         "Event ID": e["id"], "Event name": e["name"], "Date": e["event_date"],
+        "Season": e["season_year"] if e["season_year"] is not None else "Unassigned",
         "Competition type": e["competition_type"], "Results": e["result_count"],
         "Source file": e["source_filename"], "Imported at (UTC)": e["imported_at"],
     } for e in snapshot["events"]], hide_index=True, width="stretch")
@@ -159,8 +163,8 @@ def _athletes(db_path, snapshot):
                   for r in snapshot["results"] if r["athlete_id"] == selected], hide_index=True)
 
 
-def _confirm_database_reset(db_path):
-    reset_season_database(db_path)
+def _confirm_database_reset(db_path, season_year=None):
+    reset_season_database(db_path, season_year)
     generation = st.session_state.get("season_upload_generation", 0) + 1
     for key in list(st.session_state):
         if key.startswith("season_") and key != "season_view":
@@ -169,7 +173,7 @@ def _confirm_database_reset(db_path):
     st.session_state.season_reset_notice = True
 
 
-def _reset_database_controls(db_path, snapshot):
+def _reset_database_controls(db_path, snapshot, season_year=None):
     st.divider()
     with st.container(key="season_reset_container"):
         reset_col, _ = st.columns([2.2, 7.8])
@@ -177,9 +181,9 @@ def _reset_database_controls(db_path, snapshot):
             if st.button("⚠ Reset Database", key="season_reset", type="secondary", width="stretch",
                          disabled=not (snapshot["events"] or snapshot["athletes"] or snapshot.get("records"))):
                 st.session_state.season_confirm_reset = True
-    st.caption("Clear all imported events, athletes, affiliation information, results, awards and current record references for this season.")
+    st.caption("Reset removes the selected season's events, results and awards. Shared athletes and record references are retained for assigned seasons.")
     if st.session_state.get("season_confirm_reset"):
-        st.error("Are you sure? This permanently deletes the entire current season database contents, including affiliation information and current record references. This cannot be undone. Event Management sessions are unaffected.")
+        st.error("This permanently deletes the selected season's imported results. This cannot be undone. Event Management sessions are unaffected.")
         cancel, confirm = st.columns(2)
         with cancel:
             if st.button("Cancel", key="season_cancel_reset"):
@@ -187,12 +191,12 @@ def _reset_database_controls(db_path, snapshot):
                 st.rerun()
         with confirm:
             st.button("Confirm Reset Database", key="season_confirm_reset_button", type="primary",
-                      on_click=_confirm_database_reset, args=(db_path,))
+                      on_click=_confirm_database_reset, args=(db_path, season_year))
 
 
 def render(base_dir):
     st.header("Season Results Database")
-    st.caption("One database represents one season. Imported events are independent of event-management sessions.")
+    st.caption("One historical database holds all seasons. Season is selected explicitly, independently of event date.")
     if st.session_state.pop("season_reset_notice", False):
         st.success("The season database has been reset. You can import results for a new season.")
     try:
@@ -209,12 +213,32 @@ def render(base_dir):
         _imports(db_path)
         _continue_navigation(view)
         return
-    snapshot = season_snapshot(db_path)
+    years = available_seasons(db_path)
+    selected_year = st.selectbox("Season", [*years, None],
+        format_func=lambda year: str(year) if year is not None else "Unassigned (legacy)",
+        key="season_selected_year", on_change=lambda: st.session_state.pop("season_confirm_reset", None))
+    snapshot = season_snapshot(db_path, selected_year)
+    if selected_year is None and snapshot["events"]:
+        st.warning("These records have no confirmed season and are excluded from historical seed lookup. Assign a season in Imported Events.")
     if view == "Imported Events":
         _events(snapshot)
+        if selected_year is None and snapshot["events"]:
+            with st.expander("Assign a season to a legacy event"):
+                choices = {e["id"]: e for e in snapshot["events"]}
+                event_id = st.selectbox("Event", list(choices),
+                    format_func=lambda key: f"{choices[key]['name']} · {choices[key]['event_date']}")
+                year = st.number_input("Confirmed season", min_value=1900, max_value=9999, value=date.today().year)
+                if st.button("Assign season"):
+                    try:
+                        assign_event_season(db_path, event_id, int(year))
+                    except (ValueError, sqlite3.IntegrityError) as exc:
+                        st.error(f"Could not assign season: {exc}")
+                    else:
+                        st.rerun()
     elif view == "Athlete Database":
         _athletes(db_path, snapshot)
-        _reset_database_controls(db_path, snapshot)
+        if selected_year is not None or not years:
+            _reset_database_controls(db_path, snapshot, selected_year)
     elif view == "Reports":
         render_reports(db_path, snapshot)
     _continue_navigation(view)

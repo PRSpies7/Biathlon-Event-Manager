@@ -41,6 +41,8 @@ class Result:
     team: str = ""
     affiliated: bool = False
     annotations: str = ""
+    run_distance: int | None = None
+    swim_distance: int | None = None
 
 
 @dataclass
@@ -61,6 +63,7 @@ class NormalizedEvent:
     results: list[Result] = field(default_factory=list)
     awards: list[Award] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    season_year: int | None = None
 
     @property
     def identity(self) -> str:
@@ -68,6 +71,8 @@ class NormalizedEvent:
 
     def check_structure(self) -> None:
         """Check import completeness/links, not the upstream competition scores."""
+        from database.migrations import validate_season
+        validate_season(self.season_year)
         if not self.identity or not isinstance(self.event_date, date):
             raise ValueError("An event name and date are required before importing.")
         if self.competition_type not in COMPETITION_TYPES:
@@ -78,6 +83,9 @@ class NormalizedEvent:
         if len(numbers) != len(set(numbers)):
             raise ValueError("Repeated athlete numbers in category results; import stopped to avoid losing rows.")
         for result in self.results:
+            for distance in (result.run_distance, result.swim_distance):
+                if distance is not None and (type(distance) is not int or distance <= 0):
+                    raise ValueError("Result distances must be positive whole metres.")
             if not result.athlete_number or not result.athlete_name or not result.category:
                 raise ValueError("A result is missing its athlete number, name or category.")
         for award in self.awards:

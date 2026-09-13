@@ -1,8 +1,14 @@
-# Season Results Database V1
+# Season Results Database
 
 Open **Season Results Database** in the sidebar. This is independent of the four
-event-management phases and their saved sessions. Upload only final, published
-results from the season represented by the selected database.
+event-management phases and their saved sessions. One historical database now
+holds multiple explicitly selected seasons. Upload final, published results and
+confirm **Season** in the event details; event dates do not determine the season.
+
+Existing events start as **Unassigned (legacy)**. In **Imported Events**, select
+that view and explicitly assign a confirmed season to each event. Until then,
+those results remain visible but do not participate in historical seed lookup.
+See [database migrations](DATABASE_MIGRATIONS.md) for backup and storage details.
 
 ## Use
 
@@ -18,8 +24,8 @@ results from the season represented by the selected database.
    Overwriting removes its entire old result and award set and inserts the new
    set atomically, retaining its event ID. A failed transaction rolls back that
    event; previously completed events in the batch remain saved.
-5. **Imported Events** lists saved events and shows the earliest imported event
-   date as the current season start. **Athlete Database** supports search,
+5. **Imported Events**, **Athlete Database**, and **Reports** have a **Season**
+   selector. Event date is displayed separately. **Athlete Database** supports search,
    affiliation filtering, individual results and manual affiliation corrections.
    Back / Continue buttons follow the same style as Event Management navigation.
    Report descriptions use hover help beside each title; download buttons sit
@@ -30,11 +36,12 @@ results from the season represented by the selected database.
    and Event Awards sheets, plus Current Records when references have been saved.
    The Athletes sheet has one row per season athlete, `Affiliated` /
    `Not Affiliated`, attendance counts and one readable awards column.
-7. The orange **Reset Database** button on **Athlete Database** opens a warning
-   with **Cancel** and **Confirm Reset Database**. Confirmation permanently clears
-   all season events, athletes, affiliation information, results, awards and saved
-   current record references in
-   one transaction. It also clears the current browser's import previews.
+7. **Reset Database** on **Athlete Database** opens a warning with **Cancel** and
+   **Confirm Reset Database**. For an assigned season it removes only that season's
+   events, results, awards and category memberships, preserving other seasons,
+   shared athlete identities and record references. An entirely unassigned legacy
+   database retains its original full-reset behavior; once assigned seasons exist,
+   unassigned records must be assigned before resetting. Reset also clears import previews.
    Event Management sessions remain intact. Export or back up anything you need
    before resetting; the action cannot be undone.
 

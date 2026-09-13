@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from database.season_repository import find_event, store_event
+from database.migrations import validate_season
 
 
 def import_summary(db_path, event):
@@ -11,6 +12,7 @@ def import_summary(db_path, event):
     return {
         "Source file": event.source_filename, "Event": event.name,
         "Date": event.event_date, "Competition type": event.competition_type or "Confirm type",
+        "Season": event.season_year if event.season_year is not None else "Unassigned",
         "Results": len(filtered.results), "Awards": len(filtered.awards),
         "Excluded non-GN / unknown team": len(event.results) - len(filtered.results),
         "Status": "Already Imported" if existing else "New",
@@ -22,6 +24,7 @@ def import_event(db_path, event, action="Import"):
         return None
     if action not in {"Import", "Overwrite"}:
         raise ValueError("Choose Import, Overwrite or Skip.")
+    validate_season(event.season_year, required=True)
     return store_event(db_path, event, overwrite=action == "Overwrite")
 
 
