@@ -2,12 +2,13 @@
 
 Open **Season Results Database** in the sidebar. This is independent of the four
 event-management phases and their saved sessions. One historical database now
-holds multiple explicitly selected seasons. Upload final, published results and
-confirm **Season** in the event details; event dates do not determine the season.
+holds multiple seasons. Confirm **Season** in the event details. The August–July
+season is named for its ending year: September 2026 defaults to Season 2027.
+The inferred value can be overridden.
 
-Existing events start as **Unassigned (legacy)**. In **Imported Events**, select
-that view and explicitly assign a confirmed season to each event. Until then,
-those results remain visible but do not participate in historical seed lookup.
+Previously unassigned events with valid dates receive an inferred season; explicit
+seasons are preserved. **Imported Events** allows corrections. Records whose season
+cannot be safely inferred remain **Unassigned (legacy)** and are excluded from seed lookup.
 See [database migrations](DATABASE_MIGRATIONS.md) for backup and storage details.
 
 ## Use
@@ -163,9 +164,9 @@ information as described below.
   is stored in `season_record_templates` atomically with its references.
   **Download updated records list** preserves its layout, formulas, SA-record values
   and unchanged category records. Strictly higher published season bests update the
-  holder, old/current points, GN marker, season (event year), meet and run/swim times.
+  holder, old/current points, GN marker, explicit season, meet and run/swim times.
   Equal scores retain the existing holder; tied new bests use the earliest occurrence.
-  The title year follows the latest imported event year. **New Records** includes
+  The title year follows the selected season. **New Records** includes
   athlete numbers and event names/dates. Downloads do not modify the saved template
   or references. Saving a new reference list or resetting the database clears the
   previous template. Categories absent from the template are flagged, not invented.
@@ -193,9 +194,12 @@ The default is `data/season_results.sqlite`, separate from
 `data/biathlon_events.sqlite`. Data survives browser closure and application
 restarts. **Reset Sessions** does not delete season data.
 
-One database file represents one season. For a new season, configure a different
-file and restart the app. Keep the previous file as an archive. There is no
-cross-season merging or automatic calendar-year classification.
+One database file holds multiple seasons. Select the required season in the app;
+there is no need to configure a new file each year. Seasons are named for their
+ending year: August–December events default to the following year, and
+January–July events default to their calendar year. The organiser can correct
+the inferred season before saving. Historical seeding searches that season and
+at most the two immediately preceding seasons.
 
 Configuration precedence:
 

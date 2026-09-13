@@ -2,6 +2,11 @@
 
 A Streamlit + SQLite application for South African biathlon event operations.
 
+The [heat-generation workflow](HEAT_GENERATION.md) adds season-aware entry
+import, historical seeds, run/swim generation and manual approval before Phase 1.
+Approved heats export to the existing accepted PDF/Excel structures and supply
+the operational lane sheets and TimeDrops JSON from one saved state.
+
 ## V1.15 scope
 
 - Phase 1: Upload either the Master Entries Excel workbook or the standard Meet Program PDF through the same uploader. The application detects the format automatically, parses the source into the persistent Master Dataset workflow, then lets the operator review/edit the Phase 1 event settings before initialization. The confirmed settings are used to generate `meet_program.json` and one printable Swim Timekeeper workbook with one tab per swimming lane.

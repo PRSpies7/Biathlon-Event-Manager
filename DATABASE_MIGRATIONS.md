@@ -1,48 +1,39 @@
-# Season database foundation
+# Season and heat storage
 
-The existing `data/season_results.sqlite` (or configured historical database)
-stores every season. `data/biathlon_events.sqlite` continues to store operational
-sessions. No database is created per season.
+The existing historical SQLite database holds every season; the operational
+database continues to hold sessions. No database is created per season.
 
-## Migration safety
-
-On first initialization of an older schema, the application creates an adjacent
+Before upgrading an existing schema, initialization creates an adjacent
 `<name>.before-seasons-<UTC timestamp>.sqlite` backup using SQLite's backup API,
-including committed WAL data. Backup failure stops initialization. Schema changes
-then run in a transaction; failure rolls back the migration. Historical parent
-table replacement preserves event IDs, its autoincrement sequence, results and
-awards, and checks foreign keys before commit. Reopening an upgraded database
-does not repeat the migration or create another backup.
+including committed WAL data. Connections are closed explicitly on Windows.
+Migrations run transactionally, preserve IDs/results/awards and the autoincrement
+sequence, and check historical foreign keys before commit. Reopening an upgraded
+database does not repeat data migration. Restore backups only with the app closed.
 
-Migration does not infer seasons from dates or distances from historical labels.
-Existing values remain intact, with unknown season/distance fields set to NULL.
-Legacy events are visible under **Unassigned (legacy)** and can be assigned a
-season explicitly. Keep the backup; restoration should be performed with the app
-stopped and all database connections closed.
+Previously unassigned events infer their August–July season from valid dates:
+September 2026 belongs to Season 2027. Explicit seasons are preserved. Invalid
+dates and conflicting inferred identities remain unassigned for correction.
+Known competed categories supply missing competition distances; explicit distances
+remain unchanged. Unknown distances cannot supply a seed. Times are never estimated.
 
-## Storage and queries
+`athlete_seasons` stores category by season; original result categories remain
+unchanged. The old profile category column remains for compatibility. Reports use
+season-scoped events, attendance and awards. Athlete identities, affiliation and
+record benchmarks remain shared. Seed lookup uses only the current season and two
+previous seasons, with matching discipline/distance and current-season priority.
 
-- Operational `events` and historical `season_events` have nullable `season_year`.
-  New UI imports require an explicit season value. Nullable repository inputs
-  remain supported for legacy compatibility; the import service requires a season.
-- Results inherit season through their event. Event deduplication includes season,
-  including a separate uniqueness guard for unassigned events.
-- `athlete_seasons(athlete_id, season_year, category)` stores category by season.
-  Result categories retain exactly what was imported. Seasonal category summaries
-  use the latest event date (event ID breaks ties), independently of import order.
-  The original athlete profile category column remains for legacy compatibility
-  and is no longer overwritten by subsequent imports.
-- `season_results.run_distance` and `swim_distance` store positive integer metres
-  when supplied. Unknown distances are excluded from distance-matched lookup.
-- `season_snapshot(path, year)` scopes events, results, attendance and awards to
-  that year; `None` selects legacy records. The default all-season snapshot remains
-  available to existing internal callers. Interactive Reports pass the selected year.
-- `historical_performances` returns only matching discipline/distance candidates
-  from the requested and immediately preceding seasons, with source event, category,
-  date, time and status. Seed selection/validity rules belong to the later seed engine.
-- Athlete identity, affiliation and record benchmarks remain shared. Category
-  membership and competed result categories are season-specific. Full identity
-  ambiguity resolution and generated-entry integration belong to subsequent stages.
+Captured workflow times use the same historical tables. A persistent session key
+makes repeated saves update the same event. Points are not manufactured. Published
+imports can replace captured results, but captured times cannot overwrite published
+results. Conflicting athlete identities require resolution before saving history.
 
-Focused tests cover legacy backup/migration/idempotency/rollback, category changes,
-season correction, scoped reporting and resets, and historical distance boundaries.
+Operational athlete rows remain the authoritative run/swim assignments and also
+store participation, distances, seeds and sources. Events record heat source,
+run configuration, assignment revision, approval and export revision. SQLite
+triggers invalidate approval/outputs when assignments or relevant metadata change,
+including Phase 2 runner moves. Finishing-position mapping and captured times are
+separate from starting positions and do not reseed heats.
+
+Every export is built from one approved snapshot and saved together only if that
+revision remains current. Concurrent edits require reloading. Stale files are not
+offered as current downloads; organisers must replace previously downloaded copies.
