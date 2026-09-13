@@ -6,14 +6,12 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from database.repository import create_event, replace_athletes, get_event, get_athletes
-from exporters.athlete_event_mapping import build_printable_athlete_mapping_xlsx
-from exporters.filenames import event_filename
-from exporters.swim_timekeeper import build_swim_timekeeper_xlsx
+from database.repository import create_event, replace_athletes, get_event, get_athletes, approve_heats
 from exporters.timedrops_json import TIMEDROPS_UTC_OFFSET, generate_timedrops_json, dumps_json
 from parsers.master_entries import parse_master_entries
 from parsers.master_entries_pdf import infer_pdf_event_defaults
 from validation.validators import validate_master
+from services.competition import infer_season
 
 
 def _generated_dir(db_path: str) -> Path:
@@ -29,6 +27,11 @@ def _render_persistent_event(db_path: str, event_id: int):
     athletes = get_athletes(db_path, event_id)
     if not event or not athletes:
         return False
+
+    from ui.heat_review import render as render_heat_review
+    if event["heat_source"] == "generated" or event["heat_status"] != "approved":
+        render_heat_review(db_path, event_id)
+        return True
 
     st.success("Event is already initialized. The persistent Master Dataset and Phase 1 exports are available.")
     st.subheader("Current Event")
@@ -46,51 +49,39 @@ def _render_persistent_event(db_path: str, event_id: int):
         st.warning("This legacy event has no confirmed Season. Its date has not been used to assign one automatically.")
     else:
         st.caption(f'Season: {event["season_year"]}')
-    st.subheader("Phase 1 Exports")
-
-    json_path = _json_path(db_path, event_id)
-    if json_path.exists():
-        json_data = json_path.read_text(encoding="utf-8")
-    else:
-        json_data = ""
-        st.warning("The stored meet_program.json file is not available for this event. Re-upload the Master Entries workbook if it needs to be regenerated.")
-
-    swim_xlsx = build_swim_timekeeper_xlsx(
-        athletes,
-        event["name"],
-        int(event["pool_lanes"]),
-    )
-    athlete_mapping_xlsx = build_printable_athlete_mapping_xlsx(athletes)
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.download_button(
-            "Download meet_program.json",
-            data=json_data,
-            file_name="meet_program.json",
-            mime="application/json",
-            type="primary",
-            disabled=not bool(json_data),
-            key=f"download_meet_program_{event_id}",
-        )
-    with col2:
-        st.download_button(
-            "Download Swim Timekeeper Sheets",
-            data=swim_xlsx,
-            type="primary",
-            file_name=f'{event["name"].strip() or "Event"} Swim Lanes.xlsx',
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            key=f"download_swim_lanes_{event_id}",
-        )
-    with col3:
-        st.download_button(
-            "Download Athlete Heat and Lanes List",
-            data=athlete_mapping_xlsx,
-            type="primary",
-            file_name=event_filename(event["name"], "Athlete Heat and Lanes List", "xlsx"),
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            key=f"download_athlete_list_{event_id}",
-        )
+    from ui.heat_review import render_event_settings
+    render_event_settings(db_path,dict(event))
+    render_operational_outputs(db_path,event_id)
     return True
+
+
+def render_operational_outputs(db_path,event_id):
+    import json
+    from services.heat_outputs import current_outputs,generate_outputs
+    st.subheader("Phase 1 Exports")
+    event=dict(get_event(db_path,event_id))
+    files=current_outputs(db_path,event_id)
+    if not files:
+        st.info("Operational files need generation for the approved assignments.")
+    if st.button("Generate / regenerate operational files",type="primary",key=f"generate_outputs_{event_id}"):
+        reference=json.loads((Path(__file__).resolve().parents[1]/"data"/"TimeDrops JSON example.json").read_text(encoding="utf-8"))
+        try:
+            generate_outputs(db_path,event_id,reference)
+        except ValueError as exc:
+            st.error(str(exc))
+        else:
+            st.rerun()
+    labels={
+        "Combined Heats.pdf":("Download Combined Heat PDF",f"download_heats_pdf_{event_id}"),
+        "Master Entries Heats.xlsx":("Download Master Entries Heats",f"download_heats_xlsx_{event_id}"),
+        "Athlete Run Swim Lane Sheet.xlsx":("Download Athlete Run/Swim Lane Sheet",f"download_athlete_list_{event_id}"),
+        "Swim Timekeeper Sheets.xlsx":("Download Swim Timekeeper Sheets",f"download_swim_lanes_{event_id}"),
+        "meet_program.json":("Download meet_program.json",f"download_meet_program_{event_id}"),
+    }
+    for filename,(mime,content) in files.items():
+        label,key=labels[filename]
+        st.download_button(label,data=content,file_name=filename,mime=mime,key=key)
+    st.caption("Files belong to the approved heat revision. After changing assignments, regenerate and replace any copies already downloaded.")
 
 
 def render(db_path: str, reference_json: dict):
@@ -103,6 +94,9 @@ def render(db_path: str, reference_json: dict):
         return
 
     upload_key = f"master_entries_{st.session_state.get('new_session_token', 0)}"
+    heat_source = st.radio("Start event", ["Generate heats from entries", "Use existing heats"],
+        index=1, horizontal=True, key=f"heat_source_{st.session_state.get('new_session_token', 0)}")
+    generated = heat_source == "Generate heats from entries"
     uploaded = st.file_uploader(
         "Master Entries Excel or PDF",
         type=["xlsx", "pdf"],
@@ -136,6 +130,9 @@ def render(db_path: str, reference_json: dict):
 
     is_pdf = source_type == ".pdf"
     pdf_defaults = infer_pdf_event_defaults(uploaded.name) if is_pdf else None
+    metadata=parsed.get("metadata",{})
+    defaults=dict(pdf_defaults or {})
+    defaults.update(metadata)
     inferred_lanes = max(
         [int(r["lane"]) for r in parsed["swimming_records"] if r["lane"] is not None] or [8]
     )
@@ -150,26 +147,28 @@ def render(db_path: str, reference_json: dict):
     with col1:
         meet_name = st.text_input(
             "Meet name",
-            value=(pdf_defaults["meet_name"] if pdf_defaults else Path(uploaded.name).stem),
+            value=defaults.get("meet_name",Path(uploaded.name).stem),
         )
         host_team = st.text_input(
             "Host / Team name",
-            value=(pdf_defaults["host_team"] if pdf_defaults else "Gauteng North Biathlon"),
+            value=defaults.get("host_team","Gauteng North Biathlon"),
         )
     with col2:
-        default_start = date.fromisoformat(pdf_defaults["start_date"]) if pdf_defaults and pdf_defaults["start_date"] else date.today()
+        default_start = date.fromisoformat(defaults["start_date"]) if defaults.get("start_date") else date.today()
         start_date = st.date_input("Meet start date", value=default_start)
         season_year = st.number_input("Season", min_value=1900, max_value=9999,
-            value=date.today().year, step=1,
-            help="Confirm the competition season independently of the meet date.")
+            value=metadata.get("season_year",infer_season(start_date)), step=1, key=f"event_season_{start_date}",
+            help="Inferred from the meet date: seasons run August-July. Override if needed.")
         course = st.selectbox(
             "Pool course",
             ["LCM", "SCM"],
-            index=0 if (pdf_defaults or {}).get("course", "SCM") == "LCM" else 1,
+            index=0 if defaults.get("course", "SCM") == "LCM" else 1,
         )
     with col3:
-        pool_lanes = st.number_input("Pool lanes", min_value=1, max_value=12, value=inferred_lanes, step=1)
-        meet_type = st.selectbox("Meet type", ["Local", "Interprovincial"], index=0)
+        pool_lanes = st.number_input("Pool lanes", min_value=1, max_value=12,
+            value=metadata.get("pool_lanes",8 if generated else inferred_lanes), step=1)
+        meet_types=["Local", "Interprovincial", "National"]
+        meet_type = st.selectbox("Meet type", meet_types, index=meet_types.index(defaults.get("meet_type","Local")))
 
     st.subheader("Imported Master Dataset")
     preview_columns = ["athlete_number", "athlete_name", "group_name"]
@@ -187,6 +186,12 @@ def render(db_path: str, reference_json: dict):
     if parsed["swimming_only_athletes"]:
         st.warning(f"{len(parsed['swimming_only_athletes'])} athlete(s) appear in swimming but not running entries.")
 
+    if generated:
+        from ui.heat_review import render_entries
+        render_entries(db_path, parsed, uploaded, meet_name, host_team, start_date,
+                       course, int(pool_lanes), meet_type, int(season_year))
+        return
+
     if st.button("Confirm Data Set and Initialize Event", type="primary"):
         if not meet_name.strip() or not host_team.strip():
             st.error("Meet name and host/team name are required.")
@@ -200,9 +205,14 @@ def render(db_path: str, reference_json: dict):
             event_id = create_event(
                 db_path, meet_name.strip(), host_team.strip(), start_date.isoformat(), course,
                 int(pool_lanes), meet_type=meet_type, season_year=int(season_year),
+                run_positions=[int(p.strip()) for p in metadata["run_positions"].split(",")] if metadata.get("run_positions") else None,
             )
-            replace_athletes(db_path, event_id, athletes)
+            from services.heats import enrich_imported
+            replace_athletes(db_path, event_id, enrich_imported(athletes))
+            approve_heats(db_path,event_id,get_event(db_path,event_id)["heat_revision"])
+            from services.heat_outputs import generate_outputs
             st.session_state.event_id = event_id
+            generate_outputs(db_path,event_id,reference_json)
             st.session_state.timedrops_json = dumps_json(json_data)
             generated_dir = _generated_dir(db_path)
             generated_dir.mkdir(parents=True, exist_ok=True)
@@ -213,29 +223,3 @@ def render(db_path: str, reference_json: dict):
         except Exception as exc:
             st.error(f"Initialization failed: {exc}")
             return
-
-    if st.session_state.get("event_id"):
-        st.divider()
-        st.subheader("Phase 1 Exports")
-        json_data = st.session_state.get("timedrops_json", "")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.download_button(
-                "Download meet_program.json", data=json_data, file_name="meet_program.json",
-                mime="application/json", type="primary"
-            )
-        with col2:
-            swim_xlsx = build_swim_timekeeper_xlsx(athletes, meet_name.strip(), int(pool_lanes))
-            safe_name = meet_name.strip() or "Event"
-            st.download_button(
-                "Download Swim Timekeeper Sheets", data=swim_xlsx, type="primary",
-                file_name=f"{safe_name} Swim Lanes.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-        with col3:
-            athlete_mapping_xlsx = build_printable_athlete_mapping_xlsx(athletes)
-            st.download_button(
-                "Download Athlete Heat and Lanes List", data=athlete_mapping_xlsx, type="primary",
-                file_name=event_filename(meet_name.strip(), "Athlete Heat and Lanes List", "xlsx"),
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )

@@ -14,6 +14,7 @@ from database.season_repository import (EventAlreadyExists, reset_season_databas
 from parsers.season_results import parse_season_results
 from parsers.season_results.models import COMPETITION_TYPES
 from services.season_results_service import athlete_rows, import_event, import_summary
+from services.competition import infer_season
 from ui.season_reports import render as render_reports
 
 VIEWS = ("Import Results", "Imported Events", "Athlete Database", "Reports")
@@ -79,8 +80,9 @@ def _imports(db_path):
                 name = st.text_input("Event name", event.name, key=f"season_name_{token}")
                 event_date = st.date_input("Event date", value=event.event_date, key=f"season_date_{token}")
                 season_year = st.number_input("Season", min_value=1900, max_value=9999,
-                    value=event.season_year or date.today().year, step=1, key=f"season_year_{token}",
-                    help="Confirm the competition season. It can differ from the event's calendar year.")
+                    value=event.season_year or infer_season(event_date or date.today()), step=1,
+                    key=f"season_year_{token}_{event_date}",
+                    help="August-December belongs to the following year's season. Override if needed.")
                 competition_type = st.selectbox("Competition type", COMPETITION_TYPES,
                     index=COMPETITION_TYPES.index(event.competition_type) if event.competition_type else None,
                     placeholder="Confirm competition type", key=f"season_type_{token}")
@@ -196,7 +198,7 @@ def _reset_database_controls(db_path, snapshot, season_year=None):
 
 def render(base_dir):
     st.header("Season Results Database")
-    st.caption("One historical database holds all seasons. Season is selected explicitly, independently of event date.")
+    st.caption("Seasons end in July: August-December belongs to the following year's season. Inferred seasons can be corrected.")
     if st.session_state.pop("season_reset_notice", False):
         st.success("The season database has been reset. You can import results for a new season.")
     try:
@@ -222,12 +224,13 @@ def render(base_dir):
         st.warning("These records have no confirmed season and are excluded from historical seed lookup. Assign a season in Imported Events.")
     if view == "Imported Events":
         _events(snapshot)
-        if selected_year is None and snapshot["events"]:
-            with st.expander("Assign a season to a legacy event"):
+        if snapshot["events"]:
+            with st.expander("Correct an event's season"):
                 choices = {e["id"]: e for e in snapshot["events"]}
                 event_id = st.selectbox("Event", list(choices),
                     format_func=lambda key: f"{choices[key]['name']} · {choices[key]['event_date']}")
-                year = st.number_input("Confirmed season", min_value=1900, max_value=9999, value=date.today().year)
+                year = st.number_input("Confirmed season", min_value=1900, max_value=9999,
+                    value=choices[event_id]["season_year"] or infer_season(choices[event_id]["event_date"]), key=f"correct_year_{event_id}")
                 if st.button("Assign season"):
                     try:
                         assign_event_season(db_path, event_id, int(year))

@@ -266,6 +266,14 @@ except Exception as exc:
 # PHASE RENDERING
 # ============================================================================
 curr = st.session_state.current_phase
+if st.session_state.event_id:
+    current_event = get_event(str(DB_PATH), st.session_state.event_id)
+    if current_event and current_event["heat_status"] == "stale" and curr != 1:
+        st.warning("Heat assignments changed. Operational PDF/Excel/JSON files are stale; return to Event Setup to review, approve and regenerate them.")
+    if current_event and current_event["heat_source"] == "generated" and current_event["heat_status"] == "draft":
+        if curr > 1:
+            st.warning("Review and approve running and swimming heats in Event Setup before continuing.")
+            st.stop()
 
 try:
     if curr == 1:

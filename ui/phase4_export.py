@@ -1,4 +1,5 @@
 from __future__ import annotations
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -164,6 +165,19 @@ def render(db_path: str, event_id: int):
         )
 
     st.divider()
+    st.subheader("Historical results")
+    st.caption(f"Season: {event['season_year']}. Save captured times for future seeding and Reports. Published points are preserved when official results already exist.")
+    if st.button("Save / update captured times in history",key=f"save_history_{event_id}",disabled=not any(a.get("run_time") or a.get("swim_time") for a in athletes)):
+        from database.season_db import season_database_path,init_season_db
+        from services.workflow_history import save_workflow_results
+        history_path=season_database_path(Path(__file__).resolve().parents[1])
+        try:
+            init_season_db(history_path)
+            saved_id=save_workflow_results(db_path,history_path,event_id)
+        except (ValueError,OSError) as exc:
+            st.error(str(exc))
+        else:
+            st.success(f"Captured times saved to Season {event['season_year']} (historical event {saved_id}).")
     with st.container(key="phase4_reset_container"):
         reset_col, _reset_spacer = st.columns([2.2, 7.8])
         with reset_col:

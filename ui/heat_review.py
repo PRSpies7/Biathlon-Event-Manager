@@ -1,0 +1,237 @@
+"""Pre-event entry confirmation and run/swim heat review."""
+from pathlib import Path
+from hashlib import sha256
+import json
+
+import pandas as pd
+import streamlit as st
+
+from database.repository import create_event, get_event, get_athletes, replace_athletes, update_event
+from database.season_db import init_season_db, season_database_path
+from services.seeding import prepare_entries, display_seed, select_seed, time_hundredths
+from services.competition import distances, infer_season
+
+
+def render_event_settings(db_path,event):
+    with st.expander("Correct event season or lane configuration"):
+        with st.form(f"event_configuration_{event['id']}"):
+            year=st.number_input("Season",min_value=1900,max_value=9999,value=event["season_year"] or infer_season(event["start_date"]))
+            lanes=st.number_input("Pool lanes",min_value=1,max_value=12,value=int(event["pool_lanes"]))
+            positions=st.text_input("Run starting positions, inside to outside",",".join(map(str,json.loads(event["run_positions"]))))
+            if st.form_submit_button("Save event configuration"):
+                try:
+                    positions=[int(p.strip()) for p in positions.split(",")]
+                    if not positions or min(positions)<1 or len(set(positions))!=len(positions):
+                        raise ValueError("Run positions must be distinct positive numbers, ordered inside to outside.")
+                    update_event(db_path,event["id"],season_year=int(year),pool_lanes=int(lanes),run_positions=json.dumps(positions))
+                    if int(year)!=event["season_year"] and event["heat_source"]=="generated":
+                        from database.repository import save_heat_assignments
+                        history_path=season_database_path(Path(__file__).resolve().parents[1])
+                        init_season_db(history_path)
+                        rows=get_athletes(db_path,event["id"])
+                        revision=get_event(db_path,event["id"])["heat_revision"]
+                        for row in rows:
+                            for discipline in ("run","swim"):
+                                if not str(row.get(discipline+"_seed_source") or "").startswith("Manual"):
+                                    row[discipline+"_seed"],row[discipline+"_seed_source"]=select_seed(
+                                        history_path,row.get("history_athlete_id"),discipline,row.get(discipline+"_distance"),int(year))
+                        save_heat_assignments(db_path,event["id"],rows,revision)
+                except ValueError as exc:
+                    st.error(str(exc))
+                else:
+                    st.rerun()
+
+
+def render_entries(db_path, parsed, uploaded, name, host, start_date, course, lanes, meet_type, year):
+    history_path = season_database_path(Path(__file__).resolve().parents[1])
+    init_season_db(history_path)
+    token = sha256(uploaded.getvalue()).hexdigest()[:12] + f"_{year}"
+    matches = {}
+    try:
+        entries, ambiguous = prepare_entries(parsed, history_path, year)
+    except ValueError as exc:
+        st.error(str(exc))
+        return
+    unresolved = False
+    for issue in ambiguous:
+        row = issue["entry"]
+        choices = {a["id"]: f"{a['athlete_number']} · {a['athlete_name']}" for a in issue["candidates"]}
+        choices[0] = "New / visiting athlete - no historical link"
+        selection = st.selectbox(f"Confirm identity: {row['athlete_number']} · {row['athlete_name']}",
+            list(choices), format_func=choices.get, index=None, key=f"identity_{token}_{row['athlete_number']}")
+        if selection is None:
+            unresolved = True
+        else:
+            matches[row["athlete_number"]] = selection or None
+    if matches:
+        try:
+            entries, _ = prepare_entries(parsed, history_path, year, matches)
+        except ValueError as exc:
+            st.error(str(exc))
+            return
+    st.subheader("Entries and historical seeds")
+    metadata = pd.DataFrame([{"Athlete": r["athlete_number"], "Name": r["athlete_name"],
+        "Age group": r["group_name"], "Gender": r["gender"],
+        "Run distance": r["run_distance"], "Swim distance": r["swim_distance"]} for r in entries])
+    edited = st.data_editor(metadata, hide_index=True, key=f"entry_metadata_{token}",
+        disabled=["Athlete", "Name"], column_config={
+            "Gender": st.column_config.SelectboxColumn(options=["F", "M"]),
+            "Run distance": st.column_config.NumberColumn(min_value=1, step=1),
+            "Swim distance": st.column_config.SelectboxColumn(options=[25,50,100])})
+    invalid = unresolved
+    for entry, (_, row) in zip(entries, edited.iterrows()):
+        entry["group_name"], entry["gender"] = str(row["Age group"] or ""), str(row["Gender"] or "")
+        if entry["gender"] not in {"F", "M"} or not entry["group_name"].strip():
+            invalid = True
+        expected = distances(entry["group_name"])
+        for index, discipline in enumerate(("run", "swim")):
+            value = row[f"{discipline.title()} distance"]
+            distance = None if pd.isna(value) else int(value)
+            if entry[f"{discipline}_entered"] and not distance:
+                invalid = True
+            if distance and expected[index] and distance != expected[index]:
+                st.warning(f"{entry['athlete_name']}: {discipline} distance {distance} m differs from the category rule ({expected[index]} m). The confirmed event distance will be used.")
+            if entry[f"{discipline}_distance"] != distance:
+                entry[f"{discipline}_seed"], entry[f"{discipline}_seed_source"] = select_seed(
+                    history_path, entry["history_athlete_id"], discipline, distance, year)
+            entry[f"{discipline}_distance"] = distance
+    st.dataframe([{"Athlete":r["athlete_number"], "Name":r["athlete_name"],
+        "Run seed":display_seed(r["run_seed"]), "Run source":r["run_seed_source"],
+        "Swim seed":display_seed(r["swim_seed"]), "Swim source":r["swim_seed_source"]} for r in entries], hide_index=True)
+    confirmed = st.checkbox(f"Confirm pool capacity: {lanes} lanes", key=f"confirm_lanes_{token}_{lanes}")
+    positions = st.text_input("Run starting positions, inside to outside", parsed.get("metadata",{}).get("run_positions","1,2,3,4,5,6,7,8,9,10,11,12"),
+        help="Enter the actual available starting positions. Automatic heats never exceed 12 runners.")
+    try:
+        positions = [int(p.strip()) for p in positions.split(",")]
+        if not positions or min(positions) < 1 or len(set(positions)) != len(positions):
+            raise ValueError()
+    except ValueError:
+        st.error("Run positions must be distinct positive numbers, ordered from inside to outside.")
+        invalid = True
+    if invalid:
+        st.warning("Resolve identity choices and missing category, gender or discipline distances before continuing.")
+    if st.button("Confirm Entries and Initialize Event", type="primary", disabled=invalid or not confirmed):
+        if not name.strip() or not host.strip():
+            st.error("Meet name and host/team name are required.")
+            return
+        event_id = create_event(db_path,name.strip(),host.strip(),start_date.isoformat(),course,lanes,
+            meet_type=meet_type,season_year=year,heat_source="generated",run_positions=positions)
+        replace_athletes(db_path,event_id,entries)
+        st.session_state.event_id = event_id
+        st.rerun()
+
+
+def render(db_path, event_id):
+    event, entries = dict(get_event(db_path,event_id)), get_athletes(db_path,event_id)
+    st.subheader(f"{event['name']} · Season {event['season_year']}")
+    render_event_settings(db_path,event)
+    st.dataframe([{"Athlete":a["athlete_number"],"Name":a["athlete_name"],"Age group":a["group_name"],
+        "Run seed":display_seed(a["run_seed"]),"Run source":a["run_seed_source"],
+        "Swim seed":display_seed(a["swim_seed"]),"Swim source":a["swim_seed_source"]} for a in entries], hide_index=True)
+    from services.heats import generate_heats, validate_heats, DISCIPLINES, enrich_imported
+    from database.repository import save_heat_assignments, approve_heats
+    if event["heat_source"]=="imported":
+        entries=enrich_imported(entries)
+    has_heats=any(a.get("running_heat") or a.get("swimming_heat") for a in entries)
+    replace_manual=False
+    if has_heats and event["heat_source"]=="generated":
+        replace_manual=st.checkbox("Replace current assignments with newly generated heats",key=f"regenerate_{event_id}_{event['heat_revision']}")
+    if event["heat_source"]=="generated" and st.button("Generate run and swim heats", type="primary",disabled=has_heats and not replace_manual):
+        try:
+            rows = generate_heats(entries,event)
+            save_heat_assignments(db_path,event_id,rows,event["heat_revision"])
+        except ValueError as exc:
+            st.error(str(exc))
+        else:
+            st.rerun()
+    if not has_heats:
+        return
+    if event["heat_status"]=="stale":
+        st.warning("Assignments changed after approval. Existing operational files are stale; review both disciplines, approve and regenerate them.")
+    for tab,(discipline,prefix) in zip(st.tabs(["Running heats","Swimming heats"]),DISCIPLINES.items()):
+        with tab:
+            participating=[a for a in entries if a.get(discipline+"_entered") or a.get(prefix+"_heat") is not None]
+            if not participating:
+                st.info(f"No {discipline} entries.")
+                continue
+            st.caption("Edit heat numbers to move athletes earlier/later. Starting positions are separate from Phase 2 finishing positions. Save edits before approval.")
+            table=pd.DataFrame([{"Athlete":a["athlete_number"],"Name":a["athlete_name"],"Age group":a["group_name"],
+                "Gender":a.get("gender"),"Distance":a.get(discipline+"_distance"),"Heat":a.get(prefix+"_heat"),
+                "Start position" if discipline=="run" else "Lane":a.get(prefix+"_lane"),
+                "Seed":display_seed(a.get(discipline+"_seed")),"Seed source":a.get(discipline+"_seed_source") or "NT"}
+                for a in sorted(participating,key=lambda a:(a.get(prefix+"_heat") or 0,a.get(prefix+"_lane") or 0))])
+            position_label="Start position" if discipline=="run" else "Lane"
+            edited=st.data_editor(table,hide_index=True,num_rows="fixed",key=f"heat_editor_{event_id}_{discipline}_{event['heat_revision']}",
+                disabled=["Athlete","Name","Seed source"],column_config={
+                    "Heat":st.column_config.NumberColumn(min_value=1,step=1),
+                    position_label:st.column_config.NumberColumn(min_value=1,step=1),
+                    "Gender":st.column_config.SelectboxColumn(options=["F","M"]),
+                    "Distance":st.column_config.NumberColumn(min_value=1,step=1)})
+            if st.button(f"Save {discipline} heat edits",key=f"save_heats_{discipline}"):
+                try:
+                    changes={r["Athlete"]:r for _,r in edited.iterrows()}
+                    for entry in entries:
+                        if entry["athlete_number"] not in changes:
+                            continue
+                        row=changes[entry["athlete_number"]]
+                        old_distance=entry.get(discipline+"_distance")
+                        old_seed=entry.get(discipline+"_seed")
+                        for label,field in (("Heat",prefix+"_heat"),(position_label,prefix+"_lane"),("Distance",discipline+"_distance")):
+                            if pd.isna(row[label]) or float(row[label])!=int(row[label]):
+                                raise ValueError(f"{label} requires a whole number.")
+                            entry[field]=int(row[label])
+                        entry["group_name"],entry["gender"]=str(row["Age group"]),str(row["Gender"])
+                        text=str(row["Seed"]).strip()
+                        value=None if text.upper() in {"","NT"} else time_hundredths(text)
+                        if value is None and text.upper() not in {"","NT"}:
+                            raise ValueError("Enter a valid seed time such as 01:20.50, or NT.")
+                        if entry.get(discipline+"_distance")!=old_distance and value==old_seed:
+                            value=None
+                            entry[discipline+"_seed_source"]="NT - distance changed; select a valid seed or override explicitly"
+                        if value!=entry.get(discipline+"_seed"):
+                            entry[discipline+"_seed"],entry[discipline+"_seed_source"]=value,"Manual override"
+                    errors,_=validate_heats(entries,event)
+                    if errors:
+                        raise ValueError("\n".join(errors))
+                    save_heat_assignments(db_path,event_id,entries,event["heat_revision"])
+                except ValueError as exc:
+                    st.error(str(exc))
+                else:
+                    st.rerun()
+            with st.expander("Move or swap an athlete"):
+                choices={a["athlete_number"]:a for a in participating}
+                athlete=st.selectbox("Athlete",list(choices),format_func=lambda key:choices[key]["athlete_name"],key=f"move_athlete_{discipline}")
+                heat=st.number_input("Move to heat (lower = earlier)",min_value=1,value=int(choices[athlete].get(prefix+"_heat") or 1),key=f"target_heat_{discipline}_{athlete}")
+                lane=st.number_input(position_label,min_value=1,value=int(choices[athlete].get(prefix+"_lane") or 1),key=f"target_lane_{discipline}_{athlete}")
+                swap=st.selectbox("Swap with",[None,*[a for a in choices if a!=athlete]],
+                    format_func=lambda key:"No swap" if key is None else choices[key]["athlete_name"],key=f"swap_{discipline}")
+                if st.button("Apply move / swap",key=f"apply_move_{discipline}"):
+                    selected=choices[athlete]
+                    if swap:
+                        other=choices[swap]
+                        for field in (prefix+"_heat",prefix+"_lane"):
+                            selected[field],other[field]=other[field],selected[field]
+                    else:
+                        selected[prefix+"_heat"],selected[prefix+"_lane"]=int(heat),int(lane)
+                    errors,_=validate_heats(entries,event)
+                    if errors:
+                        st.error("\n".join(errors))
+                    else:
+                        save_heat_assignments(db_path,event_id,entries,event["heat_revision"])
+                        st.rerun()
+    errors,warnings=validate_heats(entries,event)
+    for warning in warnings:
+        st.warning(warning)
+    for error in errors:
+        st.error(error)
+    if event["heat_status"]!="approved":
+        reviewed_run=st.checkbox("I have reviewed the running heats",key=f"review_run_{event_id}_{event['heat_revision']}")
+        reviewed_swim=st.checkbox("I have reviewed the swimming heats",key=f"review_swim_{event_id}_{event['heat_revision']}")
+        if st.button("Approve final run and swim heats",type="primary",disabled=bool(errors) or not(reviewed_run and reviewed_swim)):
+            save_heat_assignments(db_path,event_id,entries,event["heat_revision"])
+            approve_heats(db_path,event_id,get_event(db_path,event_id)["heat_revision"])
+            st.rerun()
+    else:
+        st.success("Both disciplines approved. Operational files use these exact assignments.")
+        from ui.phase1_setup import render_operational_outputs
+        render_operational_outputs(db_path,event_id)
