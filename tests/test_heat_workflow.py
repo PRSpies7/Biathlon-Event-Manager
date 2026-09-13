@@ -78,7 +78,7 @@ def test_programme_sequence_opening_capacity_and_reseeded_moves():
     destination=next(r["running_heat"] for r in field if r["running_heat"]!=selected["running_heat"])
     moved=move_or_swap(field,settings(),"run",selected["athlete_number"],destination)
     members=sorted([r for r in moved if r["running_heat"]==destination],key=lambda r:r["run_seed"])
-    assert [r["running_lane"] for r in members]==list(range(12,12-len(members),-1))
+    assert [r["running_lane"] for r in members]==list(range(len(members),0,-1))
     assert all(r["swimming_lane"]==before[r["athlete_number"]]["swimming_lane"] for r in moved)
     swim=generate_heats(entries(7),settings(),optimise=False)
     swapped=move_or_swap(swim,settings(),"swim",swim[0]["athlete_number"],1,swim[-1]["athlete_number"])
@@ -164,7 +164,13 @@ def test_initial_structure_nt_and_lane_assignment():
     assert centre_out(8)==[4,5,3,6,2,7,1,8]
     small=generate_heats(entries(2),settings(lanes=8))
     assert [r["swimming_lane"] for r in small]==[4,5]
-    assert [r["running_lane"] for r in small]==[12,11]
+    assert [r["running_lane"] for r in small]==[2,1]
+    from services.heats import reseed_run_positions
+    small[0]["running_lane"],small[1]["running_lane"]=12,11
+    fixed=reseed_run_positions(small)
+    assert [r["running_lane"] for r in fixed]==[2,1]
+    assert [(r["running_heat"],r["swimming_heat"],r["swimming_lane"]) for r in fixed]==[(r["running_heat"],r["swimming_heat"],r["swimming_lane"]) for r in small]
+    assert [r["running_lane"] for r in small]==[12,11]  # No mutation before saving.
 
 
 def test_local_interprovincial_and_national_underfill_rules():

@@ -51,6 +51,19 @@ def reorder_heat(entries, discipline, heat_number, new_position):
     return rows
 
 
+def reseed_run_positions(entries):
+    """Keep heat membership and assign contiguous positions, fastest outermost."""
+    rows = deepcopy(entries)
+    heats = defaultdict(list)
+    for row in rows:
+        if row.get("running_heat") is not None:
+            heats[row["running_heat"]].append(row)
+    for members in heats.values():
+        for row, position in zip(sorted(members,key=lambda r:seed_order(r,"run")),range(len(members),0,-1)):
+            row["running_lane"] = position
+    return rows
+
+
 def move_or_swap(entries, event, discipline, athlete_number, target_heat, swap_number=None):
     """Change membership and reseed only the affected heats; keep other manual edits."""
     rows = deepcopy(entries)
@@ -69,7 +82,7 @@ def move_or_swap(entries, event, discipline, athlete_number, target_heat, swap_n
         members = [a for a in rows if a.get(prefix+"_heat") == heat]
         if discipline == "swim" and len(members) > int(event["pool_lanes"]):
             raise ValueError("The destination swim heat is full. Swap athletes or choose another heat.")
-        positions = range(max(12,len(members)),0,-1) if discipline == "run" else centre_out(int(event["pool_lanes"]))
+        positions = range(len(members),0,-1) if discipline == "run" else centre_out(int(event["pool_lanes"]))
         for row, lane in zip(sorted(members,key=lambda a:seed_order(a,discipline)), positions):
             row[prefix+"_lane"] = lane
     errors, _ = validate_heats(rows,event)
@@ -218,8 +231,8 @@ def generate_heats(entries, event, *, optimise=True):
         heats = _initial(rows,discipline,capacity,event["meet_type"])
         if optimise:
             heats = optimise_heats(heats,discipline,capacity,event["meet_type"])
-        lanes = list(reversed(positions)) if discipline == "run" else centre_out(capacity)
         for number,heat in enumerate(heats,1):
+            lanes = range(len(heat),0,-1) if discipline == "run" else centre_out(capacity)
             for row,lane in zip(sorted(heat,key=lambda r:seed_order(r,discipline)),lanes):
                 row[prefix+"_heat"],row[prefix+"_lane"] = number,lane
     return rows

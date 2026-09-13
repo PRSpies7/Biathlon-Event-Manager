@@ -153,6 +153,15 @@ def render(db_path, event_id):
             if not participating:
                 st.info(f"No {discipline} entries.")
                 continue
+            if discipline=="run" and st.button("Reseed run starting positions",key=f"reseed_run_{event_id}",
+                    help="Number each heat from 1, fastest on the outside. Keeps current heats and replaces run-position overrides."):
+                from services.heats import reseed_run_positions
+                try:
+                    save_heat_assignments(db_path,event_id,reseed_run_positions(entries),event["heat_revision"])
+                except ValueError as exc:
+                    st.error(str(exc))
+                else:
+                    st.rerun()
             heat_numbers=sorted({a[prefix+"_heat"] for a in participating if a.get(prefix+"_heat") is not None})
             with st.expander("Move an entire heat"):
                 if len(heat_numbers)<2:
