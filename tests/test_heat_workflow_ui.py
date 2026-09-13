@@ -16,6 +16,44 @@ from database.season_repository import store_event, season_snapshot
 from parsers.season_results.models import NormalizedEvent, Result, LEAGUE
 
 
+def test_unsaved_table_edits_block_moves_and_survive_saving_other_discipline(tmp_path,monkeypatch):
+    import json
+    from streamlit.proto.WidgetStates_pb2 import WidgetState
+    from database.repository import create_event,replace_athletes
+    app=app_test(tmp_path,monkeypatch)
+    db=tmp_path/"data/biathlon_events.sqlite"
+    eid=create_event(db,"Table drafts","GN","2026-09-01","SCM",6,heat_source="generated")
+    rows=generate_heats(entries(13),settings(),optimise=False)
+    replace_athletes(db,eid,rows)
+    revision=get_event(db,eid)["heat_revision"]
+    app.session_state["event_id"]=eid
+    app.run()
+    identifiers={}
+    states=app._tree.get_widget_states()
+    for discipline,prefix in (("run","running"),("swim","swimming")):
+        identifiers[discipline]=sorted(rows,key=lambda r:(r[prefix+"_heat"],r[prefix+"_lane"]))[0]["athlete_number"]
+        editor=app.dataframe[1 if discipline=="run" else 2]
+        states.widgets.append(WidgetState(id=editor.proto.id,string_value=json.dumps({"edited_rows":{0:{"Heat":9}},"added_rows":[],"deleted_rows":[]})))
+    app._run(widget_state=states)
+    assert not app.exception
+    assert any("Unsaved table changes" in w.value for w in app.warning)
+    assert app.button(key="apply_move_run").disabled and app.button(key="apply_move_swim").disabled
+    assert app.button(key="apply_whole_heat_run").disabled
+    app.button(key="save_heats_run").click()
+    states=app._tree.get_widget_states()
+    for editor in app.dataframe[1:]:
+        states.widgets.append(WidgetState(id=editor.proto.id,string_value=json.dumps({"edited_rows":{0:{"Heat":9}},"added_rows":[],"deleted_rows":[]})))
+    app._run(widget_state=states)
+    assert not app.exception and not app.error, [e.value for e in app.error]
+    assert app.button(key="apply_move_run").disabled  # Swim changes still pending.
+    app.button(key="save_heats_swim").click().run()
+    assert not app.exception and not app.error
+    assert not app.button(key="apply_move_run").disabled
+    saved={r["athlete_number"]:r for r in get_athletes(db,eid)}
+    assert saved[identifiers["run"]]["running_heat"]==9
+    assert saved[identifiers["swim"]]["swimming_heat"]==9
+
+
 def test_whole_heat_reordering_in_both_disciplines(tmp_path,monkeypatch):
     from database.repository import create_event,replace_athletes,approve_heats
     app=app_test(tmp_path,monkeypatch)

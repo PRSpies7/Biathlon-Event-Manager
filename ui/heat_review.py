@@ -1,6 +1,7 @@
 """Pre-event entry confirmation and run/swim heat review."""
 from pathlib import Path
 from hashlib import sha256
+from copy import deepcopy
 import json
 
 import pandas as pd
@@ -16,12 +17,12 @@ def seed_source(row, discipline):
     return "NT" if row.get(discipline+"_seed") is None else row.get(discipline+"_seed_source") or "Manual override"
 
 
-def render_event_settings(db_path,event):
+def render_event_settings(db_path,event,pending_edits=False):
     with st.expander("Correct event season or lane configuration"):
         with st.form(f"event_configuration_{event['id']}"):
             year=st.number_input("Season",min_value=1900,max_value=9999,value=event["season_year"] or infer_season(event["start_date"]))
             lanes=st.number_input("Pool lanes",min_value=1,max_value=12,value=int(event["pool_lanes"]))
-            if st.form_submit_button("Save event configuration"):
+            if st.form_submit_button("Save event configuration",disabled=pending_edits):
                 try:
                     update_event(db_path,event["id"],season_year=int(year),pool_lanes=int(lanes))
                     if int(year)!=event["season_year"] and event["heat_source"]=="generated":
@@ -127,8 +128,20 @@ def render_entries(db_path, parsed, uploaded, name, host, start_date, course, la
 
 def render(db_path, event_id):
     event, entries = dict(get_event(db_path,event_id)), get_athletes(db_path,event_id)
+    editor_keys={discipline:f"heat_editor_{event_id}_{discipline}_{event['heat_revision']}_{st.session_state.get(f'heat_editor_reset_{event_id}_{discipline}',0)}" for discipline in ("run","swim")}
+    carried=st.session_state.get(f"carried_heat_edits_{event_id}",{})
+    carried_drafts=carried.get("drafts",{}) if carried.get("revision")==event["heat_revision"] else {}
+    drafts={discipline:deepcopy(st.session_state.get(key,{})) for discipline,key in editor_keys.items()}
+    for discipline,base in carried_drafts.items():
+        merged=deepcopy(base)
+        for index,changes in drafts[discipline].get("edited_rows",{}).items():
+            merged.setdefault("edited_rows",{}).setdefault(index,{}).update(changes)
+        drafts[discipline]=merged
+    pending=[discipline for discipline,draft in drafts.items() if draft.get("edited_rows")]
     st.subheader(f"{event['name']} · Season {event['season_year']}")
-    render_event_settings(db_path,event)
+    if pending:
+        st.warning("Unsaved table changes: " + ", ".join(pending) + ". Click Save run heat edits / Save swim heat edits beneath the relevant table before moving heats or athletes, reseeding, approving or exporting.")
+    render_event_settings(db_path,event,pending_edits=bool(pending))
     st.subheader("Current entries, heats and seeds")
     st.dataframe([{"Athlete":a["athlete_number"],"Name":a["athlete_name"],"Age group":a["group_name"],
         "Run heat":a.get("running_heat"),"Run position":a.get("running_lane"),
@@ -143,7 +156,7 @@ def render(db_path, event_id):
     replace_manual=False
     if has_heats and event["heat_source"]=="generated":
         replace_manual=st.checkbox("Replace current assignments with newly generated heats",key=f"regenerate_{event_id}_{event['heat_revision']}")
-    if event["heat_source"]=="generated" and st.button("Generate run and swim heats", type="primary",disabled=has_heats and not replace_manual):
+    if event["heat_source"]=="generated" and st.button("Generate run and swim heats", type="primary",disabled=bool(pending) or (has_heats and not replace_manual)):
         try:
             rows = generate_heats(entries,event)
             save_heat_assignments(db_path,event_id,rows,event["heat_revision"])
@@ -162,6 +175,7 @@ def render(db_path, event_id):
                 st.info(f"No {discipline} entries.")
                 continue
             if discipline=="run" and st.button("Reseed run starting positions",key=f"reseed_run_{event_id}",
+                    disabled=bool(pending),
                     help="Number each heat from 1, fastest on the outside. Keeps current heats and replaces run-position overrides."):
                 from services.heats import reseed_run_positions
                 try:
@@ -179,7 +193,7 @@ def render(db_path, event_id):
                     destination=st.number_input("New place in programme",min_value=1,max_value=len(heat_numbers),
                         value=heat_numbers.index(moving_heat)+1,key=f"whole_heat_position_{event_id}_{discipline}_{moving_heat}_{event['heat_revision']}")
                     st.caption("Moves the whole heat and shifts the others. Heats are renumbered in order; athletes and their lanes stay together.")
-                    if st.button("Move entire heat",key=f"apply_whole_heat_{discipline}",disabled=destination==heat_numbers.index(moving_heat)+1):
+                    if st.button("Move entire heat",key=f"apply_whole_heat_{discipline}",disabled=bool(pending) or destination==heat_numbers.index(moving_heat)+1):
                         from services.heats import reorder_heat
                         try:
                             reordered=reorder_heat(entries,discipline,moving_heat,int(destination))
@@ -197,7 +211,7 @@ def render(db_path, event_id):
                 swap=st.selectbox("Swap with",[None,*[a for a in choices if a!=athlete]],
                     format_func=lambda key, labels=labels:"No swap" if key is None else labels[key],key=f"swap_{discipline}")
                 st.caption("Moves and swaps reseed positions in both affected heats. Use the table for a manual position override.")
-                if st.button("Apply move / swap",key=f"apply_move_{discipline}"):
+                if st.button("Apply move / swap",key=f"apply_move_{discipline}",disabled=bool(pending)):
                     try:
                         from services.heats import move_or_swap
                         moved=move_or_swap(entries,event,discipline,athlete,int(heat),swap)
@@ -213,8 +227,13 @@ def render(db_path, event_id):
                 "Seed":display_seed(a.get(discipline+"_seed")),"Seed source":seed_source(a,discipline)}
                 for a in sorted(participating,key=lambda a:(a.get(prefix+"_heat") or 0,a.get(prefix+"_lane") or 0))])
             position_label="Start position" if discipline=="run" else "Lane"
+            # Data editors cannot be assigned through session_state. Restore
+            # carried edits into their input table instead, keeping them unsaved.
+            for index,changes in carried_drafts.get(discipline,{}).get("edited_rows",{}).items():
+                for column,value in changes.items():
+                    table.at[int(index),column]=value
             st.subheader("Running heat assignments" if discipline=="run" else "Swimming heat assignments")
-            edited=st.data_editor(table,hide_index=True,num_rows="fixed",key=f"heat_editor_{event_id}_{discipline}_{event['heat_revision']}",
+            edited=st.data_editor(table,hide_index=True,num_rows="fixed",key=editor_keys[discipline],
                 disabled=["Athlete","Name","Seed source"],column_config={
                     "Heat":st.column_config.NumberColumn(min_value=1,step=1),
                     position_label:st.column_config.NumberColumn(min_value=1,step=1),
@@ -247,6 +266,13 @@ def render(db_path, event_id):
                     if errors:
                         raise ValueError("\n".join(errors))
                     save_heat_assignments(db_path,event_id,entries,event["heat_revision"])
+                    # Saving one discipline advances the shared revision. Carry
+                    # the other table's unsaved delta to its new widget key.
+                    revision=get_event(db_path,event_id)["heat_revision"]
+                    st.session_state[f"carried_heat_edits_{event_id}"]={"revision":revision,
+                        "drafts":{other:drafts[other] for other in pending if other!=discipline}}
+                    reset_key=f"heat_editor_reset_{event_id}_{discipline}"
+                    st.session_state[reset_key]=st.session_state.get(reset_key,0)+1
                 except ValueError as exc:
                     st.error(str(exc))
                 else:
@@ -261,11 +287,11 @@ def render(db_path, event_id):
     if event["heat_status"]!="approved":
         reviewed_run=st.checkbox("I have reviewed the running heats",key=f"review_run_{event_id}_{event['heat_revision']}")
         reviewed_swim=st.checkbox("I have reviewed the swimming heats",key=f"review_swim_{event_id}_{event['heat_revision']}")
-        if st.button("Approve final run and swim heats",type="primary",disabled=bool(errors) or not(reviewed_run and reviewed_swim)):
+        if st.button("Approve final run and swim heats",type="primary",disabled=bool(pending) or bool(errors) or not(reviewed_run and reviewed_swim)):
             save_heat_assignments(db_path,event_id,entries,event["heat_revision"])
             approve_heats(db_path,event_id,get_event(db_path,event_id)["heat_revision"])
             st.rerun()
-    else:
+    elif not pending:
         st.success("Both disciplines approved. Operational files use these exact assignments.")
         from ui.phase1_setup import render_operational_outputs
         render_operational_outputs(db_path,event_id)
