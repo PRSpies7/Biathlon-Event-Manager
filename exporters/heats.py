@@ -31,7 +31,7 @@ def build_heats_xlsx(rows,event):
     wb=Workbook()
     ws=wb.active
     ws.title="Heats"
-    for line in metadata(event):
+    for line in metadata(event)[:3]:
         ws.append([line])
     for discipline,prefix in (("run","running"),("swim","swimming")):
         ws.append([])
@@ -105,20 +105,10 @@ def build_heats_pdf(rows,event):
         text(26,height-28,prefix.title()+" Heats",12)
         text(26,height-44,metadata(event)[0],9,max_width=540)
         text(26,height-57," | ".join(metadata(event)[1:4]),8)
-        text(26,height-70," | ".join(metadata(event)[4:]),7,max_width=540)
         text(26,20,f"Season {event['season_year']} | Revision {event['heat_revision']} | Page {page}",8)
-        y=height-91
-    def heading(heat,members,discipline):
-        nonlocal y
-        pdf.setStrokeColor(line)
-        pdf.line(26,y,width-26,y)
-        labels=[(26,"#"),(94,"Athlete"),(250,"Group"),(395,"Lane"),(435,"Pos" if discipline=="run" else "Position"),(489,"Time")]
-        for x,label in labels:
-            text(x,y-14,label,8)
-        y-=23
-        pdf.line(26,y,width-26,y)
+        y=height-77
+    def heading_lines(heat,members,discipline):
         description="; ".join(dict.fromkeys(group_label(r,discipline) for r in members))
-        # Wrap long mixed-group headings without reducing them to unreadable text.
         words=f"Heat {heat} - {description}".split()
         lines=[]
         current=""
@@ -129,22 +119,32 @@ def build_heats_pdf(rows,event):
                 current=word
             else:
                 current=candidate
-        lines.append(current)
-        for value in lines:
+        return [*lines,current]
+    def heading(heat,members,discipline):
+        nonlocal y
+        pdf.setStrokeColor(line)
+        pdf.line(26,y,width-26,y)
+        labels=[(26,"#"),(94,"Athlete"),(250,"Group"),(395,"Lane"),(435,"Pos" if discipline=="run" else "Position"),(489,"Time")]
+        for x,label in labels:
+            text(x,y-14,label,8)
+        y-=23
+        pdf.line(26,y,width-26,y)
+        for value in heading_lines(heat,members,discipline):
             text(26,y-14,value,8)
             y-=12
         y-=8
     for discipline,prefix in (("run","running"),("swim","swimming")):
         new_page(prefix)
         for heat,members in groups(rows,prefix):
-            if y-55-min(len(members),12)*26<40:
+            needed=31+12*len(heading_lines(heat,members,discipline))+min(len(members),12)*23
+            if y-needed<40:
                 new_page(prefix)
             heading(heat,members,discipline)
             for row in members:
-                if y<67:
+                if y<63:
                     new_page(prefix)
                     heading(heat,members,discipline)
-                y-=26
+                y-=23
                 text(26,y+9,row["athlete_number"],8.5,60)
                 text(94,y+9,row["athlete_name"],8.5,150)
                 text(250,y+9,group_label(row,discipline),8,137)
@@ -154,7 +154,7 @@ def build_heats_pdf(rows,event):
                 pdf.line(489,y+5,width-28,y+5)
                 pdf.setStrokeColor(line)
                 pdf.line(26,y,width-26,y)
-            y-=16
+            y-=12
     pdf.save()
     output.seek(0)
     return output

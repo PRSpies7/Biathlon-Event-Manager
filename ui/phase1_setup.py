@@ -73,7 +73,7 @@ def render_operational_outputs(db_path,event_id):
             st.rerun()
     labels={
         "Combined Heats.pdf":("Download Combined Heat PDF",f"download_heats_pdf_{event_id}"),
-        "Master Entries Heats.xlsx":("Download Master Entries Heats",f"download_heats_xlsx_{event_id}"),
+        "Master Entries Heats.xlsx":("Download Master Entries Heat Excel",f"download_heats_xlsx_{event_id}"),
         "Athlete Run Swim Lane Sheet.xlsx":("Download Athlete Run/Swim Lane Sheet",f"download_athlete_list_{event_id}"),
         "Swim Timekeeper Sheets.xlsx":("Download Swim Timekeeper Sheets",f"download_swim_lanes_{event_id}"),
         "meet_program.json":("Download meet_program.json",f"download_meet_program_{event_id}"),
@@ -170,18 +170,19 @@ def render(db_path: str, reference_json: dict):
         meet_types=["Local", "Interprovincial", "National"]
         meet_type = st.selectbox("Meet type", meet_types, index=meet_types.index(defaults.get("meet_type","Local")))
 
-    st.subheader("Imported Master Dataset")
-    preview_columns = ["athlete_number", "athlete_name", "group_name"]
-    if any(athlete.get("province") for athlete in athletes):
-        preview_columns.append("province")
-    preview_columns.extend(["running_heat", "running_lane", "swimming_heat", "swimming_lane"])
-    preview = pd.DataFrame(athletes)[preview_columns].rename(columns={
-        "athlete_number": "Athlete Number", "athlete_name": "Athlete Name", "group_name": "Age Group",
-        "province": "Province",
-        "running_heat": "Run Heat", "running_lane": "Run Lane", "swimming_heat": "Swim Heat", "swimming_lane": "Swim Lane"
-    })
-    st.dataframe(preview, use_container_width=True, hide_index=True)
-    st.caption(f"{len(athletes)} unique athletes · {len(parsed['running_heats'])} running heats · {len(parsed['swimming_heats'])} swimming heats")
+    if not generated:
+        st.subheader("Imported Master Dataset")
+        preview_columns = ["athlete_number", "athlete_name", "group_name"]
+        if any(athlete.get("province") for athlete in athletes):
+            preview_columns.append("province")
+        preview_columns.extend(["running_heat", "running_lane", "swimming_heat", "swimming_lane"])
+        preview = pd.DataFrame(athletes)[preview_columns].rename(columns={
+            "athlete_number": "Athlete Number", "athlete_name": "Athlete Name", "group_name": "Age Group",
+            "province": "Province",
+            "running_heat": "Run Heat", "running_lane": "Run Lane", "swimming_heat": "Swim Heat", "swimming_lane": "Swim Lane"
+        })
+        st.dataframe(preview, use_container_width=True, hide_index=True)
+        st.caption(f"{len(athletes)} unique athletes · {len(parsed['running_heats'])} running heats · {len(parsed['swimming_heats'])} swimming heats")
 
     if parsed["swimming_only_athletes"]:
         st.warning(f"{len(parsed['swimming_only_athletes'])} athlete(s) appear in swimming but not running entries.")

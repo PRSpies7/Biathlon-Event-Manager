@@ -190,6 +190,55 @@ def test_local_interprovincial_and_national_underfill_rules():
     assert swim_count(rows)==2  # 50m and 100m may never mix.
 
 
+def test_whole_group_mixing_fast_swim_heats_and_opening_run_preferences():
+    from services.competition import distances,category_key
+    assert category_key("U/10 GIRLS") is None and distances("U/12 BOYS")== (None,None)
+    rows=generate_heats(entries(8,"U/15 GIRLS")+entries(4,"U/17 GIRLS",20),settings())
+    fast=[r for r in rows if r["athlete_number"] in {str(100+i) for i in range(6)}]
+    assert len({r["swimming_heat"] for r in fast})==1
+    heat=fast[0]["swimming_heat"]
+    assert len([r for r in rows if r["swimming_heat"]==heat])==6
+    rows=generate_heats(entries(4,"U/15 GIRLS")+entries(4,"U/17 GIRLS",10)+entries(2,"U/19 GIRLS",20),settings())
+    assert len({r["swimming_heat"] for r in rows if r["group_name"]=="U/19 GIRLS"})==1
+    rows=generate_heats(entries(4,"U/15 GIRLS")+entries(2,"U/15 BOYS",10)+entries(2,"U/17 GIRLS",20),settings())
+    first=[r for r in rows if r["swimming_heat"]==1]
+    assert len(first)==6 and {r["gender"] for r in first}=={"F"}
+    for women,men,count in ((3,4,1),(6,6,2)):
+        rows=generate_heats(entries(women,"MASTERS 60+ WOMEN")+entries(men,"MASTERS 70+ MEN",20),settings())
+        assert len({r["running_heat"] for r in rows})==count
+    rows=generate_heats(entries(8,"MASTERS 60+ WOMEN")+entries(3,"U/08 GIRLS",20),settings())
+    assert len({r["running_heat"] for r in rows})==1 and len(rows)==11
+    rows=generate_heats(entries(12,"MASTERS 60+ WOMEN")+entries(2,"SPECIAL NEEDS FEMALE",20),settings())
+    special=next(r["running_heat"] for r in rows if r["group_name"]=="SPECIAL NEEDS FEMALE")
+    assert any(r["group_name"]=="MASTERS 60+ WOMEN" and r["running_heat"]==special for r in rows)
+    assert all(sum(r["running_heat"]==h for r in rows)<=12 for h in {r["running_heat"] for r in rows})
+
+
+def test_print_layout_and_simplified_export_headers():
+    from io import BytesIO
+    import pdfplumber
+    import openpyxl
+    from exporters.heats import build_heats_pdf,build_heats_xlsx
+    from parsers.master_entries_pdf import parse_master_entries_pdf
+    event=dict(settings("National"),name="GNB League 2",start_date="2026-09-01",season_year=2027,
+        host_team="GN",course="SCM",heat_revision=1)
+    rows=generate_heats(entries(24),event)
+    pdf=build_heats_pdf(rows,event).getvalue()
+    with pdfplumber.open(BytesIO(pdf)) as document:
+        text=document.pages[0].extract_text()
+        assert "Heat 1 -" in text and "Heat 2 -" in text
+        assert all(r["athlete_name"] in text for r in rows)
+        assert not any(label in text for label in ("Run positions:","Meet type:","Course:","Host:"))
+        assert any(c["size"]==8.5 for c in document.pages[0].chars)
+    parsed=parse_master_entries_pdf(BytesIO(pdf))
+    assert len(parsed["athletes"])==24
+    assert {r["athlete_number"]:(r["running_heat"],r["running_lane"],r["swimming_heat"],r["swimming_lane"]) for r in parsed["athletes"]}=={
+        r["athlete_number"]:(r["running_heat"],r["running_lane"],r["swimming_heat"],r["swimming_lane"]) for r in rows}
+    ws=openpyxl.load_workbook(build_heats_xlsx(rows,event)).active
+    text=" ".join(str(row[0].value or "") for row in ws)
+    assert all(label not in text for label in ("Pool lanes:","Run positions:","Meet type:","Course:","Host:"))
+
+
 def test_manual_assignments_reach_every_export_and_phase2_invalidates(tmp_path):
     from io import BytesIO
     import openpyxl
@@ -221,8 +270,9 @@ def test_manual_assignments_reach_every_export_and_phase2_invalidates(tmp_path):
     assert race["raceLanes"][0]["laneSeedTime"]==0
     workbook=openpyxl.load_workbook(BytesIO(files["Athlete Run Swim Lane Sheet.xlsx"][1]))
     mapped=next(row for row in workbook.active.iter_rows(min_row=2,values_only=True) if row[0]=="100")
-    assert mapped[3:]==(4,4,3,12)
+    assert mapped[3:]==(4,4,3)
     workbook=openpyxl.load_workbook(BytesIO(files["Swim Timekeeper Sheets.xlsx"][1]))
+    assert all("2026-09-01" in sheet["A1"].value for sheet in workbook)
     timed=next(row for row in workbook["Lane3"].iter_rows(min_row=8,values_only=True) if row[1]=="100")
     assert timed[4]==4
     assert current_outputs(db,eid)

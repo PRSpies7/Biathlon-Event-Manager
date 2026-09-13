@@ -12,7 +12,7 @@ def category_key(group):
     text = str(group or "").upper()
     if re.search(r"\bSPECIAL\s+NEEDS\b", text):
         return "SPECIAL NEEDS"
-    match = re.search(r"\bU\s*/?\s*0?(8|9|10|11|12|13|15|17|19)\b", text)
+    match = re.search(r"\bU\s*/?\s*0?(8|9|11|13|15|17|19)\b", text)
     if match:
         return f"U/{int(match[1]):02d}"
     match = re.search(r"\bMASTERS?\s*(40|50|60|70|80)\s*\+?", text)
@@ -59,8 +59,8 @@ def category_order(group):
 COMPATIBILITY = {}
 for family in (("MASTERS 40+", "MASTERS 50+"),
                ("MASTERS 60+", "MASTERS 70+", "MASTERS 80+"),
-               ("U/08", "U/09", "U/10", "U/11"),
-               ("U/12", "U/13", "U/15"), ("U/15", "U/17", "U/19"),
+               ("U/08", "U/09", "U/11"),
+               ("U/13", "U/15"), ("U/15", "U/17", "U/19"),
                ("U/19", "JNR", "SENIOR")):
     for left in family:
         for right in family:

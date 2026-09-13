@@ -18,7 +18,7 @@ def programme_order(group, gender, discipline):
     elif key == "U/08":
         bucket = 1 if discipline == "run" else 0
     else:
-        sequence = ["U/09", "U/10", "U/11", "U/12"]
+        sequence = ["U/09", "U/11"]
         if discipline == "swim":
             sequence += ["U/13"]
         sequence += ["JNR", "SENIOR", "MASTERS 40+", "MASTERS 50+"]
@@ -27,7 +27,7 @@ def programme_order(group, gender, discipline):
     return bucket, gender, category_order(group), key
 
 
-def heat_capacity(heat, discipline, capacity, meet_type):
+def preferred_heat_size(heat, discipline, capacity, meet_type):
     if discipline == "run" and meet_type == "Local" and any(category_key(a["group_name"]) in OLDER_GROUPS for a in heat):
         return min(10, capacity)
     return capacity
@@ -133,11 +133,12 @@ def _initial(rows, discipline, capacity, meet_type="Local"):
     heats = []
     for key in sorted(groups, key=lambda k: (*programme_order(k[1],k[2],discipline), k[0])):
         ranked = sorted(groups[key],key=lambda r:seed_order(r,discipline),reverse=True)
-        count = ceil(len(ranked)/heat_capacity(ranked,discipline,capacity,meet_type))
+        count = ceil(len(ranked)/capacity)
         base, extra = divmod(len(ranked),count)
         offset = 0
         for index in range(count):
-            size = base + (index < extra)
+            # Reserve full, unmixed faster swim heats; the slower remainder can mix.
+            size = (len(ranked)-capacity*(count-1) if index==0 else capacity) if discipline=="swim" else base + (index < extra)
             heats.append(ranked[offset:offset+size])
             offset += size
     return heats
@@ -176,39 +177,75 @@ def _candidate_score(target, row, discipline, meet_type):
     seed = row.get(f"{discipline}_seed")
     difference = abs(seed-sum(seeds)/len(seeds)) if seed is not None and seeds else float("inf")
     rank = max(ranks)
-    opening_run = discipline == "run" and meet_type == "Local" and any(k in OLDER_GROUPS for k in keys)
-    return (gender,rank,difference) if meet_type == "Interprovincial" or opening_run else (rank,gender,difference)
+    same_group = all(category_key(a["group_name"]) == category_key(row["group_name"]) and a["gender"] == row["gender"] for a in target)
+    return (0 if same_group else 1,gender,rank,difference)
+
+
+def _join_special_needs_runs(heats, capacity):
+    """Place Special Needs with older Masters, keeping the Special Needs group whole."""
+    masters = OLDER_GROUPS - {"SPECIAL NEEDS"}
+    for special in list(heats):
+        if not special or not all(category_key(a["group_name"])=="SPECIAL NEEDS" for a in special):
+            continue
+        candidates=[]
+        for index,heat in enumerate(heats):
+            if not heat or not all(category_key(a["group_name"]) in masters for a in heat):
+                continue
+            if len(special)>=capacity or any(a["run_distance"]!=special[0]["run_distance"] for a in heat):
+                continue
+            same_gender=all(a["gender"]==special[0]["gender"] for a in heat)
+            candidates.append((not same_gender,len(heat)+len(special)>10,index,heat))
+        if not candidates:
+            continue
+        _,_,_,heat=min(candidates,key=lambda c:c[:3])
+        total=len(heat)+len(special)
+        same_gender=all(a["gender"]==special[0]["gender"] for a in heat)
+        if total<=capacity and (same_gender or total<=10):
+            heat.extend(special)
+            special.clear()
+        else:
+            # A full Masters heat can share some runners with the Special Needs
+            # heat without exceeding capacity or separating Special Needs athletes.
+            count=min(len(heat)-1,capacity-len(special),max(1,ceil(total/2)-len(special)))
+            if count>0:
+                special.extend(heat[:count])
+                del heat[:count]
+    return [h for h in heats if h]
 
 
 def optimise_heats(heats, discipline, capacity, meet_type):
-    """Move compatible entrants only out of incomplete groups; never chase full lanes.
-
-    Consolidate toward earlier heats. Donor eligibility is also required so an
-    otherwise acceptable heat is not dismantled simply to fill another heat.
-    """
+    """Merge whole incomplete heats, preserving small age/gender groups."""
     if meet_type == "National":
         return heats
-    eligible = {i for i,h in enumerate(heats) if _eligible(h,discipline,heat_capacity(h,discipline,capacity,meet_type),meet_type)}
+    if discipline=="run" and meet_type=="Local":
+        heats=_join_special_needs_runs(heats,capacity)
+    eligible = {i for i,h in enumerate(heats) if _eligible(h,discipline,capacity,meet_type)}
     for index in sorted(eligible):
         target = heats[index]
         if not target:
             continue
-        while len(target) < heat_capacity(target,discipline,capacity,meet_type):
+        while len(target) < preferred_heat_size(target,discipline,capacity,meet_type):
             candidates = []
             for donor in sorted(eligible):
                 if donor <= index or not heats[donor]:
                     continue
-                for row in heats[donor]:
-                    if len(target)+1 > heat_capacity([*target,row],discipline,capacity,meet_type):
-                        continue
-                    score = _candidate_score(target,row,discipline,meet_type)
-                    if score is not None:
-                        candidates.append((score, len(heats[donor]), donor, str(row["athlete_number"]), row))
+                members=heats[donor]
+                total=len(target)+len(members)
+                if total>capacity:
+                    continue
+                combined=[*target,*members]
+                opening=discipline=="run" and meet_type=="Local" and any(category_key(a["group_name"]) in OLDER_GROUPS for a in combined)
+                if opening and total>10 and len({a["gender"] for a in combined})>1:
+                    continue
+                scores=[_candidate_score(target,row,discipline,meet_type) for row in members]
+                if any(score is None for score in scores):
+                    continue
+                candidates.append((opening and total>10,max(scores),len(members),donor))
             if not candidates:
                 break
-            _,_,donor,_,row = min(candidates,key=lambda c:c[:-1])
-            target.append(row)
-            heats[donor].remove(row)
+            *_,donor = min(candidates)
+            target.extend(heats[donor])
+            heats[donor].clear()
     return [h for h in heats if h]
 
 

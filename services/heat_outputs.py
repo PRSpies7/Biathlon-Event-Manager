@@ -22,7 +22,7 @@ def build_package(rows,event,reference):
         "Combined Heats.pdf":("application/pdf",build_heats_pdf(rows,event).getvalue()),
         "Master Entries Heats.xlsx":(XLSX,build_heats_xlsx(rows,event).getvalue()),
         "Athlete Run Swim Lane Sheet.xlsx":(XLSX,build_printable_athlete_mapping_xlsx(rows).getvalue()),
-        "Swim Timekeeper Sheets.xlsx":(XLSX,build_swim_timekeeper_xlsx(rows,event["name"],event["pool_lanes"]).getvalue()),
+        "Swim Timekeeper Sheets.xlsx":(XLSX,build_swim_timekeeper_xlsx(rows,event["name"],event["pool_lanes"],event["start_date"]).getvalue()),
         "meet_program.json":("application/json",dumps_json(program).encode("utf-8")),
     }
 

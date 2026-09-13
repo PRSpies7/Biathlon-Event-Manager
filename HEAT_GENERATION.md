@@ -36,7 +36,7 @@ is a separate pass using the compatibility table in `services/competition.py`.
 
 | Event type | Swimming | Running |
 | --- | --- | --- |
-| Local league | Consider combining with at least two empty lanes; one empty lane is acceptable. Prefer compatible age, same gender, then similar seeds. | Prefer compatible age, gender and seeds. |
+| Local league | Consider combining whole incomplete groups with at least two empty lanes; one empty lane is acceptable. Prefer same age/gender, then compatible categories and similar seeds. Protect full fast heats. | Prefer same age/gender; combine compatible groups without splitting small groups. Opening combinations target 10, with 12 the automatic maximum. |
 | Interprovincial | Consider combining only with at least three empty lanes. Prefer same gender, compatible age, then similar seeds. | Consider combining only with six or fewer runners, conservatively. |
 | National / SA Championships | No automatic age or gender mixing. | No automatic age or gender mixing. |
 
@@ -50,11 +50,11 @@ The complete current rules are written out in [HEAT_RULES.md](HEAT_RULES.md).
 Special Needs Male and Female both use a 400 m run and a 50 m swim.
 Manual unusual combinations/capacities warn; technically invalid outputs are blocked.
 
-Running follows older Masters/Special Needs (women then men), Under 8, Under 9–12,
+Running follows older Masters/Special Needs (women then men), Under 8, Under 9, Under 11,
 junior/senior/Masters 40–50, then Under 13/15/17/19. Local opening run heats target
-at most 10 athletes and may combine compatible younger athletes with older Masters
+10 athletes and may combine compatible younger athletes with older Masters
 and Special Needs. Initial groups remain separate before the optimisation pass.
-Swimming follows Under 8, older Masters/Special Needs, Under 9–13, junior/senior/
+Swimming follows Under 8, older Masters/Special Needs, Under 9/11/13, junior/senior/
 Masters 40–50, then Under 15/17/19. Masters 80+ follow the 60+/70+ groups.
 
 ## One compatible output package
@@ -63,8 +63,8 @@ Masters 40–50, then Under 15/17/19. Masters 80+ follow the 60+/70+ groups.
   following the repository's accepted PDF reference. Retains blank run finishing
   position/run time and swim time capture areas.
 - **Master Entries Heats.xlsx**: the existing heat-section/athlete-row structure.
-- **Athlete Run Swim Lane Sheet.xlsx**: existing mapping output with run position added.
-- **Swim Timekeeper Sheets.xlsx**.
+- **Athlete Run Swim Lane Sheet.xlsx**: athlete, age group, run heat, swim heat and swim lane.
+- **Swim Timekeeper Sheets.xlsx**: event name and date on every lane sheet.
 - **meet_program.json**: existing TimeDrops IDs, schema and global heat numbering.
 
 The combined PDF and Excel can be downloaded and re-uploaded through **Use existing

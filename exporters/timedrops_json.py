@@ -24,9 +24,7 @@ TIMEDROPS_UTC_OFFSET = "+02:00"
 AGE_GROUP_RANGES = {
     "U/08": (6, 7),
     "U/09": (8, 8),
-    "U/10": (9, 9),
     "U/11": (9, 10),
-    "U/12": (11, 11),
     "U/13": (11, 12),
     "U/15": (13, 14),
     "U/17": (15, 16),
@@ -79,7 +77,7 @@ def event_for_group(group: str | None) -> int | None:
     key = age_group_key(group)
     if key == "U/08":
         return 1
-    if key in {"U/09", "U/10", "U/11", "U/12", "U/13", "MASTERS 60+", "MASTERS 70+", "MASTERS 80+", "SPECIAL NEEDS"}:
+    if key in {"U/09", "U/11", "U/13", "MASTERS 60+", "MASTERS 70+", "MASTERS 80+", "SPECIAL NEEDS"}:
         return 2
     if key in {"U/15", "U/17", "U/19", "JNR", "SENIOR", "MASTERS 40+", "MASTERS 50+"}:
         return 3

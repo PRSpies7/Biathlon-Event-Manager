@@ -11,7 +11,7 @@ from openpyxl.worksheet.properties import PageSetupProperties
 BLACK = "000000"
 
 
-def build_swim_timekeeper_xlsx(athletes: list[dict[str, Any]], event_name: str, pool_lanes: int) -> BytesIO:
+def build_swim_timekeeper_xlsx(athletes: list[dict[str, Any]], event_name: str, pool_lanes: int, event_date: str | None = None) -> BytesIO:
     wb = Workbook()
     wb.remove(wb.active)
 
@@ -24,10 +24,10 @@ def build_swim_timekeeper_xlsx(athletes: list[dict[str, Any]], event_name: str, 
         ws.freeze_panes = "A8"
 
         ws.merge_cells("A1:F1")
-        ws["A1"] = event_name
+        ws["A1"] = f"{event_name} · {event_date}" if event_date else event_name
         ws["A1"].font = Font(bold=True, size=16, color=BLACK)
-        ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
-        ws.row_dimensions[1].height = 26
+        ws["A1"].alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        ws.row_dimensions[1].height = 42 if event_date else 26
 
         ws.merge_cells("A2:F2")
         ws["A2"] = f"Swim Timekeeper - Lane {lane}"

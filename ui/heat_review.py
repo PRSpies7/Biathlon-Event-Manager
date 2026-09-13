@@ -12,6 +12,10 @@ from services.seeding import prepare_entries, display_seed, select_seed, time_hu
 from services.competition import distances, infer_season
 
 
+def seed_source(row, discipline):
+    return "NT" if row.get(discipline+"_seed") is None else row.get(discipline+"_seed_source") or "Manual override"
+
+
 def render_event_settings(db_path,event):
     with st.expander("Correct event season or lane configuration"):
         with st.form(f"event_configuration_{event['id']}"):
@@ -74,7 +78,7 @@ def render_entries(db_path, parsed, uploaded, name, host, start_date, course, la
         except ValueError as exc:
             st.error(str(exc))
             return
-    st.subheader("Entries and historical seeds")
+    st.subheader("Entries and event distances")
     metadata = pd.DataFrame([{"Athlete": r["athlete_number"], "Name": r["athlete_name"],
         "Age group": r["group_name"], "Gender": r["gender"],
         "Run distance": r["run_distance"], "Swim distance": r["swim_distance"]} for r in entries])
@@ -102,9 +106,10 @@ def render_entries(db_path, parsed, uploaded, name, host, start_date, course, la
                 entry[f"{discipline}_seed"], entry[f"{discipline}_seed_source"] = select_seed(
                     history_path, entry["history_athlete_id"], discipline, distance, year)
             entry[f"{discipline}_distance"] = distance
+    st.subheader("Entries and historical seeds")
     st.dataframe([{"Athlete":r["athlete_number"], "Name":r["athlete_name"],
-        "Run seed":display_seed(r["run_seed"]), "Run source":r["run_seed_source"],
-        "Swim seed":display_seed(r["swim_seed"]), "Swim source":r["swim_seed_source"]} for r in entries], hide_index=True)
+        "Run seed":display_seed(r["run_seed"]), "Run source":seed_source(r,"run"),
+        "Swim seed":display_seed(r["swim_seed"]), "Swim source":seed_source(r,"swim")} for r in entries], hide_index=True)
     confirmed = st.checkbox(f"Confirm pool capacity: {lanes} lanes", key=f"confirm_lanes_{token}_{lanes}")
     positions = list(range(1,13))
     if invalid:
@@ -124,9 +129,12 @@ def render(db_path, event_id):
     event, entries = dict(get_event(db_path,event_id)), get_athletes(db_path,event_id)
     st.subheader(f"{event['name']} · Season {event['season_year']}")
     render_event_settings(db_path,event)
+    st.subheader("Current entries, heats and seeds")
     st.dataframe([{"Athlete":a["athlete_number"],"Name":a["athlete_name"],"Age group":a["group_name"],
-        "Run seed":display_seed(a["run_seed"]),"Run source":a["run_seed_source"],
-        "Swim seed":display_seed(a["swim_seed"]),"Swim source":a["swim_seed_source"]} for a in entries], hide_index=True)
+        "Run heat":a.get("running_heat"),"Run position":a.get("running_lane"),
+        "Swim heat":a.get("swimming_heat"),"Swim lane":a.get("swimming_lane"),
+        "Run seed":display_seed(a["run_seed"]),"Run source":seed_source(a,"run"),
+        "Swim seed":display_seed(a["swim_seed"]),"Swim source":seed_source(a,"swim")} for a in entries], hide_index=True)
     from services.heats import generate_heats, validate_heats, DISCIPLINES, enrich_imported
     from database.repository import save_heat_assignments, approve_heats
     if event["heat_source"]=="imported":
@@ -180,13 +188,32 @@ def render(db_path, event_id):
                             st.error(str(exc))
                         else:
                             st.rerun()
+            with st.expander("Move or swap an athlete"):
+                choices={a["athlete_number"]:a for a in participating}
+                labels={key:f"{row['athlete_name']} · {row['group_name']} · Heat {row.get(prefix+'_heat') or 'unassigned'} · #{key}"
+                    for key,row in choices.items()}
+                athlete=st.selectbox("Athlete",list(choices),format_func=labels.get,key=f"move_athlete_{discipline}")
+                heat=st.number_input("Move to heat (lower = earlier)",min_value=1,value=int(choices[athlete].get(prefix+"_heat") or 1),key=f"target_heat_{discipline}_{athlete}")
+                swap=st.selectbox("Swap with",[None,*[a for a in choices if a!=athlete]],
+                    format_func=lambda key, labels=labels:"No swap" if key is None else labels[key],key=f"swap_{discipline}")
+                st.caption("Moves and swaps reseed positions in both affected heats. Use the table for a manual position override.")
+                if st.button("Apply move / swap",key=f"apply_move_{discipline}"):
+                    try:
+                        from services.heats import move_or_swap
+                        moved=move_or_swap(entries,event,discipline,athlete,int(heat),swap)
+                        save_heat_assignments(db_path,event_id,moved,event["heat_revision"])
+                    except ValueError as exc:
+                        st.error(str(exc))
+                    else:
+                        st.rerun()
             st.caption("Edit heat numbers to move athletes earlier/later. Starting positions are separate from Phase 2 finishing positions. Save edits before approval.")
             table=pd.DataFrame([{"Athlete":a["athlete_number"],"Name":a["athlete_name"],"Age group":a["group_name"],
                 "Gender":a.get("gender"),"Distance":a.get(discipline+"_distance"),"Heat":a.get(prefix+"_heat"),
                 "Start position" if discipline=="run" else "Lane":a.get(prefix+"_lane"),
-                "Seed":display_seed(a.get(discipline+"_seed")),"Seed source":a.get(discipline+"_seed_source") or "NT"}
+                "Seed":display_seed(a.get(discipline+"_seed")),"Seed source":seed_source(a,discipline)}
                 for a in sorted(participating,key=lambda a:(a.get(prefix+"_heat") or 0,a.get(prefix+"_lane") or 0))])
             position_label="Start position" if discipline=="run" else "Lane"
+            st.subheader("Running heat assignments" if discipline=="run" else "Swimming heat assignments")
             edited=st.data_editor(table,hide_index=True,num_rows="fixed",key=f"heat_editor_{event_id}_{discipline}_{event['heat_revision']}",
                 disabled=["Athlete","Name","Seed source"],column_config={
                     "Heat":st.column_config.NumberColumn(min_value=1,step=1),
@@ -224,24 +251,6 @@ def render(db_path, event_id):
                     st.error(str(exc))
                 else:
                     st.rerun()
-            with st.expander("Move or swap an athlete"):
-                choices={a["athlete_number"]:a for a in participating}
-                labels={key:f"{row['athlete_name']} · {row['group_name']} · Heat {row.get(prefix+'_heat') or 'unassigned'} · #{key}"
-                    for key,row in choices.items()}
-                athlete=st.selectbox("Athlete",list(choices),format_func=labels.get,key=f"move_athlete_{discipline}")
-                heat=st.number_input("Move to heat (lower = earlier)",min_value=1,value=int(choices[athlete].get(prefix+"_heat") or 1),key=f"target_heat_{discipline}_{athlete}")
-                swap=st.selectbox("Swap with",[None,*[a for a in choices if a!=athlete]],
-                    format_func=lambda key, labels=labels:"No swap" if key is None else labels[key],key=f"swap_{discipline}")
-                st.caption("Moves and swaps reseed positions in both affected heats. Use the table for a manual position override.")
-                if st.button("Apply move / swap",key=f"apply_move_{discipline}"):
-                    try:
-                        from services.heats import move_or_swap
-                        moved=move_or_swap(entries,event,discipline,athlete,int(heat),swap)
-                        save_heat_assignments(db_path,event_id,moved,event["heat_revision"])
-                    except ValueError as exc:
-                        st.error(str(exc))
-                    else:
-                        st.rerun()
     errors,warnings=validate_heats(entries,event)
     if warnings:
         with st.expander(f"Heat notices ({len(warnings)})"):
