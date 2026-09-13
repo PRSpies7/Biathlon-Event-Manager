@@ -2,6 +2,7 @@
 from datetime import datetime, timezone
 from pathlib import Path
 import sqlite3
+from contextlib import closing
 
 
 def backup_database(path):
@@ -11,8 +12,8 @@ def backup_database(path):
         return None
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     destination = path.with_name(f"{path.stem}.before-seasons-{stamp}.sqlite")
-    with sqlite3.connect(path.as_uri() + "?mode=ro", uri=True) as source:
-        with sqlite3.connect(destination) as target:
+    with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)) as source:
+        with closing(sqlite3.connect(destination)) as target:
             source.backup(target)
     return destination
 

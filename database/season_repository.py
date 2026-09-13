@@ -64,31 +64,43 @@ def find_event(db_path, event: NormalizedEvent):
 
 def store_event(db_path, event: NormalizedEvent, *, overwrite: bool = False) -> int:
     from services.season_scope import gn_event
-    event = gn_event(event)
+    if event.result_source == "published":
+        event = gn_event(event)
     event.check_structure()
+    from services.competition import distances
     with get_conn(db_path) as conn:
         # Serialize duplicate check + replacement, including concurrent browser imports.
         conn.execute("BEGIN IMMEDIATE")
         existing = conn.execute(
-            "SELECT id FROM season_events WHERE identity=? AND event_date=? AND competition_type=? AND season_year IS ?",
+            "SELECT * FROM season_events WHERE identity=? AND event_date=? AND competition_type=? AND season_year IS ?",
             (event.identity, event.event_date.isoformat(), event.competition_type, event.season_year),
         ).fetchone()
+        if event.workflow_key:
+            linked=conn.execute("SELECT * FROM season_events WHERE workflow_key=?",(event.workflow_key,)).fetchone()
+            if linked and existing and linked["id"]!=existing["id"]:
+                raise ValueError("This session's saved history conflicts with another event. Correct the event details before saving.")
+            existing=linked or existing
+            if existing and existing["result_source"]=="published":
+                raise ValueError("Published results already exist for this event and were preserved. Use Import Results to correct the published results.")
         if existing and not overwrite:
             raise EventAlreadyExists("This event already exists. Overwrite the existing event results or skip this event?")
         imported_at = datetime.now(timezone.utc).isoformat(timespec="microseconds")
         if existing:
             event_id = existing["id"]
             conn.execute("DELETE FROM season_results WHERE event_id=?", (event_id,))
-            conn.execute("UPDATE season_events SET name=?, source_filename=?, imported_at=? WHERE id=?",
-                         (event.name.strip(), event.source_filename, imported_at, event_id))
+            conn.execute("""UPDATE season_events SET identity=?,name=?,event_date=?,competition_type=?,season_year=?,
+                source_filename=?,imported_at=?,workflow_key=COALESCE(?,workflow_key),result_source=? WHERE id=?""",
+                (event.identity,event.name.strip(),event.event_date.isoformat(),event.competition_type,event.season_year,
+                 event.source_filename,imported_at,event.workflow_key,event.result_source,event_id))
         else:
             event_id = conn.execute(
-                "INSERT INTO season_events(identity, name, event_date, competition_type, source_filename, imported_at, season_year) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (event.identity, event.name.strip(), event.event_date.isoformat(), event.competition_type, event.source_filename, imported_at, event.season_year),
+                "INSERT INTO season_events(identity, name, event_date, competition_type, source_filename, imported_at, season_year,workflow_key,result_source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (event.identity, event.name.strip(), event.event_date.isoformat(), event.competition_type, event.source_filename, imported_at,event.season_year,event.workflow_key,event.result_source),
             ).lastrowid
         affiliated_awards = {a.athlete_number for a in event.awards if a.affiliated}
         ids = {}
         for r in event.results:
+            run_distance, swim_distance = distances(r.category)
             conn.execute("""
                 INSERT INTO season_athletes(athlete_number, athlete_name, school, category, province, team, affiliated)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -109,12 +121,15 @@ def store_event(db_path, event: NormalizedEvent, *, overwrite: bool = False) -> 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (event_id, athlete_id, r.athlete_name, r.category, r.position, r.run_time, r.running_points,
                   r.swim_time, r.swimming_points, r.bonus_points, r.total_points, r.status,
-                  r.school, r.province, r.team, r.annotations, r.run_distance, r.swim_distance))
+                  r.school, r.province, r.team, r.annotations,
+                  r.run_distance or run_distance, r.swim_distance or swim_distance))
         for award in event.awards:
             conn.execute("INSERT INTO season_awards(event_id, athlete_id, award_type, placing) VALUES (?, ?, ?, ?)",
                          (event_id, ids[award.athlete_number], award.award_type, award.placing))
         if event.season_year is not None:
             _refresh_categories(conn, event.season_year)
+        if existing and existing["season_year"] is not None and existing["season_year"]!=event.season_year:
+            _refresh_categories(conn,existing["season_year"])
     return event_id
 
 
@@ -154,7 +169,7 @@ def available_seasons(db_path):
 
 
 def historical_performances(db_path, athlete_id, discipline, distance, season_year):
-    """Distance-matched candidates for the seed engine, limited to two seasons.
+    """Distance-matched candidates for the seed engine, limited to three seasons.
 
     Return original times/statuses and source details; validity and fastest-time
     selection belong to the Stage 3 seed service. Unknown distances never match.
@@ -170,9 +185,9 @@ def historical_performances(db_path, athlete_id, discipline, distance, season_ye
                 r.{discipline}_distance AS distance, r.status,
                 e.id AS event_id, e.name AS event_name, e.event_date, e.season_year
             FROM season_results r JOIN season_events e ON e.id=r.event_id
-            WHERE r.athlete_id=? AND r.{discipline}_distance=? AND e.season_year IN (?, ?)
+            WHERE r.athlete_id=? AND r.{discipline}_distance=? AND e.season_year IN (?, ?, ?)
             ORDER BY e.season_year DESC, e.event_date DESC, e.id DESC
-        """, (athlete_id, distance, season_year, season_year - 1))]
+        """, (athlete_id, distance, season_year, season_year - 1, season_year - 2))]
 
 
 def set_affiliation(db_path, athlete_id: int, affiliated: bool) -> None:

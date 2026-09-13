@@ -67,14 +67,14 @@ def test_history_is_distance_and_two_season_scoped(db):
         import_event(db, event(None))
     for year in (2024, 2025, 2026, 2027, None):
         store_event(db, event(year))
-    unknown = event(name="Unknown distances", results=[Result("101", "Alex Example", "U/11 GIRLS", run_time="00:10.00")], awards=[])
+    unknown = event(name="Unknown distances", results=[Result("101", "Alex Example", "SPECIAL NEEDS", run_time="00:10.00")], awards=[])
     store_event(db, unknown)
     athlete_id = season_snapshot(db, 2026)["athletes"][0]["id"]
     candidates = historical_performances(db, athlete_id, "run", 400, 2026)
-    assert [r["season_year"] for r in candidates] == [2026, 2025]
+    assert [r["season_year"] for r in candidates] == [2026, 2025, 2024]
     assert all(r["event_name"] == "League" and r["distance"] == 400 for r in candidates)
     assert historical_performances(db, athlete_id, "run", 800, 2026) == []
-    assert len(historical_performances(db, athlete_id, "swim", 50, 2026)) == 2
+    assert len(historical_performances(db, athlete_id, "swim", 50, 2026)) == 3
     with pytest.raises(ValueError):
         historical_performances(db, athlete_id, "other", 400, 2026)
 
@@ -103,8 +103,8 @@ def test_legacy_migration_preserves_rows_and_backups_and_is_repeatable(tmp_path)
         conn.execute("UPDATE sqlite_sequence SET seq=20 WHERE name='season_events'")
     init_season_db(path)
     first = season_snapshot(path)
-    assert first["events"][0]["id"] == 7 and first["events"][0]["season_year"] is None
-    assert first["results"][0]["run_distance"] is None
+    assert first["events"][0]["id"] == 7 and first["events"][0]["season_year"] == 2026
+    assert first["results"][0]["run_distance"] == 400
     assert first["athletes"][0]["affiliated"] == 1
     assert len(first["awards"]) == 1
     backups = list(tmp_path.glob("*.before-seasons-*.sqlite"))
@@ -137,7 +137,7 @@ def test_operational_event_season_does_not_follow_date(tmp_path):
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
         conn.execute("INSERT INTO events(name,host_team,start_date) VALUES ('Legacy','GN','2025-11-01')")
     init_db(path)
-    assert get_event(path, 1)["season_year"] is None
+    assert get_event(path, 1)["season_year"] == 2026
     assert len(list(tmp_path.glob("*.before-seasons-*.sqlite"))) == 1
     event_id = create_event(path, "League", "GN", "2025-11-01", "SCM", 6, season_year=2026)
     assert get_event(path, event_id)["season_year"] == 2026

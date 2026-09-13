@@ -24,6 +24,7 @@ def build_printable_athlete_mapping_xlsx(athletes: list[dict[str, Any]]) -> Byte
         "Run Heat",
         "Swim Heat",
         "Swim Lane",
+        "Run Lane / Start Position",
     ])
 
     header_fill = PatternFill(fill_type="solid", fgColor="1F4E78")
@@ -41,6 +42,7 @@ def build_printable_athlete_mapping_xlsx(athletes: list[dict[str, Any]]) -> Byte
             athlete.get("running_heat") if athlete.get("running_heat") is not None else "",
             athlete.get("swimming_heat") if athlete.get("swimming_heat") is not None else "",
             athlete.get("swimming_lane") if athlete.get("swimming_lane") is not None else "",
+            athlete.get("running_lane") if athlete.get("running_lane") is not None else "",
         ])
 
     for row_number in range(2, ws.max_row + 1):
@@ -57,6 +59,7 @@ def build_printable_athlete_mapping_xlsx(athletes: list[dict[str, Any]]) -> Byte
         "D": 12,
         "E": 12,
         "F": 12,
+        "G": 23,
     }.items():
         ws.column_dimensions[column].width = width
 
@@ -73,7 +76,7 @@ def build_printable_athlete_mapping_xlsx(athletes: list[dict[str, Any]]) -> Byte
     ws.page_margins.bottom = 0.5
     ws.page_margins.header = 0.2
     ws.page_margins.footer = 0.2
-    ws.print_area = f"A1:F{ws.max_row}"
+    ws.print_area = f"A1:G{ws.max_row}"
 
     output = BytesIO()
     wb.save(output)

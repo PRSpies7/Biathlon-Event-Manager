@@ -9,6 +9,7 @@ from openpyxl.styles import Font, PatternFill
 
 from parsers.season_records import record_category_key as category_key, records_template_rows
 from services.season_reports import numeric_points
+from services.competition import infer_season
 
 
 def excel_time(value):
@@ -44,7 +45,7 @@ def updated_records_xlsx(snapshot):
         points = float(numeric_points(result["total_points"]))
         old_name = sheet.cell(row, 3).value
         values = {3: result["athlete_name"], 4: float(baseline), 5: points, 6: "(GN)",
-                  7: date.fromisoformat(result["event_date"]).year, 10: result["event_name"],
+                  7: result.get("season_year") or infer_season(result["event_date"]), 10: result["event_name"],
                   11: excel_time(result["run_time"]), 12: excel_time(result["swim_time"])}
         for column, value in values.items():
             cell = sheet.cell(row, column, value)
@@ -54,7 +55,7 @@ def updated_records_xlsx(snapshot):
                         float(baseline), points, result["event_name"], date.fromisoformat(result["event_date"]),
                         result["run_time"], result["swim_time"]])
     if snapshot["events"]:
-        year = max(e["event_date"] for e in snapshot["events"])[:4]
+        year = str(max(e.get("season_year") or infer_season(e["event_date"]) for e in snapshot["events"]))
         for sheet in workbook:
             if isinstance(sheet["B2"].value, str) and "BIATHLON RECORDS" in sheet["B2"].value.upper():
                 sheet["B2"] = re.sub(r"\b20\d{2}\b", year, sheet["B2"].value)

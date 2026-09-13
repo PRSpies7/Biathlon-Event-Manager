@@ -20,3 +20,5 @@ data/biathlon_events.sqlite*
 .ruff_cache/
 .coverage
 htmlcov/
+tmp/
+output/

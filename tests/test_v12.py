@@ -171,7 +171,7 @@ def test_printable_athlete_mapping_is_sorted_and_configured_for_portrait_printin
     ws = load_workbook(workbook).active
 
     assert [cell.value for cell in ws[1]] == [
-        "Athlete Hash", "Athlete Name", "Age Group", "Run Heat", "Swim Heat", "Swim Lane"
+        "Athlete Hash", "Athlete Name", "Age Group", "Run Heat", "Swim Heat", "Swim Lane", "Run Lane / Start Position"
     ]
     assert [ws.cell(2, column).value for column in range(1, 7)] == [
         "0011", "Alpha Athlete", "Junior", 1, 3, 2

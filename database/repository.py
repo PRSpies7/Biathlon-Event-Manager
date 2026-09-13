@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import json
+from uuid import uuid4
 from typing import Any, Iterable
 
-from .db import get_conn, audit
+from .db import get_conn, audit, HEAT_ATHLETE_COLUMNS
 from .migrations import validate_season
 
 
@@ -20,12 +21,21 @@ def create_event(
     pool_lanes: int,
     meet_type: str = "Local",
     season_year: int | None = None,
+    heat_source: str = "imported",
+    run_positions: list[int] | None = None,
 ) -> int:
+    if heat_source not in {"imported", "generated"}:
+        raise ValueError("Unknown heat source.")
+    if season_year is None:
+        from services.competition import infer_season
+        season_year = infer_season(start_date)
     validate_season(season_year)
     with get_conn(db_path) as conn:
         cur = conn.execute(
-            "INSERT INTO events(name, host_team, start_date, course, pool_lanes, meet_type, season_year) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (name, host_team, start_date, course, pool_lanes, meet_type, season_year),
+            """INSERT INTO events(name, host_team, start_date, course, pool_lanes, meet_type, season_year,heat_source,heat_status,run_positions,history_key)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (name, host_team, start_date, course, pool_lanes, meet_type, season_year, heat_source,
+             "draft" if heat_source == "generated" else "approved", json.dumps(run_positions or list(range(1,13))),str(uuid4())),
         )
         event_id = int(cur.lastrowid)
     audit(db_path, event_id, "EVENT_CREATED", name)
@@ -52,7 +62,7 @@ def delete_all_events(db_path: str) -> int:
 
 
 def update_event(db_path: str, event_id: int, **fields: Any) -> None:
-    allowed = {"name", "host_team", "start_date", "course", "pool_lanes", "meet_type", "season_year"}
+    allowed = {"name", "host_team", "start_date", "course", "pool_lanes", "meet_type", "season_year", "run_positions"}
     if "season_year" in fields:
         validate_season(fields["season_year"])
     updates = {k: v for k, v in fields.items() if k in allowed}
@@ -85,6 +95,10 @@ def replace_athletes(db_path: str, event_id: int, athletes: Iterable[dict[str, A
                 for r in rows
             ],
         )
+        extra = list(HEAT_ATHLETE_COLUMNS)
+        for r in rows:
+            conn.execute(f"UPDATE athletes SET {','.join(c+'=?' for c in extra)} WHERE event_id=? AND athlete_number=?",
+                         (*[r.get(c) for c in extra], event_id, r["athlete_number"]))
         _touch_event(conn, event_id)
     audit(db_path, event_id, "MASTER_DATASET_CREATED", f"athletes={len(rows)}")
 
@@ -92,6 +106,38 @@ def replace_athletes(db_path: str, event_id: int, athletes: Iterable[dict[str, A
 def get_athletes(db_path: str, event_id: int) -> list[dict[str, Any]]:
     with get_conn(db_path) as conn:
         return [dict(r) for r in conn.execute("SELECT * FROM athletes WHERE event_id = ? ORDER BY sort_order", (event_id,)).fetchall()]
+
+
+def save_heat_assignments(db_path, event_id, rows, expected_revision):
+    """Save manual/generator output without touching captured finish positions or times."""
+    fields = ["running_heat","running_lane","swimming_heat","swimming_lane","group_name",*HEAT_ATHLETE_COLUMNS]
+    with get_conn(db_path) as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        event = conn.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()
+        if event is None or event["heat_revision"] != expected_revision:
+            raise ValueError("The event changed in another session. Reload before editing heats.")
+        existing = {r[0] for r in conn.execute("SELECT athlete_number FROM athletes WHERE event_id=?", (event_id,))}
+        if len(rows) != len(existing) or {r["athlete_number"] for r in rows} != existing:
+            raise ValueError("Heat edits must retain the event's complete athlete roster.")
+        for row in rows:
+            conn.execute(f"UPDATE athletes SET {','.join(f+'=?' for f in fields)} WHERE event_id=? AND athlete_number=?",
+                (*[row.get(f) for f in fields],event_id,row["athlete_number"]))
+        _touch_event(conn,event_id)
+
+
+def approve_heats(db_path,event_id,expected_revision):
+    from services.heats import validate_heats
+    with get_conn(db_path) as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        event = conn.execute("SELECT * FROM events WHERE id=?",(event_id,)).fetchone()
+        if event is None or event["heat_revision"] != expected_revision:
+            raise ValueError("Heat assignments changed. Reload and review before approving.")
+        rows = [dict(r) for r in conn.execute("SELECT * FROM athletes WHERE event_id=?",(event_id,))]
+        errors,warnings = validate_heats(rows,dict(event))
+        if errors:
+            raise ValueError("\n".join(errors))
+        conn.execute("UPDATE events SET heat_status='approved',approved_revision=heat_revision WHERE id=?",(event_id,))
+    return warnings
 
 
 def get_running_heats(db_path: str, event_id: int) -> list[int]:

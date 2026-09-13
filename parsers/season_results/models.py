@@ -8,7 +8,8 @@ import re
 LEAGUE = "Gauteng North Local League"
 INTERPROVINCIAL = "Interprovincial"
 CHAMPIONSHIP = "Gauteng North Championship"
-COMPETITION_TYPES = (LEAGUE, INTERPROVINCIAL, CHAMPIONSHIP)
+NATIONAL = "South African Championships"
+COMPETITION_TYPES = (LEAGUE, INTERPROVINCIAL, CHAMPIONSHIP, NATIONAL)
 AWARD_TYPES = ("Runner", "Swimmer", "Overall Athlete")
 
 
@@ -64,6 +65,8 @@ class NormalizedEvent:
     awards: list[Award] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     season_year: int | None = None
+    workflow_key: str | None = None
+    result_source: str = "published"
 
     @property
     def identity(self) -> str:
@@ -73,6 +76,8 @@ class NormalizedEvent:
         """Check import completeness/links, not the upstream competition scores."""
         from database.migrations import validate_season
         validate_season(self.season_year)
+        if self.result_source not in {"published", "workflow"}:
+            raise ValueError("Unknown result source.")
         if not self.identity or not isinstance(self.event_date, date):
             raise ValueError("An event name and date are required before importing.")
         if self.competition_type not in COMPETITION_TYPES:

@@ -12,6 +12,7 @@ import copy
 import json
 import re
 import unicodedata
+from services.competition import category_key, gender_for_group
 from typing import Any
 
 from .timedrops_teams import interprovincial_team_id, interprovincial_teams
@@ -23,7 +24,9 @@ TIMEDROPS_UTC_OFFSET = "+02:00"
 AGE_GROUP_RANGES = {
     "U/08": (6, 7),
     "U/09": (8, 8),
+    "U/10": (9, 9),
     "U/11": (9, 10),
+    "U/12": (11, 11),
     "U/13": (11, 12),
     "U/15": (13, 14),
     "U/17": (15, 16),
@@ -58,30 +61,12 @@ def _timedrops_swimmer_name(value: object, athlete_number: object) -> str:
 
 def infer_gender(group: str | None) -> str:
     """Return the gender code already represented by the imported group label."""
-    group_text = str(group or "").upper()
-    if re.search(r"\b(GIRLS?|WOMEN|WOMAN|LADIES|LADY|FEMALE)\b", group_text):
-        return "F"
-    if re.search(r"\b(BOYS?|MEN|MAN|MALE)\b", group_text):
-        return "M"
-    return ""
+    return gender_for_group(group)
 
 
 def age_group_key(group: str | None) -> str | None:
     """Apply Biathlon domain age categories used in SwimCloud event metadata."""
-    group_text = re.sub(r"\s+", " ", str(group or "").upper()).strip()
-
-    under_age = re.search(r"\bU\s*/?\s*0?(8|9|11|13|15|17|19)\b", group_text)
-    if under_age:
-        return f"U/{int(under_age.group(1)):02d}"
-
-    masters = re.search(r"\bMASTERS?\s*(40|50|60|70|80)\s*\+?", group_text)
-    if masters:
-        return f"MASTERS {masters.group(1)}+"
-    if re.search(r"\b(JNR|JUNIOR)\b", group_text):
-        return "JNR"
-    if re.search(r"\bSENIORS?\b", group_text):
-        return "SENIOR"
-    return None
+    return category_key(group)
 
 
 def age_range_for_group(group: str | None) -> tuple[int, int] | None:
@@ -94,7 +79,7 @@ def event_for_group(group: str | None) -> int | None:
     key = age_group_key(group)
     if key == "U/08":
         return 1
-    if key in {"U/09", "U/11", "U/13", "MASTERS 60+", "MASTERS 70+", "MASTERS 80+"}:
+    if key in {"U/09", "U/10", "U/11", "U/12", "U/13", "MASTERS 60+", "MASTERS 70+", "MASTERS 80+"}:
         return 2
     if key in {"U/15", "U/17", "U/19", "JNR", "SENIOR", "MASTERS 40+", "MASTERS 50+"}:
         return 3
@@ -103,7 +88,7 @@ def event_for_group(group: str | None) -> int | None:
 
 def _event_gender(rows: list[dict[str, Any]]) -> str:
     """Return machine-facing F/M/X, independently of human event-label terms."""
-    genders = {infer_gender(row.get("group_name")) for row in rows}
+    genders = {row.get("gender") or infer_gender(row.get("group_name")) for row in rows}
     genders.discard("")
     if genders == {"F"}:
         return "F"
@@ -247,8 +232,8 @@ def generate_timedrops_json(
     Canonical athlete records also contain running assignments, but Running Heats
     must never leak into this swimming meet program.
     """
-    if meet_type not in {"Local", "Interprovincial"}:
-        raise ValueError("Meet type must be Local or Interprovincial.")
+    if meet_type not in {"Local", "Interprovincial", "National"}:
+        raise ValueError("Meet type must be Local, Interprovincial or National.")
 
     data = copy.deepcopy(reference)
     data["meetName"] = meet_name
@@ -261,9 +246,10 @@ def generate_timedrops_json(
     # The canonical athlete records have independent running and swimming
     # assignments. Only athletes with a swimming heat participate here.
     swimmers = [athlete for athlete in athletes if athlete.get("swimming_heat") is not None]
+    provincial_teams = meet_type == "Interprovincial" or (meet_type == "National" and any(a.get("province") for a in swimmers))
     swimmer_team_ids = {
         str(athlete["athlete_number"]): (
-            interprovincial_team_id(athlete) if meet_type == "Interprovincial" else "1"
+            interprovincial_team_id(athlete) if provincial_teams else "1"
         )
         for athlete in swimmers
     }
@@ -276,7 +262,7 @@ def generate_timedrops_json(
     # by assigning the whole heat to its single known distance event.
     heat_event: dict[int, int] = {}
     for heat, rows in swimming_heats.items():
-        events = {event_for_group(row.get("group_name")) for row in rows}
+        events = {{25:1,50:2,100:3}.get(row.get("swim_distance"),event_for_group(row.get("group_name"))) for row in rows}
         events.discard(None)
         if not events:
             raise ValueError(f"Could not map swimming Heat {heat} to a TimeDrops event.")
@@ -352,7 +338,7 @@ def generate_timedrops_json(
 
     data["meetTeams"] = (
         interprovincial_teams()
-        if meet_type == "Interprovincial"
+        if provincial_teams
         else [_build_team(reference, host_team)]
     )
 
@@ -368,7 +354,7 @@ def generate_timedrops_json(
         swimmer = copy.deepcopy(swimmer_source)
         swimmer["swimmerId"] = athlete_id
         swimmer["swimmerName"] = _timedrops_swimmer_name(athlete["athlete_name"], athlete_id)
-        swimmer["swimmerGender"] = infer_gender(athlete.get("group_name"))
+        swimmer["swimmerGender"] = athlete.get("gender") or infer_gender(athlete.get("group_name"))
         swimmer["swimmerAge"] = _swimmer_age(athlete)
         swimmer["swimmerTeamId"] = swimmer_team_ids[athlete_id]
         output_swimmers.append(swimmer)

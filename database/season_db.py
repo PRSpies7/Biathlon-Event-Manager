@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+from contextlib import closing
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -117,9 +118,9 @@ def init_season_db(db_path: str | Path) -> None:
     import sqlite3
     legacy = False
     if path.exists() and path.stat().st_size:
-        with sqlite3.connect(path.as_uri() + "?mode=ro", uri=True) as reader:
+        with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)) as reader:
             columns = {r[1] for r in reader.execute("PRAGMA table_info(season_events)")}
-            legacy = bool(columns) and "season_year" not in columns
+            legacy = bool(columns) and ("season_year" not in columns or "workflow_key" not in columns)
         if legacy:
             backup_database(path)
     with get_conn(path) as conn:
@@ -146,6 +147,25 @@ def init_season_db(db_path: str | Path) -> None:
             for discipline in ("run", "swim"):
                 conn.execute(f"ALTER TABLE season_results ADD COLUMN {discipline}_distance INTEGER CHECK({discipline}_distance > 0)")
         execute_schema(conn, SCHEMA)
+        columns = {r[1] for r in conn.execute("PRAGMA table_info(season_events)")}
+        if "workflow_key" not in columns:
+            conn.execute("ALTER TABLE season_events ADD COLUMN workflow_key TEXT")
+            conn.execute("ALTER TABLE season_events ADD COLUMN result_source TEXT NOT NULL DEFAULT 'published'")
+            from services.competition import infer_season, distances
+            for row in conn.execute("SELECT id,event_date FROM season_events WHERE season_year IS NULL").fetchall():
+                try:
+                    conn.execute("UPDATE season_events SET season_year=? WHERE id=?", (infer_season(row["event_date"]),row["id"]))
+                except (ValueError, sqlite3.IntegrityError):
+                    pass
+            for row in conn.execute("SELECT event_id,athlete_id,category,run_distance,swim_distance FROM season_results").fetchall():
+                run, swim = distances(row["category"])
+                conn.execute("""UPDATE season_results SET run_distance=COALESCE(run_distance,?),
+                    swim_distance=COALESCE(swim_distance,?) WHERE event_id=? AND athlete_id=?""",
+                    (run,swim,row["event_id"],row["athlete_id"]))
+            from .season_repository import _refresh_categories
+            for row in conn.execute("SELECT DISTINCT season_year FROM season_events WHERE season_year IS NOT NULL").fetchall():
+                _refresh_categories(conn, row[0])
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS history_workflow ON season_events(workflow_key) WHERE workflow_key IS NOT NULL")
         conn.execute("CREATE INDEX IF NOT EXISTS season_events_year ON season_events(season_year, id)")
         # SQLite UNIQUE permits multiple NULL values; legacy imports must still deduplicate.
         conn.execute("""CREATE UNIQUE INDEX IF NOT EXISTS season_events_unassigned

@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import pdfplumber
+from .event_metadata import read_metadata
 
 HEAT_RE = re.compile(r"\bHeat\s+(\d+)\s*-", re.IGNORECASE)
 DATE_RE = re.compile(r"(?<!\d)(20\d{2})[-_](\d{2})[-_](\d{2})(?!\d)")
@@ -23,11 +24,12 @@ def _clean_group(text: str) -> str:
 
 
 def _group_words_by_line(words: list[dict[str, Any]]) -> list[list[dict[str, Any]]]:
-    lines: dict[float, list[dict[str, Any]]] = {}
-    for word in words:
-        key = round(float(word["top"]), 1)
-        lines.setdefault(key, []).append(word)
-    return [sorted(items, key=lambda item: float(item["x0"])) for _, items in sorted(lines.items())]
+    lines: list[list[dict[str, Any]]] = []
+    for word in sorted(words,key=lambda w:float(w["top"])):
+        if not lines or abs(float(word["top"])-float(lines[-1][0]["top"]))>3:
+            lines.append([])
+        lines[-1].append(word)
+    return [sorted(items,key=lambda item:float(item["x0"])) for items in lines]
 
 
 def parse_master_entries_pdf(path_or_file) -> dict[str, Any]:
@@ -41,6 +43,8 @@ def parse_master_entries_pdf(path_or_file) -> dict[str, Any]:
     discipline = "running"
     current_heat: int | None = None
     source_order = 0
+    metadata={}
+    name_start,group_start,lane_start=70,200,300
 
     try:
         pdf = pdfplumber.open(path_or_file)
@@ -50,6 +54,7 @@ def parse_master_entries_pdf(path_or_file) -> dict[str, Any]:
     with pdf:
         for page in pdf.pages:
             text = page.extract_text(x_tolerance=1, y_tolerance=2) or ""
+            metadata.update(read_metadata(text.splitlines()))
             if re.search(r"^\s*Swimming Heats\s*$", text, re.IGNORECASE | re.MULTILINE):
                 discipline = "swimming"
                 current_heat = None
@@ -60,6 +65,14 @@ def parse_master_entries_pdf(path_or_file) -> dict[str, Any]:
                     continue
 
                 line_text = " ".join(str(w["text"]) for w in line_words)
+                if line_text.strip().casefold() in {"running heats","swimming heats"}:
+                    discipline=line_text.split()[0].lower()
+                    current_heat=None
+                    continue
+                headers={str(w["text"]).casefold():float(w["x0"]) for w in line_words}
+                if "#" in headers and "athlete" in headers and "group" in headers and "lane" in headers:
+                    name_start,group_start,lane_start=headers["athlete"]-2,headers["group"]-2,headers["lane"]-2
+                    continue
                 heat_match = HEAT_RE.search(line_text)
                 if heat_match:
                     current_heat = int(heat_match.group(1))
@@ -69,15 +82,15 @@ def parse_master_entries_pdf(path_or_file) -> dict[str, Any]:
                     continue
 
                 first = str(line_words[0]["text"])
-                if not re.fullmatch(r"\d{3,6}", first):
+                if not re.fullmatch(r"\d+", first):
                     continue
 
                 # The PDF uses fixed visual columns. Athlete names start around x=93,
                 # group labels around x=200+, and the lane column is >300.
                 lane_candidates = [
                     word for word in line_words[1:]
-                    if re.fullmatch(r"\d{1,2}", str(word["text"]))
-                    and float(word["x0"]) > 300
+                    if re.fullmatch(r"\d+", str(word["text"]))
+                    and float(word["x0"]) >= lane_start
                 ]
                 if not lane_candidates:
                     continue
@@ -87,12 +100,12 @@ def parse_master_entries_pdf(path_or_file) -> dict[str, Any]:
                 name_words = [
                     str(word["text"])
                     for word in line_words[1:]
-                    if 70 <= float(word["x0"]) < 200
+                    if name_start <= float(word["x0"]) < group_start
                 ]
                 group_words = [
                     str(word["text"])
                     for word in line_words[1:]
-                    if 180 <= float(word["x0"]) < float(lane_word["x0"])
+                    if group_start <= float(word["x0"]) < lane_start
                 ]
 
                 athlete_name = _clean_athlete_name(" ".join(name_words))
@@ -109,6 +122,7 @@ def parse_master_entries_pdf(path_or_file) -> dict[str, Any]:
                         "athlete_number": first,
                         "athlete_name": athlete_name,
                         "group_name": group_name,
+                        "distance": int(m[1]) if (m := re.search(r"\((\d+)\s*m\)"," ".join(group_words),re.I)) else None,
                         "lane": lane,
                     }
                 )
@@ -161,7 +175,11 @@ def parse_master_entries_pdf(path_or_file) -> dict[str, Any]:
         existing["swimming_heat"] = rec["heat"]
         existing["swimming_lane"] = rec["lane"]
 
+    for record in records:
+        if record.get("distance"):
+            by_athlete[record["athlete_number"]]["run_distance" if record["discipline"]=="running" else "swim_distance"]=record["distance"]
     return {
+        "metadata": metadata,
         "source_type": "pdf",
         "athletes": list(by_athlete.values()),
         "running_records": run_records,

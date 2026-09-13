@@ -7,6 +7,7 @@ from typing import Any
 import openpyxl
 
 from .master_entries_pdf import parse_master_entries_pdf
+from .event_metadata import read_metadata
 
 HEAT_RE = re.compile(r"^Heat\s*(\d+)\s*-\s*(.*)$", re.IGNORECASE)
 INTERPROVINCIAL_DISTANCE_SUFFIX_RE = re.compile(
@@ -93,7 +94,8 @@ def _parse_local_excel_records(ws) -> list[dict[str, Any]]:
                 "heat": current_heat,
                 "athlete_number": str(athlete_number),
                 "athlete_name": normalize_uploaded_athlete_name(b),
-                "group_name": str(c).strip(),
+                "group_name": _clean_interprovincial_group_name(c),
+                "distance": int(m[1]) if (m := re.search(r"\((\d+)\s*m\)",str(c),re.I)) else None,
                 "province": None,
                 "lane": lane,
                 "row": row_num,
@@ -134,6 +136,7 @@ def _parse_interprovincial_excel_records(ws) -> list[dict[str, Any]]:
                 "athlete_number": str(athlete_number),
                 "athlete_name": normalize_uploaded_athlete_name(name_value),
                 "group_name": _clean_interprovincial_group_name(group_value),
+                "distance": int(m[1]) if (m := re.search(r"\((\d+)\s*m\)",str(group_value),re.I)) else None,
                 "province": str(province_value).strip() if province_value not in (None, "") else None,
                 "lane": lane,
                 "row": row_num,
@@ -157,6 +160,7 @@ def parse_master_entries(path_or_file) -> dict[str, Any]:
     ws = wb[wb.sheetnames[0]]
 
     try:
+        metadata=read_metadata(row[0] for row in ws.iter_rows(values_only=True) if row and row[0] is not None)
         is_interprovincial = _is_interprovincial_layout(ws)
         records = (
             _parse_interprovincial_excel_records(ws)
@@ -223,7 +227,11 @@ def parse_master_entries(path_or_file) -> dict[str, Any]:
         existing["swimming_heat"] = rec["heat"]
         existing["swimming_lane"] = rec["lane"]
 
+    for record in records:
+        if record.get("distance"):
+            by_athlete[record["athlete_number"]]["run_distance" if record["discipline"]=="running" else "swim_distance"]=record["distance"]
     return {
+        "metadata": metadata,
         "source_type": "xlsx_interprovincial" if is_interprovincial else "xlsx",
         "athletes": list(by_athlete.values()),
         "running_records": run_records,
