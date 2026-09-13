@@ -12,13 +12,20 @@ Both use the approved Master Entries Excel/PDF parsers and the same saved event.
    actual pool capacity, initially suggested from the uploaded document.
    Run positions automatically use 1–12, inside to outside; manual position 13
    and above extends the outside edge without extra configuration.
-3. Resolve historical identity choices and check category, gender, distances and
+3. Athlete numbers link history automatically; differing names are highlighted
+   without blocking, and the uploaded name stays unchanged. Check category, gender, distances and
    seed sources. Current-season fastest takes priority, then previous season,
    then two seasons previously. Wrong-distance/older results cannot supply seeds.
    No usable history produces NT, including visiting athletes.
 4. Generate both disciplines, review their tabs, move/swap athletes or edit heat
    numbers, positions and seeds, then save. Lower heat numbers move athletes earlier.
    Manual edits remain authoritative; regeneration explicitly replaces assignments.
+   The move/swap controls reseed the affected heats automatically. Use the table
+   for explicit position overrides; heat notices are collected in a collapsed panel.
+   **Move an entire heat** inserts a selected run or swim heat elsewhere in that
+   discipline's programme. Other heats shift and are renumbered; athletes and
+   lane assignments within each heat remain intact. Reapprove and regenerate
+   operational files after changing the order.
 5. Confirm review of both disciplines, approve, and generate the operational files.
    Continue through the existing phases. Phase 2 retains its runner-movement controls.
 
@@ -38,6 +45,13 @@ exceed 12. NT athletes generally enter slower heats within their competition gro
 Swim lanes use centre-out seeding; faster runners receive outer starting positions.
 Special Needs Male and Female both use a 400 m run and a 50 m swim.
 Manual unusual combinations/capacities warn; technically invalid outputs are blocked.
+
+Running follows older Masters/Special Needs (women then men), Under 8, Under 9–12,
+junior/senior/Masters 40–50, then Under 13/15/17/19. Local opening run heats target
+at most 10 athletes and may combine compatible younger athletes with older Masters
+and Special Needs. Initial groups remain separate before the optimisation pass.
+Swimming follows Under 8, older Masters/Special Needs, Under 9–13, junior/senior/
+Masters 40–50, then Under 15/17/19. Masters 80+ follow the 60+/70+ groups.
 
 ## One compatible output package
 

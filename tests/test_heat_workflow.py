@@ -36,7 +36,7 @@ def test_inferred_season_and_three_season_distance_lookup(tmp_path):
     assert select_seed(db,aid,"swim",50,2027)[0] is None
 
 
-def test_entry_matching_does_not_silently_link_number_collision(tmp_path):
+def test_entry_matching_uses_number_and_highlights_name_difference(tmp_path):
     db=tmp_path/"history.sqlite"
     init_season_db(db)
     store_event(db,NormalizedEvent("League",date(2026,9,1),LEAGUE,"x.xlsx",
@@ -44,11 +44,50 @@ def test_entry_matching_does_not_silently_link_number_collision(tmp_path):
     parsed={"athletes":[{"athlete_number":"101","athlete_name":"Different Person","group_name":"U/13 GIRLS",
         "running_heat":1,"swimming_heat":1,"sort_order":1}]}
     rows,ambiguous=prepare_entries(parsed,db,2027)
-    assert len(ambiguous)==1 and rows[0]["run_seed"] is None
+    assert len(ambiguous)==1 and ambiguous[0]["number_matched"]
+    assert rows[0]["history_athlete_id"] is not None
+    assert rows[0]["athlete_name"]=="Different Person"
+    assert rows[0]["run_seed"] is None  # U13 distance differs from U11 history.
     parsed["athletes"][0]["athlete_name"]="Alex Example"
     rows,ambiguous=prepare_entries(parsed,db,2027)
     assert not ambiguous and rows[0]["history_athlete_id"] is not None
     assert rows[0]["run_distance"]==800 and rows[0]["run_seed"] is None
+
+
+def test_programme_sequence_opening_capacity_and_reseeded_moves():
+    from services.heats import move_or_swap
+    import pytest
+    groups=["U/19 GIRLS","U/17 GIRLS","U/15 GIRLS","U/13 GIRLS","MASTERS 50+ WOMEN",
+        "MASTERS 40+ WOMEN","SENIOR WOMEN","JNR GIRLS","U/11 GIRLS","U/09 GIRLS","U/08 GIRLS",
+        "SPECIAL NEEDS FEMALE","MASTERS 80+ WOMEN","MASTERS 70+ WOMEN","MASTERS 60+ WOMEN"]
+    field=[entries(1,group,i)[0] for i,group in enumerate(groups)]
+    rows=generate_heats(field,settings(),optimise=False)
+    run=[r["group_name"] for r in sorted(rows,key=lambda r:r["running_heat"])]
+    swim=[r["group_name"] for r in sorted(rows,key=lambda r:r["swimming_heat"])]
+    assert run==list(reversed(groups))
+    assert swim[:5]==["U/08 GIRLS",*run[:4]]
+    assert swim.index("U/13 GIRLS")<swim.index("JNR GIRLS")<swim.index("U/15 GIRLS")
+    field=entries(6,"MASTERS 60+ WOMEN")+entries(2,"MASTERS 70+ WOMEN",10)+entries(2,"SPECIAL NEEDS FEMALE",20)+entries(3,"U/08 GIRLS",30)
+    rows=generate_heats(field,settings())
+    opening=[r for r in rows if r["running_heat"]==1]
+    assert len(opening)==10
+    assert {r["group_name"] for r in opening}=={"MASTERS 60+ WOMEN","MASTERS 70+ WOMEN","SPECIAL NEEDS FEMALE"}
+    field=generate_heats(entries(13),settings(),optimise=False)
+    before={r["athlete_number"]:dict(r) for r in field}
+    selected=field[0]
+    destination=next(r["running_heat"] for r in field if r["running_heat"]!=selected["running_heat"])
+    moved=move_or_swap(field,settings(),"run",selected["athlete_number"],destination)
+    members=sorted([r for r in moved if r["running_heat"]==destination],key=lambda r:r["run_seed"])
+    assert [r["running_lane"] for r in members]==list(range(12,12-len(members),-1))
+    assert all(r["swimming_lane"]==before[r["athlete_number"]]["swimming_lane"] for r in moved)
+    swim=generate_heats(entries(7),settings(),optimise=False)
+    swapped=move_or_swap(swim,settings(),"swim",swim[0]["athlete_number"],1,swim[-1]["athlete_number"])
+    assert swapped[0]["swimming_heat"]==swim[-1]["swimming_heat"]
+    full=generate_heats(entries(7),settings())
+    for i,row in enumerate(full):
+        row.update(swimming_heat=1 if i<6 else 2,swimming_lane=i+1 if i<6 else 3)
+    with pytest.raises(ValueError,match="full"):
+        move_or_swap(full,settings(),"swim",full[-1]["athlete_number"],1)
 
 
 def test_existing_database_inference_preserves_override(tmp_path):
@@ -181,6 +220,19 @@ def test_manual_assignments_reach_every_export_and_phase2_invalidates(tmp_path):
     timed=next(row for row in workbook["Lane3"].iter_rows(min_row=8,values_only=True) if row[1]=="100")
     assert timed[4]==4
     assert current_outputs(db,eid)
+    from services.heats import reorder_heat
+    before=get_athletes(db,eid)
+    reordered=reorder_heat(before,"run",4,1)
+    reordered=reorder_heat(reordered,"swim",4,1)
+    assert [(r["running_lane"],r["swimming_lane"]) for r in reordered]==[(r["running_lane"],r["swimming_lane"]) for r in before]
+    save_heat_assignments(db,eid,reordered,get_event(db,eid)["heat_revision"])
+    assert get_event(db,eid)["heat_status"]=="stale" and not current_outputs(db,eid)
+    approve_heats(db,eid,get_event(db,eid)["heat_revision"])
+    reordered_files=generate_outputs(db,eid,{})
+    parsed=parse_master_entries(BytesIO(reordered_files["Master Entries Heats.xlsx"][1]))
+    first=next(r for r in parsed["athletes"] if r["athlete_number"]=="100")
+    assert (first["running_heat"],first["swimming_heat"])==(1,1)
+    assert json.loads(reordered_files["meet_program.json"][1])["meetSessions"][0]["sessionRaces"][0]["raceLanes"][0]["laneSwimmerId"]=="100"
     assign_athlete_to_run_heat(db,eid,"100",5)
     assert get_event(db,eid)["heat_status"]=="stale" and not current_outputs(db,eid)
     with pytest.raises(ValueError,match="approve"):

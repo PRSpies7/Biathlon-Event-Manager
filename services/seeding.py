@@ -60,7 +60,7 @@ def _select(records, season_year):
 
 
 def prepare_entries(parsed, history_path, season_year, matches=None):
-    """Reuse approved parser output; ambiguity needs an explicit identity choice.
+    """Link by athlete number; name differences are non-blocking notices.
 
     matches maps entry number to historical athlete ID or None (new/visiting).
     Source heat membership only determines discipline participation, never seeding.
@@ -86,9 +86,11 @@ def prepare_entries(parsed, history_path, season_year, matches=None):
             matched = matches[number]
             if matched is not None and matched not in by_id:
                 raise ValueError("Selected historical athlete no longer exists.")
-        elif len(same_number) == 1 and name_key(same_number[0]["athlete_name"]) == name_key(row["athlete_name"]):
+        elif len(same_number) == 1:
             matched = same_number[0]["id"]
-        elif candidates:
+            if name_key(same_number[0]["athlete_name"]) != name_key(row["athlete_name"]):
+                ambiguities.append({"entry": row, "candidates": same_number, "number_matched": True})
+        elif len(same_number) > 1:
             ambiguities.append({"entry": row, "candidates": list(candidates.values())})
         run, swim = distances(row.get("group_name"))
         for discipline,prefix in (("run","running"),("swim","swimming")):

@@ -16,6 +16,31 @@ from database.season_repository import store_event, season_snapshot
 from parsers.season_results.models import NormalizedEvent, Result, LEAGUE
 
 
+def test_whole_heat_reordering_in_both_disciplines(tmp_path,monkeypatch):
+    from database.repository import create_event,replace_athletes,approve_heats
+    app=app_test(tmp_path,monkeypatch)
+    db=tmp_path/"data/biathlon_events.sqlite"
+    eid=create_event(db,"Move whole heats","GN","2026-09-01","SCM",6,heat_source="generated")
+    rows=generate_heats(entries(25),settings(),optimise=False)
+    replace_athletes(db,eid,rows)
+    approve_heats(db,eid,get_event(db,eid)["heat_revision"])
+    app.session_state["event_id"]=eid
+    app.run()
+    for discipline,prefix,source,destination in (("run","running",3,1),("swim","swimming",1,5)):
+        before=get_athletes(db,eid)
+        app.selectbox(key=f"move_whole_heat_{discipline}").set_value(source).run()
+        target=next(w for w in app.number_input if w.key and w.key.startswith(f"whole_heat_position_{eid}_{discipline}_{source}_"))
+        target.set_value(destination)
+        app.button(key=f"apply_whole_heat_{discipline}").click().run()
+        assert not app.exception and not app.error
+        after=get_athletes(db,eid)
+        for old,new in zip(before,after):
+            assert old[prefix+"_lane"]==new[prefix+"_lane"]
+            if old[prefix+"_heat"]==source:
+                assert new[prefix+"_heat"]==destination
+        assert get_event(db,eid)["heat_status"]=="stale"
+
+
 def test_entry_corrections_unblock_initialization(tmp_path, monkeypatch):
     import openpyxl
     app=app_test(tmp_path,monkeypatch)
@@ -41,10 +66,8 @@ def test_entry_corrections_unblock_initialization(tmp_path, monkeypatch):
         assert not any("Run starting positions" in w.label for w in app.text_input)
         initialize=next(b for b in app.button if b.label=="Confirm Entries and Initialize Event")
         assert initialize.disabled
-        identity=next(w for w in app.selectbox if w.label.startswith("Confirm identity:"))
-        aid=season_snapshot(history)["athletes"][0]["id"]
-        identity.set_value(aid).run()
-        assert any("Selection accepted for Heidi von Wielligh" in w.value for w in app.success)
+        assert not any(w.label.startswith("Confirm identity:") for w in app.selectbox)
+        assert any("Linked by athlete number; no action required" in w.value for w in app.warning)
         next(w for w in app.checkbox if w.label.startswith("Confirm pool capacity:")).check().run()
         next(b for b in app.button if b.label=="Confirm Entries and Initialize Event").click().run()
         assert not app.exception and not app.error
@@ -80,12 +103,10 @@ def test_both_start_paths_reach_exports_results_and_season_reports(tmp_path, mon
             click("Generate run and swim heats")
             app.selectbox(key="move_athlete_run").set_value("100").run()
             app.number_input(key="target_heat_run_100").set_value(4)
-            app.number_input(key="target_lane_run_100").set_value(12)
             app.button(key="apply_move_run").click().run()
             assert not app.exception
             app.selectbox(key="move_athlete_swim").set_value("100").run()
             app.number_input(key="target_heat_swim_100").set_value(3)
-            app.number_input(key="target_lane_swim_100").set_value(3)
             app.button(key="apply_move_swim").click().run()
             assert not app.exception
             next(c for c in app.checkbox if c.label=="I have reviewed the running heats").check()

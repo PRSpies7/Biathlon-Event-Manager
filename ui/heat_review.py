@@ -52,9 +52,12 @@ def render_entries(db_path, parsed, uploaded, name, host, start_date, course, la
     blockers = []
     if ambiguous:
         st.subheader("Check historical identities")
-        st.info("The uploaded name or number differs from a historical record. Choose whether each record belongs to the same person. The name from your entries stays unchanged. Selections apply immediately to the seed preview and are saved with Confirm Entries and Initialize Event below.")
+        st.caption("Athletes are linked by athlete number. Name differences are highlighted for reference; the uploaded name is retained.")
     for issue in ambiguous:
         row = issue["entry"]
+        if issue.get("number_matched"):
+            st.warning(f"{row['athlete_number']}: entry name {row['athlete_name']} differs from historical name {issue['candidates'][0]['athlete_name']}. Linked by athlete number; no action required.")
+            continue
         choices = {a["id"]: f"Link historical record: {a['athlete_number']} · {a['athlete_name']}" for a in issue["candidates"]}
         choices[0] = "New / visiting athlete - no historical link"
         selection = st.selectbox(f"Confirm identity: {row['athlete_number']} · {row['athlete_name']}",
@@ -150,6 +153,24 @@ def render(db_path, event_id):
             if not participating:
                 st.info(f"No {discipline} entries.")
                 continue
+            heat_numbers=sorted({a[prefix+"_heat"] for a in participating if a.get(prefix+"_heat") is not None})
+            with st.expander("Move an entire heat"):
+                if len(heat_numbers)<2:
+                    st.caption("At least two heats are needed to change their order.")
+                else:
+                    moving_heat=st.selectbox("Heat to move",heat_numbers,format_func=lambda value:f"Heat {value}",key=f"move_whole_heat_{discipline}")
+                    destination=st.number_input("New place in programme",min_value=1,max_value=len(heat_numbers),
+                        value=heat_numbers.index(moving_heat)+1,key=f"whole_heat_position_{event_id}_{discipline}_{moving_heat}_{event['heat_revision']}")
+                    st.caption("Moves the whole heat and shifts the others. Heats are renumbered in order; athletes and their lanes stay together.")
+                    if st.button("Move entire heat",key=f"apply_whole_heat_{discipline}",disabled=destination==heat_numbers.index(moving_heat)+1):
+                        from services.heats import reorder_heat
+                        try:
+                            reordered=reorder_heat(entries,discipline,moving_heat,int(destination))
+                            save_heat_assignments(db_path,event_id,reordered,event["heat_revision"])
+                        except ValueError as exc:
+                            st.error(str(exc))
+                        else:
+                            st.rerun()
             st.caption("Edit heat numbers to move athletes earlier/later. Starting positions are separate from Phase 2 finishing positions. Save edits before approval.")
             table=pd.DataFrame([{"Athlete":a["athlete_number"],"Name":a["athlete_name"],"Age group":a["group_name"],
                 "Gender":a.get("gender"),"Distance":a.get(discipline+"_distance"),"Heat":a.get(prefix+"_heat"),
@@ -196,28 +217,27 @@ def render(db_path, event_id):
                     st.rerun()
             with st.expander("Move or swap an athlete"):
                 choices={a["athlete_number"]:a for a in participating}
-                athlete=st.selectbox("Athlete",list(choices),format_func=lambda key:choices[key]["athlete_name"],key=f"move_athlete_{discipline}")
+                labels={key:f"{row['athlete_name']} · {row['group_name']} · Heat {row.get(prefix+'_heat') or 'unassigned'} · #{key}"
+                    for key,row in choices.items()}
+                athlete=st.selectbox("Athlete",list(choices),format_func=labels.get,key=f"move_athlete_{discipline}")
                 heat=st.number_input("Move to heat (lower = earlier)",min_value=1,value=int(choices[athlete].get(prefix+"_heat") or 1),key=f"target_heat_{discipline}_{athlete}")
-                lane=st.number_input(position_label,min_value=1,value=int(choices[athlete].get(prefix+"_lane") or 1),key=f"target_lane_{discipline}_{athlete}")
                 swap=st.selectbox("Swap with",[None,*[a for a in choices if a!=athlete]],
-                    format_func=lambda key:"No swap" if key is None else choices[key]["athlete_name"],key=f"swap_{discipline}")
+                    format_func=lambda key, labels=labels:"No swap" if key is None else labels[key],key=f"swap_{discipline}")
+                st.caption("Moves and swaps reseed positions in both affected heats. Use the table for a manual position override.")
                 if st.button("Apply move / swap",key=f"apply_move_{discipline}"):
-                    selected=choices[athlete]
-                    if swap:
-                        other=choices[swap]
-                        for field in (prefix+"_heat",prefix+"_lane"):
-                            selected[field],other[field]=other[field],selected[field]
+                    try:
+                        from services.heats import move_or_swap
+                        moved=move_or_swap(entries,event,discipline,athlete,int(heat),swap)
+                        save_heat_assignments(db_path,event_id,moved,event["heat_revision"])
+                    except ValueError as exc:
+                        st.error(str(exc))
                     else:
-                        selected[prefix+"_heat"],selected[prefix+"_lane"]=int(heat),int(lane)
-                    errors,_=validate_heats(entries,event)
-                    if errors:
-                        st.error("\n".join(errors))
-                    else:
-                        save_heat_assignments(db_path,event_id,entries,event["heat_revision"])
                         st.rerun()
     errors,warnings=validate_heats(entries,event)
-    for warning in warnings:
-        st.warning(warning)
+    if warnings:
+        with st.expander(f"Heat notices ({len(warnings)})"):
+            for warning in warnings:
+                st.write(f"• {warning}")
     for error in errors:
         st.error(error)
     if event["heat_status"]!="approved":

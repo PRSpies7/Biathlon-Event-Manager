@@ -167,8 +167,6 @@ def render(db_path: str, reference_json: dict):
     with col3:
         pool_lanes = st.number_input("Pool lanes", min_value=1, max_value=12,
             value=metadata.get("pool_lanes",inferred_lanes), step=1)
-        if generated:
-            st.caption("Suggested from the uploaded document. Check the actual pool capacity; unused lanes may not appear in the entries.")
         meet_types=["Local", "Interprovincial", "National"]
         meet_type = st.selectbox("Meet type", meet_types, index=meet_types.index(defaults.get("meet_type","Local")))
 

@@ -8,6 +8,74 @@ from services.competition import category_key, category_order, compatibility, ge
 
 
 DISCIPLINES = {"run": "running", "swim": "swimming"}
+OLDER_GROUPS = {"MASTERS 60+", "MASTERS 70+", "MASTERS 80+", "SPECIAL NEEDS"}
+
+
+def programme_order(group, gender, discipline):
+    key = category_key(group) or group
+    if key in OLDER_GROUPS:
+        bucket = 0 if discipline == "run" else 1
+    elif key == "U/08":
+        bucket = 1 if discipline == "run" else 0
+    else:
+        sequence = ["U/09", "U/10", "U/11", "U/12"]
+        if discipline == "swim":
+            sequence += ["U/13"]
+        sequence += ["JNR", "SENIOR", "MASTERS 40+", "MASTERS 50+"]
+        sequence += ["U/13", "U/15", "U/17", "U/19"] if discipline == "run" else ["U/15", "U/17", "U/19"]
+        bucket = sequence.index(key)+2 if key in sequence else 99
+    return bucket, gender, category_order(group), key
+
+
+def heat_capacity(heat, discipline, capacity, meet_type):
+    if discipline == "run" and meet_type == "Local" and any(category_key(a["group_name"]) in OLDER_GROUPS for a in heat):
+        return min(10, capacity)
+    return capacity
+
+
+def reorder_heat(entries, discipline, heat_number, new_position):
+    """Insert a whole heat at a programme position, retaining its assignments."""
+    rows = deepcopy(entries)
+    field = DISCIPLINES[discipline]+"_heat"
+    order = sorted({r[field] for r in rows if r.get(field) is not None})
+    if heat_number not in order or not 1 <= new_position <= len(order):
+        raise ValueError("Choose an existing heat and a position in the programme.")
+    if order.index(heat_number) == new_position-1:
+        return rows
+    order.remove(heat_number)
+    order.insert(new_position-1,heat_number)
+    mapping = {old:new for new,old in enumerate(order,1)}
+    for row in rows:
+        if row.get(field) is not None:
+            row[field] = mapping[row[field]]
+    return rows
+
+
+def move_or_swap(entries, event, discipline, athlete_number, target_heat, swap_number=None):
+    """Change membership and reseed only the affected heats; keep other manual edits."""
+    rows = deepcopy(entries)
+    prefix = DISCIPLINES[discipline]
+    selected = next(a for a in rows if a["athlete_number"] == athlete_number)
+    affected = {selected.get(prefix+"_heat")}
+    if swap_number:
+        other = next(a for a in rows if a["athlete_number"] == swap_number)
+        selected[prefix+"_heat"], other[prefix+"_heat"] = other[prefix+"_heat"], selected[prefix+"_heat"]
+    else:
+        selected[prefix+"_heat"] = int(target_heat)
+    affected.add(selected[prefix+"_heat"])
+    for heat in affected:
+        if heat is None:
+            continue
+        members = [a for a in rows if a.get(prefix+"_heat") == heat]
+        if discipline == "swim" and len(members) > int(event["pool_lanes"]):
+            raise ValueError("The destination swim heat is full. Swap athletes or choose another heat.")
+        positions = range(max(12,len(members)),0,-1) if discipline == "run" else centre_out(int(event["pool_lanes"]))
+        for row, lane in zip(sorted(members,key=lambda a:seed_order(a,discipline)), positions):
+            row[prefix+"_lane"] = lane
+    errors, _ = validate_heats(rows,event)
+    if errors:
+        raise ValueError("\n".join(errors))
+    return rows
 
 
 def enrich_imported(rows):
@@ -42,7 +110,7 @@ def seed_order(row, discipline):
     return (value is None, value if value is not None else 0, str(row["athlete_number"]))
 
 
-def _initial(rows, discipline, capacity):
+def _initial(rows, discipline, capacity, meet_type="Local"):
     groups = defaultdict(list)
     for row in rows:
         if not row.get(f"{discipline}_entered"):
@@ -50,9 +118,9 @@ def _initial(rows, discipline, capacity):
         key = (row[f"{discipline}_distance"], category_key(row["group_name"]) or row["group_name"], row["gender"])
         groups[key].append(row)
     heats = []
-    for key in sorted(groups, key=lambda k: (k[0],category_order(k[1]),k[1],k[2])):
+    for key in sorted(groups, key=lambda k: (*programme_order(k[1],k[2],discipline), k[0])):
         ranked = sorted(groups[key],key=lambda r:seed_order(r,discipline),reverse=True)
-        count = ceil(len(ranked)/capacity)
+        count = ceil(len(ranked)/heat_capacity(ranked,discipline,capacity,meet_type))
         base, extra = divmod(len(ranked),count)
         offset = 0
         for index in range(count):
@@ -73,7 +141,16 @@ def _eligible(heat, discipline, capacity, meet_type):
 def _candidate_score(target, row, discipline, meet_type):
     if any(a[f"{discipline}_distance"] != row[f"{discipline}_distance"] for a in target):
         return None
-    ranks = [compatibility(a["group_name"],row["group_name"]) for a in target]
+    def rank_for(a):
+        left, right = category_key(a["group_name"]), category_key(row["group_name"])
+        pair = {left,right}
+        if "SPECIAL NEEDS" in pair:
+            if pair <= OLDER_GROUPS:
+                return 1
+            if discipline == "run" and meet_type == "Local" and pair <= {"SPECIAL NEEDS","U/08","U/09"}:
+                return 2
+        return compatibility(a["group_name"],row["group_name"])
+    ranks = [rank_for(a) for a in target]
     if any(rank is None for rank in ranks):
         return None
     # Younger children/older masters pairing applies specifically to the 400m run.
@@ -86,7 +163,8 @@ def _candidate_score(target, row, discipline, meet_type):
     seed = row.get(f"{discipline}_seed")
     difference = abs(seed-sum(seeds)/len(seeds)) if seed is not None and seeds else float("inf")
     rank = max(ranks)
-    return (gender,rank,difference) if meet_type == "Interprovincial" else (rank,gender,difference)
+    opening_run = discipline == "run" and meet_type == "Local" and any(k in OLDER_GROUPS for k in keys)
+    return (gender,rank,difference) if meet_type == "Interprovincial" or opening_run else (rank,gender,difference)
 
 
 def optimise_heats(heats, discipline, capacity, meet_type):
@@ -97,17 +175,19 @@ def optimise_heats(heats, discipline, capacity, meet_type):
     """
     if meet_type == "National":
         return heats
-    eligible = {i for i,h in enumerate(heats) if _eligible(h,discipline,capacity,meet_type)}
+    eligible = {i for i,h in enumerate(heats) if _eligible(h,discipline,heat_capacity(h,discipline,capacity,meet_type),meet_type)}
     for index in sorted(eligible):
         target = heats[index]
         if not target:
             continue
-        while len(target) < capacity:
+        while len(target) < heat_capacity(target,discipline,capacity,meet_type):
             candidates = []
             for donor in sorted(eligible):
                 if donor <= index or not heats[donor]:
                     continue
                 for row in heats[donor]:
+                    if len(target)+1 > heat_capacity([*target,row],discipline,capacity,meet_type):
+                        continue
                     score = _candidate_score(target,row,discipline,meet_type)
                     if score is not None:
                         candidates.append((score, len(heats[donor]), donor, str(row["athlete_number"]), row))
@@ -135,7 +215,7 @@ def generate_heats(entries, event, *, optimise=True):
         capacity = min(12,len(positions)) if discipline == "run" else int(event["pool_lanes"])
         if capacity < 1:
             raise ValueError("Heat capacity must be positive.")
-        heats = _initial(rows,discipline,capacity)
+        heats = _initial(rows,discipline,capacity,event["meet_type"])
         if optimise:
             heats = optimise_heats(heats,discipline,capacity,event["meet_type"])
         lanes = list(reversed(positions)) if discipline == "run" else centre_out(capacity)
