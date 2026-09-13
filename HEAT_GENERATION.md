@@ -9,7 +9,9 @@ Both use the approved Master Entries Excel/PDF parsers and the same saved event.
    run/swim PDF. Existing assignments establish discipline participation; the
    generator creates new assignments. Source metadata and distances are reused.
 2. Check the inferred August–July season and override it if needed. Confirm the
-   actual pool capacity and run starting positions in inside-to-outside order.
+   actual pool capacity, initially suggested from the uploaded document.
+   Run positions automatically use 1–12, inside to outside; manual position 13
+   and above extends the outside edge without extra configuration.
 3. Resolve historical identity choices and check category, gender, distances and
    seed sources. Current-season fastest takes priority, then previous season,
    then two seasons previously. Wrong-distance/older results cannot supply seeds.
@@ -34,6 +36,7 @@ is a separate pass using the compatibility table in `services/competition.py`.
 All combinations require equal discipline distances. Automatic run heats never
 exceed 12. NT athletes generally enter slower heats within their competition groups.
 Swim lanes use centre-out seeding; faster runners receive outer starting positions.
+Special Needs Male and Female both use a 400 m run and a 50 m swim.
 Manual unusual combinations/capacities warn; technically invalid outputs are blocked.
 
 ## One compatible output package

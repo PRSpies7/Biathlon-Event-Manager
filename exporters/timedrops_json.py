@@ -79,7 +79,7 @@ def event_for_group(group: str | None) -> int | None:
     key = age_group_key(group)
     if key == "U/08":
         return 1
-    if key in {"U/09", "U/10", "U/11", "U/12", "U/13", "MASTERS 60+", "MASTERS 70+", "MASTERS 80+"}:
+    if key in {"U/09", "U/10", "U/11", "U/12", "U/13", "MASTERS 60+", "MASTERS 70+", "MASTERS 80+", "SPECIAL NEEDS"}:
         return 2
     if key in {"U/15", "U/17", "U/19", "JNR", "SENIOR", "MASTERS 40+", "MASTERS 50+"}:
         return 3

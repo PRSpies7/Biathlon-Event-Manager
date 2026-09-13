@@ -16,6 +16,45 @@ from database.season_repository import store_event, season_snapshot
 from parsers.season_results.models import NormalizedEvent, Result, LEAGUE
 
 
+def test_entry_corrections_unblock_initialization(tmp_path, monkeypatch):
+    import openpyxl
+    app=app_test(tmp_path,monkeypatch)
+    history=tmp_path/"data/history.sqlite"
+    monkeypatch.setenv("SEASON_DATABASE_PATH",str(history))
+    init_season_db(history)
+    store_event(history,NormalizedEvent("Prior meet",date(2026,8,1),LEAGUE,"prior.xlsx",
+        [Result("100","HHeeiiddi von Wielligh","Special Needs Female",run_time="02:00.00",swim_time="00:45.00")],season_year=2027))
+    event=dict(settings(),name="Entry correction",host_team="GN",start_date="2026-09-01",season_year=2027,course="SCM")
+    field=entries(6,"Special Needs Female")
+    field[0]["athlete_name"]="Heidi von Wielligh"
+    workbook=openpyxl.load_workbook(build_heats_xlsx(generate_heats(field,event),event))
+    for row in workbook.active:
+        if str(row[0].value).startswith("Pool lanes:"):
+            row[0].value=None  # Older accepted documents only carry occupied lanes.
+    upload=BytesIO()
+    workbook.save(upload)
+    upload.name="Entries.xlsx"
+    with patch("streamlit.file_uploader",return_value=upload):
+        app.radio(key="heat_source_0").set_value("Generate heats from entries").run()
+        assert not app.exception
+        assert next(w for w in app.number_input if w.label=="Pool lanes").value==6
+        assert not any("Run starting positions" in w.label for w in app.text_input)
+        initialize=next(b for b in app.button if b.label=="Confirm Entries and Initialize Event")
+        assert initialize.disabled
+        identity=next(w for w in app.selectbox if w.label.startswith("Confirm identity:"))
+        aid=season_snapshot(history)["athletes"][0]["id"]
+        identity.set_value(aid).run()
+        assert any("Selection accepted for Heidi von Wielligh" in w.value for w in app.success)
+        next(w for w in app.checkbox if w.label.startswith("Confirm pool capacity:")).check().run()
+        next(b for b in app.button if b.label=="Confirm Entries and Initialize Event").click().run()
+        assert not app.exception and not app.error
+        eid=app.session_state.event_id
+        rows=get_athletes(tmp_path/"data/biathlon_events.sqlite",eid)
+        heidi=next(r for r in rows if r["athlete_number"]=="100")
+        assert heidi["athlete_name"]=="Heidi von Wielligh"
+        assert (heidi["run_distance"],heidi["swim_distance"],heidi["swim_seed"])==(400,50,4500)
+
+
 @pytest.mark.parametrize("generated", [True, False])
 def test_both_start_paths_reach_exports_results_and_season_reports(tmp_path, monkeypatch, generated):
     app=app_test(tmp_path,monkeypatch)

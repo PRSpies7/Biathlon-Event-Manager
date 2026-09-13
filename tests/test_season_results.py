@@ -63,7 +63,7 @@ def excel_fixture(interprovincial=False, title=None):
     return stream
 
 
-def pdf_fixture(interprovincial=False, title=None):
+def pdf_fixture(interprovincial=False, title=None, overprint=False):
     """Build tiny text PDFs using standard PDF primitives, without extra dependencies.
 
     League tables have vertical rules. IP tables only rule the headers, change
@@ -75,6 +75,8 @@ def pdf_fixture(interprovincial=False, title=None):
     def label(x, y, value):
         escaped = str(value or "").replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
         commands.append(f"BT /F1 9 Tf {x} {height-y} Td ({escaped}) Tj ET")
+        if overprint and value == "Alex":
+            commands.append(f"BT /F1 9 Tf {x+0.1} {height-y} Td ({escaped}) Tj ET")
 
     def line(x, y, x2, y2):
         commands.append(f"{x} {height-y} m {x2} {height-y2} l S")
@@ -162,8 +164,9 @@ def test_excel_import(interprovincial):
 
 
 @pytest.mark.parametrize("interprovincial", [False, True])
-def test_pdf_import_wrapped_names_columns_and_page_continuation(interprovincial):
-    event = parse_season_results(pdf_fixture(interprovincial), "incorrect-2025-08-25.pdf")
+@pytest.mark.parametrize("overprint", [False, True])
+def test_pdf_import_wrapped_names_columns_and_page_continuation(interprovincial, overprint):
+    event = parse_season_results(pdf_fixture(interprovincial, overprint=overprint), "incorrect-2025-08-25.pdf")
     event.check_structure()
     assert event.event_date == date(2026, 8, 25)
     assert len(event.results) == 1 and len(event.awards) == 3

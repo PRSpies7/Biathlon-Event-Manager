@@ -67,7 +67,7 @@ def test_history_is_distance_and_two_season_scoped(db):
         import_event(db, event(None))
     for year in (2024, 2025, 2026, 2027, None):
         store_event(db, event(year))
-    unknown = event(name="Unknown distances", results=[Result("101", "Alex Example", "SPECIAL NEEDS", run_time="00:10.00")], awards=[])
+    unknown = event(name="Unknown distances", results=[Result("101", "Alex Example", "UNCLASSIFIED", run_time="00:10.00")], awards=[])
     store_event(db, unknown)
     athlete_id = season_snapshot(db, 2026)["athletes"][0]["id"]
     candidates = historical_performances(db, athlete_id, "run", 400, 2026)

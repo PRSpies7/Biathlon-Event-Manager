@@ -121,9 +121,7 @@ def optimise_heats(heats, discipline, capacity, meet_type):
 
 def generate_heats(entries, event, *, optimise=True):
     rows = deepcopy(entries)
-    positions = json.loads(event["run_positions"])
-    if not positions or len(set(positions)) != len(positions) or any(type(p) is not int or p<1 for p in positions):
-        raise ValueError("Configure distinct positive run starting positions, inside to outside.")
+    positions = list(range(1,13))
     if event["meet_type"] not in {"Local","Interprovincial","National"}:
         raise ValueError("Select Local, Interprovincial or National event type.")
     for row in rows:

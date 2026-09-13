@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from collections import Counter
+from types import SimpleNamespace
 import re
 
 import pdfplumber
@@ -25,6 +26,9 @@ def parse_season_results(source, filename: str | None = None):
         with pdfplumber.open(source) as pdf:
             if not pdf.pages:
                 raise ValueError("This PDF has no pages.")
+            # Some reports paint the same glyph twice at the same position.
+            # Remove only spatial duplicates, never repeated letters in names.
+            pdf = SimpleNamespace(pages=[page.dedupe_chars(tolerance=0.5) for page in pdf.pages])
             first = pdf.pages[0].extract_text() or ""
             if not first.strip():
                 raise ValueError("This PDF has no extractable text. Upload the original text PDF or Excel results.")

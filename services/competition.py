@@ -10,6 +10,8 @@ def infer_season(value):
 
 def category_key(group):
     text = str(group or "").upper()
+    if re.search(r"\bSPECIAL\s+NEEDS\b", text):
+        return "SPECIAL NEEDS"
     match = re.search(r"\bU\s*/?\s*0?(8|9|10|11|12|13|15|17|19)\b", text)
     if match:
         return f"U/{int(match[1]):02d}"
@@ -36,6 +38,8 @@ def distances(group):
     key = category_key(group)
     if key is None:
         return None, None
+    if key == "SPECIAL NEEDS":
+        return 400, 50
     short_masters = key in {"MASTERS 60+", "MASTERS 70+", "MASTERS 80+"}
     age = int(key[2:]) if key.startswith("U/") else None
     run = 400 if short_masters or (age is not None and age <= 11) else 800

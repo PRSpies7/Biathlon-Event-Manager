@@ -79,6 +79,37 @@ def settings(meet_type="Local",lanes=6):
     return dict(meet_type=meet_type,pool_lanes=lanes,run_positions=json.dumps(list(range(1,13))))
 
 
+def test_special_needs_distances_backfill_and_seeds(tmp_path):
+    from services.competition import distances
+    from exporters.timedrops_json import event_for_group
+    db=tmp_path/"history.sqlite"
+    init_season_db(db)
+    for gender in ("Male", "Female"):
+        group=f"Special Needs {gender}"
+        assert distances(group)==(400,50)
+        assert event_for_group(group)==2
+    store_event(db,NormalizedEvent("League",date(2026,9,1),LEAGUE,"x.xlsx",
+        [Result("100","Athlete 0","Special Needs Female",run_time="02:00.00",swim_time="00:45.00"),
+         Result("101","Athlete 1","Special Needs Male",run_distance=800,swim_distance=100)],season_year=2027))
+    with sqlite3.connect(db) as conn:
+        conn.execute("UPDATE season_results SET run_distance=NULL,swim_distance=NULL WHERE athlete_id=(SELECT id FROM season_athletes WHERE athlete_number='100')")
+    init_season_db(db)
+    init_season_db(db)
+    assert len(list(tmp_path.glob("*.before-seasons-*.sqlite")))==1
+    snapshot=season_snapshot(db)
+    linked={a["athlete_number"]:a["id"] for a in snapshot["athletes"]}
+    assert select_seed(db,linked["100"],"run",400,2027)[0]==12000
+    assert select_seed(db,linked["100"],"swim",50,2027)[0]==4500
+    explicit=next(r for r in snapshot["results"] if r["athlete_id"]==linked["101"])
+    assert (explicit["run_distance"],explicit["swim_distance"])==(800,100)
+    rows=generate_heats(entries(13,"Special Needs Female"),settings())
+    assert all((r["run_distance"],r["swim_distance"])==(400,50) for r in rows)
+    from services.heats import validate_heats
+    for i,row in enumerate(rows):
+        row.update(running_heat=1,running_lane=i+1)
+    assert validate_heats(rows,settings())[0]==[]  # Manual position 13 is allowed.
+
+
 def test_initial_structure_nt_and_lane_assignment():
     field=entries(13)+entries(3,"U/13 BOYS",20)
     field[0]["run_seed"]=field[0]["swim_seed"]=None

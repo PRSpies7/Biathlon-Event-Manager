@@ -117,11 +117,17 @@ def init_season_db(db_path: str | Path) -> None:
     # Inspect before using the normal connection, which enables WAL mode.
     import sqlite3
     legacy = False
+    special_needs_backfill = False
     if path.exists() and path.stat().st_size:
         with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)) as reader:
             columns = {r[1] for r in reader.execute("PRAGMA table_info(season_events)")}
             legacy = bool(columns) and ("season_year" not in columns or "workflow_key" not in columns)
-        if legacy:
+            result_columns = {r[1] for r in reader.execute("PRAGMA table_info(season_results)")}
+            if {"run_distance", "swim_distance"} <= result_columns:
+                from services.competition import category_key
+                special_needs_backfill = any(category_key(r[0]) == "SPECIAL NEEDS" for r in reader.execute(
+                    "SELECT category FROM season_results WHERE run_distance IS NULL OR swim_distance IS NULL"))
+        if legacy or special_needs_backfill:
             backup_database(path)
     with get_conn(path) as conn:
         # Rebuild only the parent table to replace its old uniqueness constraint.
@@ -165,6 +171,13 @@ def init_season_db(db_path: str | Path) -> None:
             from .season_repository import _refresh_categories
             for row in conn.execute("SELECT DISTINCT season_year FROM season_events WHERE season_year IS NOT NULL").fetchall():
                 _refresh_categories(conn, row[0])
+        # Fill only missing Special Needs distances; preserve explicit historical values.
+        from services.competition import category_key
+        for row in conn.execute("SELECT event_id,athlete_id,category FROM season_results WHERE run_distance IS NULL OR swim_distance IS NULL").fetchall():
+            if category_key(row["category"]) == "SPECIAL NEEDS":
+                conn.execute("""UPDATE season_results SET run_distance=COALESCE(run_distance,400),
+                    swim_distance=COALESCE(swim_distance,50) WHERE event_id=? AND athlete_id=?""",
+                    (row["event_id"],row["athlete_id"]))
         conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS history_workflow ON season_events(workflow_key) WHERE workflow_key IS NOT NULL")
         conn.execute("CREATE INDEX IF NOT EXISTS season_events_year ON season_events(season_year, id)")
         # SQLite UNIQUE permits multiple NULL values; legacy imports must still deduplicate.

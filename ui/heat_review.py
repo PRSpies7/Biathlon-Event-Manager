@@ -17,13 +17,9 @@ def render_event_settings(db_path,event):
         with st.form(f"event_configuration_{event['id']}"):
             year=st.number_input("Season",min_value=1900,max_value=9999,value=event["season_year"] or infer_season(event["start_date"]))
             lanes=st.number_input("Pool lanes",min_value=1,max_value=12,value=int(event["pool_lanes"]))
-            positions=st.text_input("Run starting positions, inside to outside",",".join(map(str,json.loads(event["run_positions"]))))
             if st.form_submit_button("Save event configuration"):
                 try:
-                    positions=[int(p.strip()) for p in positions.split(",")]
-                    if not positions or min(positions)<1 or len(set(positions))!=len(positions):
-                        raise ValueError("Run positions must be distinct positive numbers, ordered inside to outside.")
-                    update_event(db_path,event["id"],season_year=int(year),pool_lanes=int(lanes),run_positions=json.dumps(positions))
+                    update_event(db_path,event["id"],season_year=int(year),pool_lanes=int(lanes))
                     if int(year)!=event["season_year"] and event["heat_source"]=="generated":
                         from database.repository import save_heat_assignments
                         history_path=season_database_path(Path(__file__).resolve().parents[1])
@@ -53,16 +49,22 @@ def render_entries(db_path, parsed, uploaded, name, host, start_date, course, la
         st.error(str(exc))
         return
     unresolved = False
+    blockers = []
+    if ambiguous:
+        st.subheader("Check historical identities")
+        st.info("The uploaded name or number differs from a historical record. Choose whether each record belongs to the same person. The name from your entries stays unchanged. Selections apply immediately to the seed preview and are saved with Confirm Entries and Initialize Event below.")
     for issue in ambiguous:
         row = issue["entry"]
-        choices = {a["id"]: f"{a['athlete_number']} · {a['athlete_name']}" for a in issue["candidates"]}
+        choices = {a["id"]: f"Link historical record: {a['athlete_number']} · {a['athlete_name']}" for a in issue["candidates"]}
         choices[0] = "New / visiting athlete - no historical link"
         selection = st.selectbox(f"Confirm identity: {row['athlete_number']} · {row['athlete_name']}",
             list(choices), format_func=choices.get, index=None, key=f"identity_{token}_{row['athlete_number']}")
         if selection is None:
             unresolved = True
+            blockers.append(f"{row['athlete_number']} · {row['athlete_name']}: choose a historical identity or New / visiting athlete.")
         else:
             matches[row["athlete_number"]] = selection or None
+            st.success(f"Selection accepted for {row['athlete_name']}: {'historical seeds will be checked' if selection else 'no historical link; seed is NT'}. Save with Confirm Entries and Initialize Event below.")
     if matches:
         try:
             entries, _ = prepare_entries(parsed, history_path, year, matches)
@@ -83,12 +85,14 @@ def render_entries(db_path, parsed, uploaded, name, host, start_date, course, la
         entry["group_name"], entry["gender"] = str(row["Age group"] or ""), str(row["Gender"] or "")
         if entry["gender"] not in {"F", "M"} or not entry["group_name"].strip():
             invalid = True
+            blockers.append(f"{entry['athlete_number']} · {entry['athlete_name']}: enter a category and select gender F or M.")
         expected = distances(entry["group_name"])
         for index, discipline in enumerate(("run", "swim")):
             value = row[f"{discipline.title()} distance"]
             distance = None if pd.isna(value) else int(value)
             if entry[f"{discipline}_entered"] and not distance:
                 invalid = True
+                blockers.append(f"{entry['athlete_number']} · {entry['athlete_name']}: enter the {discipline} distance in the table above.")
             if distance and expected[index] and distance != expected[index]:
                 st.warning(f"{entry['athlete_name']}: {discipline} distance {distance} m differs from the category rule ({expected[index]} m). The confirmed event distance will be used.")
             if entry[f"{discipline}_distance"] != distance:
@@ -99,17 +103,9 @@ def render_entries(db_path, parsed, uploaded, name, host, start_date, course, la
         "Run seed":display_seed(r["run_seed"]), "Run source":r["run_seed_source"],
         "Swim seed":display_seed(r["swim_seed"]), "Swim source":r["swim_seed_source"]} for r in entries], hide_index=True)
     confirmed = st.checkbox(f"Confirm pool capacity: {lanes} lanes", key=f"confirm_lanes_{token}_{lanes}")
-    positions = st.text_input("Run starting positions, inside to outside", parsed.get("metadata",{}).get("run_positions","1,2,3,4,5,6,7,8,9,10,11,12"),
-        help="Enter the actual available starting positions. Automatic heats never exceed 12 runners.")
-    try:
-        positions = [int(p.strip()) for p in positions.split(",")]
-        if not positions or min(positions) < 1 or len(set(positions)) != len(positions):
-            raise ValueError()
-    except ValueError:
-        st.error("Run positions must be distinct positive numbers, ordered from inside to outside.")
-        invalid = True
+    positions = list(range(1,13))
     if invalid:
-        st.warning("Resolve identity choices and missing category, gender or discipline distances before continuing.")
+        st.warning("Before initializing, complete these items:\n\n" + "\n".join(f"- {item}" for item in blockers))
     if st.button("Confirm Entries and Initialize Event", type="primary", disabled=invalid or not confirmed):
         if not name.strip() or not host.strip():
             st.error("Meet name and host/team name are required.")
