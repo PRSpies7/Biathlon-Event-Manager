@@ -20,11 +20,12 @@ Both use the approved Master Entries Excel/PDF parsers and the same saved event.
 4. Generate both disciplines, review their tabs, move/swap athletes or edit heat
    numbers, positions and seeds, then save. Lower heat numbers move athletes earlier.
    Manual edits remain authoritative; regeneration explicitly replaces assignments.
-   Click **Save run heat edits** or **Save swim heat edits** below the table before
+   Click **Save run heats and recalculate starting positions** or **Save swim heat edits** below the table before
    moving athletes or whole heats. Unsaved table edits block those actions;
    saving one discipline preserves pending edits in the other.
    The move/swap controls reseed the affected heats automatically. Use the table
-   for explicit position overrides; heat notices are collected in a collapsed panel.
+   for explicit swim lane overrides; run positions are read-only and recalculated
+   from seeds whenever run heat edits are saved. Heat notices are in a collapsed panel.
    **Move an entire heat** inserts a selected run or swim heat elsewhere in that
    discipline's programme. Other heats shift and are renumbered; athletes and
    lane assignments within each heat remain intact. Reapprove and regenerate

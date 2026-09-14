@@ -140,7 +140,7 @@ def render(db_path, event_id):
     pending=[discipline for discipline,draft in drafts.items() if draft.get("edited_rows")]
     st.subheader(f"{event['name']} · Season {event['season_year']}")
     if pending:
-        st.warning("Unsaved table changes: " + ", ".join(pending) + ". Click Save run heat edits / Save swim heat edits beneath the relevant table before moving heats or athletes, reseeding, approving or exporting.")
+        st.warning("Unsaved table changes: " + ", ".join(pending) + ". Save the edits beneath the relevant table before moving heats or athletes, reseeding, approving or exporting.")
     render_event_settings(db_path,event,pending_edits=bool(pending))
     st.subheader("Current entries, heats and seeds")
     st.dataframe([{"Athlete":a["athlete_number"],"Name":a["athlete_name"],"Age group":a["group_name"],
@@ -210,7 +210,7 @@ def render(db_path, event_id):
                 heat=st.number_input("Move to heat (lower = earlier)",min_value=1,value=int(choices[athlete].get(prefix+"_heat") or 1),key=f"target_heat_{discipline}_{athlete}")
                 swap=st.selectbox("Swap with",[None,*[a for a in choices if a!=athlete]],
                     format_func=lambda key, labels=labels:"No swap" if key is None else labels[key],key=f"swap_{discipline}")
-                st.caption("Moves and swaps reseed positions in both affected heats. Use the table for a manual position override.")
+                st.caption("Moves and swaps reseed positions in both affected heats." + ("" if discipline=="run" else " Use the table for a manual swim lane override."))
                 if st.button("Apply move / swap",key=f"apply_move_{discipline}",disabled=bool(pending)):
                     try:
                         from services.heats import move_or_swap
@@ -220,7 +220,7 @@ def render(db_path, event_id):
                         st.error(str(exc))
                     else:
                         st.rerun()
-            st.caption("Edit heat numbers to move athletes earlier/later. Starting positions are separate from Phase 2 finishing positions. Save edits before approval.")
+            st.caption("Edit heat numbers to move athletes earlier/later. Saving recalculates run starting positions from seed times." if discipline=="run" else "Edit heat numbers or lanes, then save before approval.")
             table=pd.DataFrame([{"Athlete":a["athlete_number"],"Name":a["athlete_name"],"Age group":a["group_name"],
                 "Gender":a.get("gender"),"Distance":a.get(discipline+"_distance"),"Heat":a.get(prefix+"_heat"),
                 "Start position" if discipline=="run" else "Lane":a.get(prefix+"_lane"),
@@ -234,12 +234,13 @@ def render(db_path, event_id):
                     table.at[int(index),column]=value
             st.subheader("Running heat assignments" if discipline=="run" else "Swimming heat assignments")
             edited=st.data_editor(table,hide_index=True,num_rows="fixed",key=editor_keys[discipline],
-                disabled=["Athlete","Name","Seed source"],column_config={
+                disabled=["Athlete","Name","Seed source",*(["Start position"] if discipline=="run" else [])],column_config={
                     "Heat":st.column_config.NumberColumn(min_value=1,step=1),
                     position_label:st.column_config.NumberColumn(min_value=1,step=1),
                     "Gender":st.column_config.SelectboxColumn(options=["F","M"]),
                     "Distance":st.column_config.NumberColumn(min_value=1,step=1)})
-            if st.button(f"Save {discipline} heat edits",key=f"save_heats_{discipline}"):
+            save_label="Save run heats and recalculate starting positions" if discipline=="run" else "Save swim heat edits"
+            if st.button(save_label,key=f"save_heats_{discipline}"):
                 try:
                     changes={r["Athlete"]:r for _,r in edited.iterrows()}
                     for entry in entries:
@@ -262,6 +263,9 @@ def render(db_path, event_id):
                             entry[discipline+"_seed_source"]="NT - distance changed; select a valid seed or override explicitly"
                         if value!=entry.get(discipline+"_seed"):
                             entry[discipline+"_seed"],entry[discipline+"_seed_source"]=value,"Manual override"
+                    if discipline=="run":
+                        from services.heats import reseed_run_positions
+                        entries=reseed_run_positions(entries)
                     errors,_=validate_heats(entries,event)
                     if errors:
                         raise ValueError("\n".join(errors))

@@ -165,7 +165,9 @@ An incomplete swim heat keeps the centre-lane pattern; it does not start at lane
 
 - Moving or swapping athletes between heats reseeds positions in both affected
   heats. Other heats retain their assignments.
-- The table permits explicit manual position/lane and seed overrides.
+- The running table permits heat and seed edits. Saving automatically recalculates
+  all run starting positions from 1, fastest outermost; that column is read-only.
+  The swimming table also permits explicit lane overrides.
 - Manual run heats can exceed 12, with a notice. Swimming cannot exceed pool
   capacity, and duplicate positions/lanes are blocked.
 - Moving a whole heat changes its programme position and shifts/renumbers other
