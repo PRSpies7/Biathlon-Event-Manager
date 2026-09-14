@@ -140,8 +140,10 @@ def test_both_start_paths_reach_exports_results_and_season_reports(tmp_path, mon
             click("Confirm Entries and Initialize Event")
             click("Generate heats from entries")
             assert next(b for b in app.button if b.label=="Regenerate heats from entries").disabled
-            assert any(c.label=="Replace current assignments with newly generated heats" for c in app.checkbox)
-            assert any(w.value=="This reruns automatic heat generation and replaces the current heat assignments, including manual changes." for w in app.warning)
+            replacement=next(c for c in app.checkbox if c.label=="Replace current assignments with newly generated heats")
+            assert "Ticking it alone changes nothing" in replacement.proto.help
+            assert not any("This reruns automatic heat generation" in w.value for w in app.warning)
+            assert next(b for b in app.button if b.label=="Regenerate heats from entries").proto.help=="This reruns automatic heat generation and replaces the current heat assignments, including manual changes."
             app.selectbox(key="move_athlete_run").set_value("100").run()
             app.number_input(key="target_heat_run_100").set_value(4)
             app.button(key="apply_move_run").click().run()

@@ -20,10 +20,12 @@ Both use the approved Master Entries Excel/PDF parsers and the same saved event.
 4. Click **Generate heats from entries** to generate both disciplines, review their tabs, move/swap athletes or edit heat
    numbers, positions and seeds, then save. Lower heat numbers move athletes earlier.
    Manual edits remain authoritative; regeneration explicitly replaces assignments.
-   Once heats exist, the action is **Regenerate heats from entries**. Its warning
+   Once heats exist, the action is **Regenerate heats from entries**. Its hover tooltip
    states: "This reruns automatic heat generation and replaces the current heat
    assignments, including manual changes." The existing **Replace current assignments
-   with newly generated heats** checkbox is still required.
+   with newly generated heats** checkbox is still required. Its question-mark
+   tooltip explains that ticking it only enables regeneration; assignments change
+   only after clicking **Regenerate heats from entries**.
    Click **Save run heats and recalculate starting positions** or **Save swim heat edits** below the table before
    moving athletes or whole heats. Unsaved table edits block those actions;
    saving one discipline preserves pending edits in the other.

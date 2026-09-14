@@ -155,10 +155,11 @@ def render(db_path, event_id):
     has_heats=any(a.get("running_heat") or a.get("swimming_heat") for a in entries)
     replace_manual=False
     if has_heats and event["heat_source"]=="generated":
-        st.warning("This reruns automatic heat generation and replaces the current heat assignments, including manual changes.")
-        replace_manual=st.checkbox("Replace current assignments with newly generated heats",key=f"regenerate_{event_id}_{event['heat_revision']}")
+        replace_manual=st.checkbox("Replace current assignments with newly generated heats",key=f"regenerate_{event_id}_{event['heat_revision']}",
+            help="Tick this to enable Regenerate heats from entries. Ticking it alone changes nothing. Current heat assignments, including manual changes, are replaced only when you click Regenerate heats from entries.")
     generate_label="Regenerate heats from entries" if has_heats else "Generate heats from entries"
-    if event["heat_source"]=="generated" and st.button(generate_label, type="primary",disabled=bool(pending) or (has_heats and not replace_manual)):
+    generate_help="This reruns automatic heat generation and replaces the current heat assignments, including manual changes." if has_heats else None
+    if event["heat_source"]=="generated" and st.button(generate_label,type="primary",help=generate_help,disabled=bool(pending) or (has_heats and not replace_manual)):
         try:
             rows = generate_heats(entries,event)
             save_heat_assignments(db_path,event_id,rows,event["heat_revision"])
