@@ -84,6 +84,7 @@ def category_order(group):
 # 3 weak/last resort. Unlisted pairs are incompatible, regardless of occupancy.
 OLDER_MASTERS = ("MASTERS 60+", "MASTERS 70+", "MASTERS 80+")
 ADULT_GROUPS = ("JNR", "SENIOR", "MASTERS 40+", "MASTERS 50+")
+RUN_CONTINUITY = ("U/13", "U/15", "U/17", "U/19", *ADULT_GROUPS)
 COMPATIBILITY = {("run", 400): {}, ("run", 800): {},
                  ("swim", 25): {}, ("swim", 50): {}, ("swim", 100): {}}
 
@@ -105,7 +106,7 @@ for scope in (("run", 800), ("swim", 100)):
         table[frozenset(("U/19", adult))] = 2
         table[frozenset(("U/17", adult))] = 3
 for scope, pairs in {
-    ("run", 400): (("U/08", "U/09", 1), ("U/09", "U/11", 2), ("U/08", "U/11", 3)),
+    ("run", 400): (("U/08", "U/09", 1), ("U/09", "U/11", 2)),
     ("run", 800): (("U/13", "U/15", 1), ("U/13", "U/17", 2), ("U/13", "U/19", 3)),
     ("swim", 50): (("U/09", "U/11", 1), ("U/11", "U/13", 2), ("U/09", "U/13", 3)),
 }.items():
@@ -113,7 +114,7 @@ for scope, pairs in {
         COMPATIBILITY[scope][frozenset((left, right))] = tier
 
 
-def compatibility(left, right, discipline, distance):
+def compatibility(left, right, discipline, distance, meet_type=None):
     """Category tier within a discipline/distance; callers enforce equal distances.
 
     Special Needs has equally valid same-distance destinations, allowing gender
@@ -124,6 +125,11 @@ def compatibility(left, right, discipline, distance):
         return None
     if left == right:
         return 0
+    if discipline == "run" and {left,right} == {"U/08","U/11"}:
+        return None
+    if (discipline == "run" and distance == 400 and meet_type == "Interprovincial"
+            and "U/08" in (left,right) and (left in OLDER_MASTERS or right in OLDER_MASTERS)):
+        return 1  # Equally valid to U8/U9; performance chooses the destination.
     if "SPECIAL NEEDS" in (left, right):
         return 2
     return COMPATIBILITY.get((discipline, distance), {}).get(frozenset((left, right)))

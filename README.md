@@ -8,13 +8,20 @@ Approved heats export to the existing accepted PDF/Excel structures and supply
 the operational lane sheets and TimeDrops JSON from one saved state.
 
 Automatic generation uses one deterministic generator with three selectable policies:
-**League — Efficient**, **Interprovincial — Conservative**, and **SA Champs — Strict**.
+**League â€” Efficient**, **Interprovincial â€” Conservative**, and **SA Champs â€” Strict**.
 The selector defaults from event type but can be overridden without changing it;
 the used profile is saved with the generated revision and displayed during review.
 All policies group by discipline/distance/category/gender first. League repacks
 compatible clusters to eliminate unnecessary heats, using relative seed coherence
 inside valid combinations. Interprovincial protects sensible same-group heats;
 SA Champs never mixes categories/genders. Distance always remains a hard boundary.
+For running, U8 may join U9 but never U11, even through an intermediate category.
+Final compatibility is checked pairwise. Interprovincial repairs 1â€“4-runner heats
+by conservative placement into suitable heats while retaining larger groups;
+five is a sensible-size guideline, not a mandatory minimum. Running continuity
+favours available intermediate categories with suitable relative seeds. League's
+existing optimiser gains only that tie-break and the U8/U11 safeguard; swimming
+behaviour is preserved.
 Running preferred/hard sizes are **10/12 at 400 m** and **12/15 at 800 m**; pool lanes
 remain the swimming limit. Manual overrides and output regeneration stay separate.
 Previous heat assignments never train future generation. See the complete

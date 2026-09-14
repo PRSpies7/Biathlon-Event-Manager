@@ -56,7 +56,7 @@ def test_profiles_keep_distance_and_forbidden_category_boundaries():
         for discipline in ("run","swim"):
             for heat in heats(rows,discipline):
                 assert len({r[discipline+"_distance"] for r in heat})==1
-                assert compatibility_tier(heat,[],discipline) is not None
+                assert compatibility_tier(heat,[],discipline,"Interprovincial" if profile=="interprovincial" else None) is not None
                 if profile=="sa_champs":
                     assert len({(r["group_name"],r["gender"]) for r in heat})==1
 
@@ -87,3 +87,103 @@ def test_profile_migration_and_atomic_revision_provenance(tmp_path):
     with pytest.raises(ValueError,match="another session"):
         save_heat_assignments(db,eid,rows,-1,generation_profile="league")
     assert get_event(db,eid)["generation_metadata"]==event["generation_metadata"]
+
+
+@pytest.mark.parametrize("profile",["league","interprovincial"])
+@pytest.mark.parametrize("gender",["GIRLS","BOYS"])
+def test_young_running_compatibility_is_not_transitive(profile,gender):
+    from services.competition import category_key
+    for pair in (("U/08","U/09"),("U/09","U/11")):
+        rows=generate_heats(entries(2,pair[0]+" "+gender)+entries(3,pair[1]+" "+gender,20),settings(),profile=profile)
+        assert len(heats(rows,"run"))==1
+    field=entries(2,"U/08 "+gender)+entries(3,"U/09 "+gender,20)+entries(2,"U/11 "+gender,40)
+    rows=generate_heats(field,settings(),profile=profile)
+    for heat in heats(rows,"run"):
+        assert not {"U/08","U/11"}<={category_key(r["group_name"]) for r in heat}
+    replay=generate_heats(list(reversed(field)),settings(),profile=profile)
+    assert sorted(rows,key=lambda r:r["athlete_number"])==sorted(replay,key=lambda r:r["athlete_number"])
+
+
+@pytest.mark.parametrize("closer",["U/09","MASTERS 60+"])
+@pytest.mark.parametrize("gender",["GIRLS","BOYS"])
+def test_interprovincial_u8_singleton_uses_performance_not_fixed_destination(closer,gender):
+    field=entries(1,"U/08 "+gender)+entries(8,"U/09 "+gender,20)+entries(8,"MASTERS 60+ "+gender,40)
+    for row in field:
+        row["run_seed"]=10000 if row["group_name"].startswith(("U/08",closer)) else 30000
+    rows=generate_heats(field,settings(),profile="interprovincial")
+    target=next(h for h in heats(rows,"run") if any(r["athlete_number"]=="100" for r in h))
+    assert len(target)==9
+    assert {r["group_name"] for r in target}=={"U/08 "+gender,closer+" "+gender}
+
+
+@pytest.mark.parametrize("categories",[("U/15","U/17","U/19"),("SENIOR","MASTERS 40+","MASTERS 50+")])
+@pytest.mark.parametrize("gender",["GIRLS","BOYS"])
+def test_interprovincial_repairs_skipped_category_tiny_heat(categories,gender):
+    from services.heats import reconsider_sparse_running,category_continuity_penalty
+    first=entries(1,categories[0]+" "+gender)
+    middle=entries(8,categories[1]+" "+gender,20)
+    last=entries(2,categories[2]+" "+gender,40)
+    for row in first+middle+last:
+        row["run_seed"]=10000
+    original=[first+last,middle]
+    assert category_continuity_penalty(original,15)==1
+    repaired=reconsider_sparse_running(original,15)
+    assert [len(h) for h in repaired]==[11]
+    assert category_continuity_penalty(repaired,15)==0
+    # Mere category adjacency cannot force a much worse relative seed fit.
+    for row in middle:
+        row["run_seed"]=50000
+    assert category_continuity_penalty(original,15)==0
+
+
+def test_sparse_cluster_can_split_mixed_remainder_between_suitable_destinations():
+    from services.heats import reconsider_sparse_running
+    junior=entries(7,"JNR MEN")
+    masters=entries(8,"MASTERS 40+ MEN",20)
+    senior=entries(1,"SENIOR MEN",40)
+    older=entries(2,"MASTERS 50+ MEN",60)
+    for row in junior+senior:
+        row["run_seed"]=10000
+    for row in masters+older:
+        row["run_seed"]=30000
+    result=reconsider_sparse_running([junior,masters,senior+older],15)
+    assert sorted(len(h) for h in result)==[8,10]
+    assert {frozenset(r["group_name"] for r in h) for h in result}=={
+        frozenset(["JNR MEN","SENIOR MEN"]),frozenset(["MASTERS 40+ MEN","MASTERS 50+ MEN"])}
+
+
+def test_sparse_category_can_share_two_spare_destinations_without_dismantling_them():
+    field=entries(26,"U/15 GIRLS")+entries(4,"U/17 GIRLS",40)
+    rows=generate_heats(field,settings(),profile="interprovincial")
+    assert sorted(len(h) for h in heats(rows,"run"))==[15,15]
+    assert all(sum(r["group_name"]=="U/15 GIRLS" for r in h)==13 for h in heats(rows,"run"))
+
+
+def test_conservative_repair_leaves_good_groups_and_impossible_sparse_heats():
+    field=entries(8,"U/15 GIRLS")+entries(7,"U/17 GIRLS",20)
+    assert sorted(map(len,heats(generate_heats(field,settings(),profile="interprovincial"),"run")))==[7,8]
+    field=entries(1,"U/08 GIRLS")+entries(8,"U/11 GIRLS",20)
+    assert sorted(map(len,heats(generate_heats(field,settings(),profile="interprovincial"),"run")))==[1,8]
+
+
+def test_sparse_repair_considers_protected_destinations_before_committing_a_nearby_pair():
+    field=entries(1,"U/08 GIRLS")+entries(5,"U/09 GIRLS",20)+entries(8,"MASTERS 60+ WOMEN",40)
+    for row in field:
+        row["run_seed"]=30000 if row["group_name"]=="U/09 GIRLS" else 10000
+    rows=generate_heats(field,settings(),profile="interprovincial")
+    target=next(h for h in heats(rows,"run") if any(r["athlete_number"]=="100" for r in h))
+    assert {r["group_name"] for r in target}=={"U/08 GIRLS","MASTERS 60+ WOMEN"}
+
+
+def test_league_continuity_breaks_structural_ties_without_changing_swim_scoring():
+    from services.heats import arrangement_rank
+    young=entries(2,"U/15 GIRLS")
+    middle=entries(4,"U/17 GIRLS",20)
+    older=entries(2,"U/19 GIRLS",40)
+    for row in young+middle+older:
+        row["run_seed"]=row["swim_seed"]=10000
+    skipped=[young+older,middle]
+    continuous=[young+middle[:2],middle[2:]+older]
+    assert arrangement_rank(continuous,"run",15,12)<arrangement_rank(skipped,"run",15,12)
+    # Swimming retains its previous seed/gender/category ordering (no continuity).
+    assert arrangement_rank(skipped,"swim",6,6)<arrangement_rank(continuous,"swim",6,6)

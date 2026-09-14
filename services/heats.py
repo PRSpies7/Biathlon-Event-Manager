@@ -6,10 +6,11 @@ Profiles compare only valid arrangements; League may repack to remove heats.
 from collections import Counter, defaultdict
 from copy import deepcopy
 from math import ceil
+from itertools import combinations, product
 import json
 
 from services.competition import category_key, category_order, compatibility, gender_for_group, distances
-from services.competition import GENERATION_PROFILES, default_profile, running_capacity
+from services.competition import GENERATION_PROFILES, default_profile, running_capacity, RUN_CONTINUITY
 
 
 DISCIPLINES = {"run": "running", "swim": "swimming"}
@@ -248,9 +249,9 @@ def combine_selected_heats(entries, event, discipline, programme, selected):
 
 
 def protection_reason(heat, discipline, capacity, meet_type):
+    """Protected Interprovincial heats cannot donate; sparse repairs may add to them."""
     if meet_type == "Local":
         return None  # Preferred structures may be repacked to eliminate a heat.
-    """Explain why a heat cannot donate or receive athletes automatically."""
     if meet_type == "National":
         return "National age/gender groups remain separate."
     if len(heat) >= capacity:
@@ -272,7 +273,7 @@ def is_heat_eligible_for_optimisation(heat, discipline, capacity, meet_type):
     return bool(heat) and not is_heat_protected(heat, discipline, capacity, meet_type)
 
 
-def compatibility_tier(left, right, discipline):
+def compatibility_tier(left, right, discipline, meet_type=None):
     """Require a valid distance and category pair for EVERY athlete combination.
 
     A compatible intermediary never licenses an otherwise incompatible pair.
@@ -283,7 +284,7 @@ def compatibility_tier(left, right, discipline):
         return None
     distance = next(iter(distance_set))
     categories = sorted({a["group_name"] for a in members})
-    tiers = [compatibility(a, b, discipline, distance)
+    tiers = [compatibility(a, b, discipline, distance, meet_type)
              for index, a in enumerate(categories) for b in categories[index:]]
     return None if any(tier is None for tier in tiers) else max(tiers)
 
@@ -329,6 +330,113 @@ def rank_destination(left, right, discipline, capacity, meet_type):
 
 def _heat_identity(heat):
     return tuple(sorted(str(a["athlete_number"]) for a in heat))
+
+
+def final_heat_is_compatible(heat, discipline, capacity, meet_type):
+    """Automatic-only guard; manual exceptional arrangements stay supported."""
+    if not heat or len(heat)>capacity:
+        return False
+    tier = compatibility_tier(heat,[],discipline,meet_type)
+    if tier is None:
+        return False
+    genders = {a["gender"] for a in heat}
+    if meet_type == "National":
+        return tier==0 and len(genders)==1
+    if meet_type == "Interprovincial":
+        if tier>2:
+            return False
+        if len(genders)>1:
+            return tier<=1 and (len(heat)>=5 if discipline=="run" else capacity-len(heat)<=2)
+    return True
+
+
+def heat_size_quality(heats):
+    """Repair singles first, then two/three-person heats, then fours; five is sensible."""
+    return tuple(sum(len(h)==size for h in heats) for size in (1,2,3,4))
+
+
+def category_continuity_penalty(heats, capacity):
+    """Count avoidable skipped 800 m categories in the surrounding arrangement.
+
+    An available intermediate category counts only when its relative seed gap is
+    no worse than the selected endpoint gap. Adjacency never forces a poor speed fit.
+    """
+    penalty = 0
+    for heat in heats:
+        if heat[0].get("run_distance")!=800:
+            continue
+        groups = {category_key(a["group_name"]) for a in heat}
+        indexes = sorted(RUN_CONTINUITY.index(c) for c in groups if c in RUN_CONTINUITY)
+        if len(indexes)<2:
+            continue
+        genders = {a["gender"] for a in heat}
+        for low,high in zip(indexes,indexes[1:]):
+            endpoints = [[a for a in heat if category_key(a["group_name"])==RUN_CONTINUITY[i]] for i in (low,high)]
+            gap = _seed_gap(*endpoints,"run")
+            for category in RUN_CONTINUITY[low+1:high]:
+                available = [a for other in heats if other is not heat and len(other)<capacity for a in other
+                    if a.get("run_distance")==800 and a["gender"] in genders and category_key(a["group_name"])==category]
+                if available and compatibility_tier(heat,available,"run") is not None and _seed_gap(heat,available,"run")<=gap:
+                    penalty += 1
+    return penalty
+
+
+def _sparse_placements(heats, source_index, blocks, capacity):
+    """Yield valid placements in one or two existing heats; retain all recipients."""
+    destinations = [i for i,h in enumerate(heats) if i!=source_index and len(h)<capacity
+        and any(final_heat_is_compatible(h+b,"run",capacity,"Interprovincial") for b in blocks)]
+    choices = [(i,) for i in destinations]
+    if len(blocks)>1:
+        choices += list(combinations(destinations,2))
+    for targets in choices:
+        for assignment in product(targets,repeat=len(blocks)):
+            if set(assignment)!=set(targets):
+                continue
+            result = [list(h) for h in heats]
+            for block,target in zip(blocks,assignment):
+                result[target].extend(block)
+            if any(not final_heat_is_compatible(result[i],"run",capacity,"Interprovincial") for i in targets):
+                continue
+            result.pop(source_index)
+            yield result
+
+
+def reconsider_sparse_running(heats, capacity):
+    """Conservative local repair: relocate a tiny heat, never split a good heat.
+
+    Consider whole-source merges and category/gender blocks distributed to two
+    destinations. Compare the resulting full arrangement, including continuity.
+    A change must strictly improve sparse-size quality, not just reduce heat count.
+    """
+    while True:
+        quality = heat_size_quality(heats)
+        candidates = []
+        for source_index,source in enumerate(heats):
+            if len(source)>4:
+                continue
+            blocks = defaultdict(list)
+            for athlete in source:
+                blocks[(category_key(athlete["group_name"]),athlete["gender"])].append(athlete)
+            blocks = [blocks[k] for k in sorted(blocks)]
+            placements = list(_sparse_placements(heats,source_index,blocks,capacity))
+            if not placements and len(blocks)<len(source):
+                # Only split a tiny category if intact blocks cannot be placed.
+                placements = list(_sparse_placements(heats,source_index,
+                    [[a] for a in sorted(source,key=lambda a:seed_order(a,"run"))],capacity))
+            for result in placements:
+                repaired = heat_size_quality(result)
+                if repaired>=quality:
+                    continue
+                # Existing scoring supplies gender/seed/occupancy ties; its
+                # League heat-count objective is deliberately omitted here.
+                score = arrangement_rank(result,"run",capacity,capacity)
+                # Category tiers define feasibility, not a fixed U8 destination;
+                # compare performance before age cost for these sparse repairs.
+                ranking = (score[1],score[4],score[5],score[3],*score[6:])
+                candidates.append(((repaired,category_continuity_penalty(result,capacity),*ranking),result))
+        if not candidates:
+            return heats
+        heats = min(candidates,key=lambda c:c[0])[1]
 
 
 def optimise_heats(heats, discipline, capacity, meet_type):
@@ -398,7 +506,7 @@ def arrangement_rank(heats, discipline, capacity, preferred):
         for i,a in enumerate(names):
             for b in names[i+1:]:
                 age += categories[a]*categories[b]*(compatibility(a,b,discipline,heat[0][discipline+"_distance"]) or 0)
-    preference = (gender,age,unknown,spread) if discipline=="run" else (unknown,spread,gender,age)
+    preference = (gender,category_continuity_penalty(heats,capacity),age,unknown,spread) if discipline=="run" else (unknown,spread,gender,age)
     return (len(heats),*preference,sum(max(0,len(h)-preferred) for h in heats),
             sum((capacity-len(h))**2 for h in heats),tuple(sorted(_heat_identity(h) for h in heats)))
 
@@ -493,8 +601,16 @@ def generate_heats(entries, event, *, optimise=True, profile=None):
                 raise ValueError("Heat capacity must be positive.")
             base = build_balanced_base_heats({k:v for k,v in groups.items() if k[0]==distance},discipline,capacity)
             if optimise:
+                if discipline=="run" and policy.competition=="Interprovincial":
+                    # Give tiny groups all valid destinations before ordinary
+                    # pair merging can commit them to the first nearby category.
+                    base = reconsider_sparse_running(base,capacity)
                 base = (repack_league_clusters(base,discipline,capacity,preferred) if policy.repack_clusters else
                         optimise_heats(base,discipline,capacity,policy.competition))
+                if discipline=="run" and policy.competition=="Interprovincial":
+                    base = reconsider_sparse_running(base,capacity)
+            if any(not final_heat_is_compatible(h,discipline,capacity,policy.competition) for h in base):
+                raise ValueError("Automatic heat generation produced an incompatible heat.")
             heats.extend(base)
         assign_positions_or_lanes(heats, discipline, int(event["pool_lanes"]))
         for row in rows:

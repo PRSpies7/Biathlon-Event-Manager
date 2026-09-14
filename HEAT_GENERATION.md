@@ -78,9 +78,9 @@ One deterministic generator uses the selected **Heat generation profile**:
 
 | Profile | Behaviour |
 | --- | --- |
-| League — Efficient | Repack valid same-distance clusters to remove unnecessary heats. Satisfactory heats may participate. |
-| Interprovincial — Conservative | Preserve satisfactory groups; only consider compatible whole remainders. More than six runners or at most two empty swim lanes normally protects a heat. |
-| SA Champs — Strict | Never automatically mix categories or genders. Incomplete heats are acceptable. |
+| League â€” Efficient | Repack valid same-distance clusters to remove unnecessary heats. Satisfactory heats may participate. |
+| Interprovincial â€” Conservative | Preserve sensible groups, but repair 1â€“4-runner heats through compatible local placement. Larger run heats can receive a remainder without donating athletes. Swimming still protects heats with at most two empty lanes. |
+| SA Champs â€” Strict | Never automatically mix categories or genders. Incomplete heats are acceptable. |
 
 The selector defaults from event type but can be overridden without changing that
 actual event type. Its descriptions explain each policy. **Generated using:** shows
@@ -98,12 +98,27 @@ split rule; choosing a generation profile does not rerun manual edits or exports
 
 League evaluates all-pairs-compatible clusters, not just one remainder and one heat.
 Within valid arrangements it prioritises heat-count reduction. At equal heat count,
-running prefers gender/category then seed coherence; swimming prefers seed coherence
+running prefers gender/continuity/category then seed coherence; swimming prefers seed coherence
 then gender/category. Preferred sizes and utilisation break later ties. Deterministic
 relative seed partitions use no arbitrary time-gap thresholds. NT stays unseeded.
 A repack must remove a heat, not merely improve trivial occupancy. Overlapping
 clusters are compared deterministically; this is not an exhaustive global solver.
-Interprovincial keeps protection and conservative pair merging; SA Champs stays strict.
+Interprovincial keeps conservative pair merging, with sparse-running repair before
+and after it; SA Champs stays strict. Five runners is a sensible-size guideline:
+1â€“3 should be repaired and four reconsidered, without making five a hard minimum.
+Repair can move a tiny heat's category/gender blocks to one or two suitable heats;
+if intact blocks cannot fit, it may split only that tiny group. Existing larger
+groups stay intact. It ranks sparse-size improvement, continuity, gender, seed fit
+and utilisation, rather than pursuing League-style minimum heat count.
+
+Running continuity follows U13/U15/U17/U19/Junior/Senior/Masters 40+/50+. Prefer
+not to skip an available intermediate category when it offers a compatible,
+equally good relative seed fit. This applies to both genders and does not change
+the programme sequence. League only adds this structural tie-break to its existing
+ranking. Interprovincial U8 singletons may use U9 or older Masters over 400 m,
+with no fixed destination preference. **U8 and U11 can never share an automatic
+running heat**, even through U9. Final heat checks enforce all pairwise constraints,
+distance, profile restrictions and hard capacity. Swimming rules are unchanged.
 
 Distance and category compatibility remain hard feasibility checks. Special Needs
 may use valid same-distance Masters or younger destinations based on performance,

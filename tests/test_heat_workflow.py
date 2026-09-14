@@ -257,10 +257,12 @@ def test_balanced_same_group_runs_are_protected_from_other_remainders():
     rows=generate_heats(field,settings("Interprovincial"))
     u11=[r for r in rows if r["group_name"]=="U/11 GIRLS"]
     assert sorted(sum(r["running_heat"]==h for r in u11) for h in {r["running_heat"] for r in u11})==[8,8]
-    assert not {r["running_heat"] for r in u11} & {r["running_heat"] for r in rows if r not in u11}
+    # The four U9 runners can now join an intact U11 heat; neither U11 base
+    # group donates athletes or is split up by sparse-heat repair.
+    assert sorted(sum(r["running_heat"]==h for r in rows) for h in {r["running_heat"] for r in rows})==[8,12]
     field=entries(7,"U/15 GIRLS")+entries(3,"U/17 GIRLS",20)
     rows=generate_heats(field,settings("Interprovincial"))
-    assert len({r["running_heat"] for r in rows})==2
+    assert len({r["running_heat"] for r in rows})==1
 
 
 @pytest.mark.parametrize("meet,count,protected",[

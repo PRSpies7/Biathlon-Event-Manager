@@ -43,7 +43,7 @@ Under 15 covers 13–14, Under 17 covers 15–16 and Under 19 covers 17–18.
 
 The selector **Heat generation profile** defaults to the event type, but may be
 changed deliberately without changing the competition type. The policies are
-**League � Efficient**, **Interprovincial � Conservative**, and **SA Champs � Strict**.
+**League — Efficient**, **Interprovincial — Conservative**, and **SA Champs — Strict**.
 The profile and generated revision are saved atomically with assignments and in
 the audit log. Review displays **Generated using:** the last generation policy.
 Manual edits retain this provenance; selecting a profile alone changes no heats.
@@ -57,8 +57,8 @@ Other explicitly supplied run distances retain the former maximum of 12.
 Swimming reserves full faster base heats and a slower remainder, within pool
 capacity. NT is unseeded/slower, never an invented time.
 
-Interprovincial protects satisfactory heats and merges only compatible whole
-remainders. SA Champs never mixes groups. League instead searches compatible
+Interprovincial preserves satisfactory groups but repairs sparse running heats,
+including placing tiny remainders into suitable larger heats. SA Champs never mixes groups. League instead searches compatible
 clusters and may repartition satisfactory heats when it removes an entire heat.
 No profile mixes distances or uses previous heat assignments as training data.
 
@@ -88,7 +88,7 @@ After combinations are decided, a combined heat takes the earliest programme
 category/gender among its members. Within that category, slower/NT heats come first.
 The organiser can subsequently move an entire heat to any place in the programme.
 
-## 5. League � Efficient
+## 5. League — Efficient
 
 Compatibility defines feasibility; heat count and seed coherence choose among
 feasible arrangements. A good same-group heat is preferred, not immutable. It can
@@ -105,7 +105,7 @@ candidate search, not a claim of exhaustive global optimisation across overlappi
 incompatible clusters.
 
 Within valid candidates, fewer total heats comes first. For **running**, equal-count
-solutions prefer same gender, nearer category tiers, seed coherence, then preferred
+solutions prefer same gender, category continuity, nearer category tiers, seed coherence, then preferred
 size and balanced utilisation. For **swimming**, equal-count solutions prefer seed
 coherence, same gender, nearer category tiers, then balanced utilisation. Seed
 coherence separates NT where practical and compares within-heat squared deviations
@@ -122,7 +122,11 @@ heats first and faster heats last; standard position/lane seeding still applies.
 
 ## 6. Interprovincial optimisation
 
-- Running: protect heats of more than six; consider groups of six or fewer.
+- Running: five or more runners normally make a sensible heat. One to three are
+  strongly undesirable; four requires reconsideration. Before and after ordinary
+  conservative pair merging, repair 1–4-person heats against the surrounding
+  same-distance arrangement. Larger heats may receive compatible athletes, but
+  their existing members are never removed or redistributed by this repair pass.
   A five- or six-person group remains acceptable without a strong alternative.
 - Swimming: protect heats with zero, one or two empty lanes. At least three
   empty lanes are needed for consideration.
@@ -132,9 +136,42 @@ heats first and faster heats last; standard position/lane seeding still applies.
 - Conservative implementation: same-gender combinations can use strong or
   neighbouring tiers (0–2); weak tier 3 remains separate. Different genders may
   combine only in the same category or strong tier (0–1), and only if the combined
-  heat becomes satisfactory (at least seven runners, or at most two empty swim
-  lanes). Eligibility alone does not justify combining.
-- Protection, whole-remainder integrity, capacity and equal distance apply first.
+  heat becomes satisfactory (normally seven runners for ordinary pair merging,
+  at least five for sparse-running repair, or at most two empty swim lanes).
+  Eligibility alone does not justify combining.
+- Sparse repair compares complete resulting arrangements: fewer singletons, then
+  fewer two-/three-person heats, then fewer fours; continuity; gender; seed
+  coherence; category suitability; utilisation. Heat count alone never triggers it.
+  Consider an intact tiny group first, or distribute a mixed tiny heat's category/
+  gender blocks between two destinations. Only if those blocks cannot be placed,
+  consider splitting the tiny group between two heats with spare capacity. Good
+  recipient groups remain intact. Repeat until no such compatible repair improves
+  sparse-heat quality. A small heat can remain if these sensible repairs are impossible.
+- A singleton U8 runner can join suitable U9 or older Masters (60+/70+/80+) over
+  400 m. Both are equally valid strong relationships at Interprovincial; size,
+  gender and relative seed fit choose the destination, without a fixed preference.
+- Hard capacity, distance and final pairwise compatibility always apply first.
+
+### Running category continuity and final checks
+
+The continuity sequence is U13 → U15 → U17 → U19 → Junior → Senior → Masters 40+
+→ Masters 50+. It is a structural comparison, not the programme order or a fixed
+pairing table. Penalise skipping an intermediate category elsewhere with spare
+capacity when the distance/gender/compatibility fit and its relative seed gap is
+no worse than the selected endpoints' gap. This prevents labels from forcing a
+poor performance match. Missing categories incur no penalty. The same logic applies
+to both genders and looks across the whole candidate arrangement.
+
+League uses continuity only within its existing candidate ranking; it keeps its
+heat-count objective and cluster repacking. Interprovincial uses it during local
+sparse repair, not programme-wide repacking. The 400 m 10/12 and 800 m 12/15
+preferred/hard capacities are unchanged. SA Champs stays strict; swimming scoring
+and optimisation remain unchanged.
+
+Every final automatic heat is checked for distance, hard capacity, and profile
+compatibility. **U8 may run with U9, and U9 with U11 where allowed, but U8 must
+never run with U11**, including a three-category U8/U9/U11 heat. Compatibility is
+not transitive. This running-only prohibition does not constrain manual overrides.
 
 ## 7. National / South African Championships
 
@@ -151,7 +188,7 @@ Needs has the flexible exception described below.
 
 | Discipline / distance | Strong (1) | Neighbouring (2) | Weak (3) |
 | --- | --- | --- | --- |
-| Run 400 m | U8/U9; any older Masters pair | U9/U11 | U8/U11 |
+| Run 400 m | U8/U9; any older Masters pair; U8/older Masters at Interprovincial | U9/U11 | — |
 | Run 800 m | U13/U15; any U15/U17/U19 pair; any adult-cluster pair | U13/U17; U19 with adult cluster | U13/U19; U17 with adult cluster |
 | Swim 25 m | Same U8 category uses tier 0; genders may combine where permitted | — | — |
 | Swim 50 m | U9/U11; any older Masters pair | U11/U13 | U9/U13 |
@@ -159,8 +196,10 @@ Needs has the flexible exception described below.
 
 Older Masters means 60+, 70+, 80+. The adult cluster means Junior, Senior,
 Masters 40+, Masters 50+. Interprovincial preserves satisfactory U11/U13 heats;
-League may repack them within valid neighbouring clusters to remove a heat. Older Masters and U8/U9 no longer have a direct automatic pairing;
-Special Needs flexibility does not make those otherwise separate groups compatible.
+League may repack them within valid neighbouring clusters to remove a heat.
+U8/older Masters is an Interprovincial running option for sparse repair; League
+retains its existing relationship table. U9/older Masters remains incompatible.
+Neither U9 nor Special Needs can act as a bridge to permit forbidden pairs.
 
 **Special Needs:** any recognised same-distance category is a flexible tier-2
 option. Older Masters or suitable younger groups can be destinations. League
@@ -170,7 +209,8 @@ and gender restrictions. No individual athlete is hard-coded.
 
 Every category in a generated heat must be compatible with every other category.
 Interprovincial compares eligible whole-remainder pairs, then rechecks protection
-following each merge. Its seed similarity uses mean absolute known-time differences,
+following each merge, with a separate sparse-running repair pass before and after.
+Pair-merge seed similarity uses mean absolute known-time differences,
 with unknown similarity last. League uses cluster partition comparisons instead.
 Implementation is centralised in `services/competition.py` (profiles, capacities,
 compatibility) and `services/heats.py` (base heats, profile policies and assignment).
