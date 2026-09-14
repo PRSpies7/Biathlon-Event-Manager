@@ -61,7 +61,9 @@ def test_form_batches_both_disciplines_and_remembers_swimming(tmp_path,monkeypat
     form=next(f for f in app.get("form") if f.proto.form.form_id==f"heat_review_form_{eid}")
     assert form.proto.form.enter_to_submit is False
     identifiers=(run.value.iloc[0]["Athlete"],swim.value.iloc[0]["Athlete"])
-    submit(app,"save_heats_swim",{f"heat_editor_{eid}_run_":{0:{"Heat":9}},f"heat_editor_{eid}_swim_":{0:{"Heat":9}}})
+    app.session_state[f"heat_review_tabs_{eid}"]="Swimming heats"
+    assert len([b for b in app.button if b.label=="Save all changes"])==1
+    submit(app,f"save_all_changes_{eid}",{f"heat_editor_{eid}_run_":{0:{"Heat":9}},f"heat_editor_{eid}_swim_":{0:{"Heat":9}}})
     assert not app.error,[e.value for e in app.error]
     saved={r["athlete_number"]:r for r in get_athletes(db,eid)}
     assert saved[identifiers[0]]["running_heat"]==3
@@ -83,7 +85,7 @@ def test_profile_choice_changes_generation_not_event_type(tmp_path,monkeypatch):
     assert not app.exception and not app.error
     assert get_event(db,eid)["meet_type"]=="Local"
     assert len({r["swimming_heat"] for r in get_athletes(db,eid)})==2
-    assert any(c.value=="Generated using: Interprovincial — Conservative" for c in app.caption)
+    assert any(c.value=="Last generated with: Interprovincial — Conservative" for c in app.caption)
 
 
 def test_entry_notices_and_explicit_removal_preserve_other_corrections(tmp_path,monkeypatch):
@@ -116,11 +118,14 @@ def test_entry_notices_and_explicit_removal_preserve_other_corrections(tmp_path,
         assert remaining.loc[remaining["Athlete"]==second,"Run distance"].item()==400
         assert not any("Same full name" in w.value for w in app.warning)
         next(c for c in app.checkbox if c.label.startswith("Confirm pool capacity")).check()
-        next(b for b in app.button if b.label=="Confirm Entries and Initialize Event").click().run()
+        next(b for b in app.button if b.label=="Confirm entries and continue").click().run()
         assert not app.exception and not app.error
-        assert app.button(key="save_heats_run").label=="Save entry changes"
+        eid=app.session_state.event_id
+        assert app.button(key=f"save_all_changes_{eid}").label=="Save all changes"
         assert [h.value for h in app.header if h.value[:2] in {"1.","2.","3."}]==[
-            "1. Choose a heat generation profile","2. Generate heats from entries","3. Add, remove or confirm entries"]
+            "2. Review and confirm entries","3. Choose profile and generate heats"]
+        assert not app.tabs
+        assert len(table(app,f"entry_roster_{eid}_").value)==2
         db=tmp_path/"data/biathlon_events.sqlite"
         saved=get_athletes(db,app.session_state.event_id)
         assert len(saved)==2 and next(r for r in saved if r["athlete_number"]==second)["run_distance"]==400
@@ -141,7 +146,7 @@ def test_checkbox_combine_three_heats_is_draft_then_saves_fastest_last(tmp_path,
     draft=table(app,f"heat_editor_{eid}_{discipline}_").value
     assert draft.loc[draft["Seed"]=="NT","Heat"].item()==1
     assert len(table(app,f"programme_editor_{eid}_{discipline}_").value)==(3 if discipline=="run" else 2)
-    submit(app,f"save_heats_{discipline}")
+    submit(app,f"save_all_changes_{eid}")
     assert not app.error,[e.value for e in app.error]
     saved=get_athletes(db,eid)
     seeded=[r for r in saved if r.get(discipline+"_seed") is not None]
@@ -163,14 +168,14 @@ def test_add_remove_duplicates_history_and_stale_outputs(tmp_path,monkeypatch):
     assert not app.error
     assert any("Same full name" in w.value for w in app.warning)
     assert len(get_athletes(db,eid))==8
-    submit(app,"save_heats_swim")
+    submit(app,f"save_all_changes_{eid}")
     assert not app.error,[e.value for e in app.error]
     late=next(r for r in get_athletes(db,eid) if r["athlete_number"]=="999")
     assert (late["run_seed"],late["swim_seed"])==(12000,3500)
     assert get_event(db,eid)["heat_status"]=="stale" and not current_outputs(db,eid)
     athletes=table(app,f"heat_editor_{eid}_run_").value
     index=int(athletes.index[athletes["Athlete"]=="999"][0])
-    submit(app,"save_heats_run",{f"heat_editor_{eid}_run_":{index:{"Remove from event":True}}})
+    submit(app,f"save_all_changes_{eid}",{f"heat_editor_{eid}_run_":{index:{"Remove from event":True}}})
     assert not app.error
     assert len(get_athletes(db,eid))==8
     assert len(season_snapshot(history)["results"])==1
@@ -185,7 +190,7 @@ def test_add_discard_and_multiple_new_positions(tmp_path,monkeypatch):
     submit(app,f"discard_heats_{eid}")
     assert len(table(app,f"programme_editor_{eid}_run_").value)==3
     assert get_athletes(db,eid)==before
-    submit(app,"save_heats_run",{f"programme_editor_{eid}_run_":{0:{"New Position":3},1:{"New Position":2}}})
+    submit(app,f"save_all_changes_{eid}",{f"programme_editor_{eid}_run_":{0:{"New Position":3},1:{"New Position":2}}})
     assert not app.error
     for old,new in zip(before,get_athletes(db,eid)):
         assert new["running_heat"]=={1:3,2:2,3:1}[old["running_heat"]]
@@ -205,6 +210,31 @@ def test_drafts_detect_external_changes_and_clear_on_session_reset(tmp_path,monk
     assert f"heat_review_tables_{eid}" not in app.session_state
 
 
+def test_unified_entry_review_add_remove_and_save_before_generation(tmp_path,monkeypatch):
+    rows=entries(3)
+    rows[-1]["swim_entered"]=0
+    app,db,eid,_=opened(tmp_path,monkeypatch,rows)
+    assert not app.tabs
+    assert len(table(app,f"entry_roster_{eid}_").value)==3
+    app.text_input(key=f"late_number_{eid}").set_value("999")
+    app.text_input(key=f"late_name_{eid}").set_value("Late Entry")
+    submit(app,f"add_athlete_{eid}",{f"entry_roster_{eid}_":{0:{"Run seed":"01:23.45","Swim seed":"00:32.10"}}})
+    assert len(get_athletes(db,eid))==3
+    generate=next(b for b in app.button if b.label=="Generate heats from entries")
+    assert generate.disabled
+    assert any("Unsaved changes" in i.value for i in app.info)
+    submit(app,f"remove_review_entries_{eid}",{f"entry_roster_{eid}_":{1:{"Remove from event":True}}})
+    assert len(get_athletes(db,eid))==3
+    submit(app,f"save_all_changes_{eid}")
+    assert not app.error,[e.value for e in app.error]
+    saved={r["athlete_number"]:r for r in get_athletes(db,eid)}
+    assert set(saved)=={"100","102","999"}
+    assert (saved["100"]["run_seed"],saved["100"]["swim_seed"])==(8345,3210)
+    assert not saved["102"]["swim_entered"]
+    assert all(not r["running_heat"] and not r["swimming_heat"] for r in saved.values())
+    assert not next(b for b in app.button if b.label=="Generate heats from entries").disabled
+
+
 @pytest.mark.parametrize("generated",[True,False])
 def test_both_start_paths_and_output_regeneration_preserve_edits(tmp_path,monkeypatch,generated):
     history=tmp_path/"history.sqlite"
@@ -221,13 +251,13 @@ def test_both_start_paths_and_output_regeneration_preserve_edits(tmp_path,monkey
         app.radio(key="heat_source_0").set_value("Generate heats from entries" if generated else "Use existing heats").run()
         if generated:
             next(c for c in app.checkbox if c.label.startswith("Confirm pool capacity")).check()
-            click("Confirm Entries and Initialize Event")
+            click("Confirm entries and continue")
             click("Generate heats from entries")
             eid=app.session_state.event_id
-            submit(app,"save_heats_swim",{f"heat_editor_{eid}_run_":{0:{"Heat":4}},f"heat_editor_{eid}_swim_":{0:{"Heat":3}}})
+            submit(app,f"save_all_changes_{eid}",{f"heat_editor_{eid}_run_":{0:{"Heat":4}},f"heat_editor_{eid}_swim_":{0:{"Heat":3}}})
             next(c for c in app.checkbox if c.label=="I have reviewed the running heats").check()
             next(c for c in app.checkbox if c.label=="I have reviewed the swimming heats").check()
-            click("Approve final run and swim heats")
+            click("Save and approve final heats")
             click("Generate operational files")
         else:
             click("Confirm Data Set and Initialize Event")

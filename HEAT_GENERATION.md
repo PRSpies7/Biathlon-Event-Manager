@@ -23,10 +23,16 @@ Both use the approved Master Entries Excel/PDF parsers and the same saved event.
 4. Click **Generate heats from entries** to generate both disciplines, then review
    the linked programme and athlete tables in each discipline's tab.
    Manual edits remain authoritative; regeneration explicitly replaces assignments.
-   The initialized event shows numbered steps: **1. Choose a heat generation
-   profile**, **2. Generate heats from entries**, and **3. Add, remove or confirm
-   entries** (changing to **Organise and confirm heats** after generation).
-   Before generation, the save action reads **Save entry changes**. Previously
+   The visible sequence is **1. Upload entries and set event details**,
+   **2. Review and confirm entries**, **3. Choose profile and generate heats**,
+   **4. Organise and approve heats**, and **5. Generate and download operational files**.
+   Pool-capacity confirmation sits beside the lane setting. **Confirm entries and
+   continue** saves the event and roster without generating heats or files.
+   Historical seed details are expandable. After confirmation, optional **Edit event
+   entries** provides one combined roster for corrections and missing athletes before
+   generation; another routine entry confirmation is not required. Once heats exist,
+   profile and regeneration controls are collapsed under **Generation settings**.
+   One shared **Save all changes** action saves roster and both disciplines. Previously
    reviewed duplicate-name notices are not repeated here; a newly added duplicate
    still receives a collapsed notice. Programme columns are Heat, New Position,
    Categories, Athletes, then Combine on the right. Numeric columns use compact
@@ -47,7 +53,7 @@ Both use the approved Master Entries Excel/PDF parsers and the same saved event.
    or edit seeds and swim lanes. Entering an unused heat number adds it to the draft
    programme too. Heat numbers remain stable while editing; programme positions
    indicate their intended order after saving.
-   Enter finishes a cell edit without submitting the form. **Save heat changes**
+   Enter finishes a cell edit without submitting the form. **Save all changes**
    applies edits from both disciplines together, removes unused/empty heats and
    renumbers remaining heats consecutively. Added empty heats are temporary until
    populated. Run positions are recalculated from 1, fastest
@@ -60,13 +66,17 @@ Both use the approved Master Entries Excel/PDF parsers and the same saved event.
    saved revision change requires reloading rather than overwriting a staged draft.
    Use **Add athlete to this event** for a late entry: number-based history supplies
    valid seeds, otherwise NT. The athlete starts in a new draft heat and can be moved
-   in the table. Tick **Remove from event** in either athlete table to remove that
-   entry from both disciplines on save. Historical results remain untouched.
+   in the table. Tick **Remove from event** and click **Remove selected entries**
+   to prepare removal from both disciplines; **Save all changes** commits it.
+   Saving directly also applies selected removals. Add athlete, Add heat, Combine
+   and Remove selected entries prepare unsaved drafts, as their tooltips explain.
+   Historical results remain untouched.
    Same-full-name warnings at import/review help identify mistakes without blocking
    legitimate namesakes. Athlete numbers remain the identity key. Review-table seed
    sources and run positions are hidden; Seed and swimming Lane remain visible.
    Reapprove and regenerate operational files after saving assignment changes.
-5. Confirm review of both disciplines, approve, and click **Generate operational files**.
+5. Confirm review of both disciplines and click **Save and approve final heats**,
+   which saves submitted edits and approves them together. Then click **Generate operational files**.
    Once files have been generated, this becomes **Regenerate operational files**,
    including after saved edits make the previous files stale and you reapprove.
    The helper states: "Uses the approved heat assignments exactly as currently saved.
@@ -94,7 +104,7 @@ One deterministic generator uses the selected **Heat generation profile**:
 | SA Champs — Strict | Never automatically mix categories or genders. Incomplete heats are acceptable. |
 
 The selector defaults from event type but can be overridden without changing that
-actual event type. Its descriptions explain each policy. **Generated using:** shows
+actual event type. Its descriptions explain each policy. **Last generated with:** shows
 the last saved profile, not an unsubmitted selector choice. A nullable event metadata
 field stores the profile and generated revision, also recorded in the audit log,
 in the assignment-save transaction. Existing events migrate without rewriting data;

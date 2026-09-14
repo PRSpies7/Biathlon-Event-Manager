@@ -17,7 +17,7 @@ def seed_source(row, discipline):
 
 
 def render_event_settings(db_path,event,pending_edits=False):
-    with st.expander("Correct event season or lane configuration"):
+    with st.expander("Event settings"):
         with st.form(f"event_configuration_{event['id']}"):
             year=st.number_input("Season",min_value=1900,max_value=9999,value=event["season_year"] or infer_season(event["start_date"]))
             lanes=st.number_input("Pool lanes",min_value=1,max_value=12,value=int(event["pool_lanes"]))
@@ -42,7 +42,8 @@ def render_event_settings(db_path,event,pending_edits=False):
                     st.rerun()
 
 
-def render_entries(db_path, parsed, uploaded, name, host, start_date, course, lanes, meet_type, year):
+def render_entries(db_path, parsed, uploaded, name, host, start_date, course, lanes, meet_type, year, capacity_confirmed=False):
+    st.subheader("2. Review and confirm entries")
     history_path = season_database_path(Path(__file__).resolve().parents[1])
     init_season_db(history_path)
     token = sha256(uploaded.getvalue()).hexdigest()[:12] + f"_{year}"
@@ -75,14 +76,14 @@ def render_entries(db_path, parsed, uploaded, name, host, start_date, course, la
             blockers.append(f"{row['athlete_number']} · {row['athlete_name']}: choose a historical identity or New / visiting athlete.")
         else:
             matches[row["athlete_number"]] = selection or None
-            st.success(f"Selection accepted for {row['athlete_name']}: {'historical seeds will be checked' if selection else 'no historical link; seed is NT'}. Save with Confirm Entries and Initialize Event below.")
+            st.success(f"Selection accepted for {row['athlete_name']}: {'historical seeds will be checked' if selection else 'no historical link; seed is NT'}. Save with Confirm entries and continue below.")
     if matches:
         try:
             entries, _ = prepare_entries(parsed, history_path, year, matches)
         except ValueError as exc:
             st.error(str(exc))
             return
-    st.subheader("Entries and event distances")
+    st.caption("Review the entries and event distances. You can add missing athletes before generating heats on the next screen.")
     from ui.heat_review_tables import duplicate_name_notices,show_entry_notices
     notices.extend(duplicate_name_notices(entries))
     notice_area = st.container()
@@ -129,16 +130,15 @@ def render_entries(db_path, parsed, uploaded, name, host, start_date, course, la
     if not entries:
         invalid = True
         blockers.append("Keep at least one entry to initialize the event.")
-    st.subheader("Entries and historical seeds")
-    st.dataframe([{"Athlete":r["athlete_number"], "Name":r["athlete_name"],
-        "Run seed":display_seed(r["run_seed"]), "Run source":seed_source(r,"run"),
-        "Swim seed":display_seed(r["swim_seed"]), "Swim source":seed_source(r,"swim")} for r in entries], hide_index=True)
-    confirmed = st.checkbox(f"Confirm pool capacity: {lanes} lanes", key=f"confirm_lanes_{token}_{lanes}")
+    with st.expander("Historical seed details"):
+        st.dataframe([{"Athlete":r["athlete_number"], "Name":r["athlete_name"],
+            "Run seed":display_seed(r["run_seed"]), "Run source":seed_source(r,"run"),
+            "Swim seed":display_seed(r["swim_seed"]), "Swim source":seed_source(r,"swim")} for r in entries], hide_index=True)
     positions = list(range(1,13))
     if invalid:
         st.warning("Before initializing, complete these items:\n\n" + "\n".join(f"- {item}" for item in blockers))
-    if st.button("Confirm Entries and Initialize Event", type="primary", disabled=invalid or not confirmed or bool(selected),
-                 help="Apply Remove selected entries first if any entries are ticked for removal."):
+    if st.button("Confirm entries and continue", type="primary", disabled=invalid or not capacity_confirmed or bool(selected),
+                 help="Confirm pool capacity beside Pool lanes and apply any selected removals first. Saves this event and its entries; heats are generated in the next step."):
         if not name.strip() or not host.strip():
             st.error("Meet name and host/team name are required.")
             return
@@ -164,39 +164,44 @@ def render(db_path, event_id):
     from services.competition import GENERATION_PROFILES, default_profile
     profile = default_profile(event["meet_type"])
     metadata = json.loads(event.get("generation_metadata") or "{}")
+    if not has_heats:
+        st.header("2. Review and confirm entries")
+        st.caption(f"{len(entries)} entries saved. Add or correct entries below if needed, then generate heats.")
+        with st.expander("Edit event entries",expanded=bool(pending)):
+            render_workbench(db_path,event,entries,state,has_heats=False)
     if event["heat_source"]=="generated":
-        st.header("1. Choose a heat generation profile")
-        options = list(GENERATION_PROFILES)
-        profile = st.selectbox("Heat generation profile",options,
-            index=options.index(metadata.get("profile",profile)),
-            format_func=lambda value:GENERATION_PROFILES[value].label,
-            key=f"generation_profile_{event_id}",disabled=bool(pending))
-        st.caption(GENERATION_PROFILES[profile].description)
-    if metadata.get("profile") in GENERATION_PROFILES:
-        st.caption("Generated using: " + GENERATION_PROFILES[metadata["profile"]].label)
-    replace_manual=False
-    if event["heat_source"]=="generated":
-        st.header("2. Generate heats from entries")
-    if has_heats and event["heat_source"]=="generated":
-        replace_manual=st.checkbox("Replace current assignments with newly generated heats",key=f"regenerate_{event_id}_{event['heat_revision']}",
-            help="Tick this to enable Regenerate heats from entries. Ticking it alone changes nothing. Current heat assignments, including manual changes, are replaced only when you click Regenerate heats from entries.")
-    generate_label="Regenerate heats from entries" if has_heats else "Generate heats from entries"
-    generate_help="This reruns automatic heat generation and replaces the current heat assignments, including manual changes." if has_heats else None
-    if event["heat_source"]=="generated" and st.button(generate_label,type="primary",help=generate_help,disabled=bool(pending) or (has_heats and not replace_manual)):
-        try:
-            rows = generate_heats(entries,event,profile=profile)
-            save_heat_assignments(db_path,event_id,rows,event["heat_revision"],generation_profile=profile)
-        except ValueError as exc:
-            st.error(str(exc))
-        else:
-            st.rerun()
+        generation_area = st.expander("Generation settings") if has_heats else st.container()
+        with generation_area:
+            st.header("3. Choose profile and generate heats")
+            options = list(GENERATION_PROFILES)
+            profile = st.selectbox("Heat generation profile",options,
+                index=options.index(metadata.get("profile",profile)),
+                format_func=lambda value:GENERATION_PROFILES[value].label,
+                key=f"generation_profile_{event_id}",disabled=bool(pending),
+                help="Controls automatic grouping. Defaults from Meet type; changing the profile does not change the event's Meet type or existing assignments.")
+            st.caption(GENERATION_PROFILES[profile].description)
+            if metadata.get("profile") in GENERATION_PROFILES:
+                st.caption("Last generated with: " + GENERATION_PROFILES[metadata["profile"]].label)
+            replace_manual=False
+            if has_heats:
+                replace_manual=st.checkbox("Replace current assignments with newly generated heats",key=f"regenerate_{event_id}_{event['heat_revision']}",
+                    help="Tick this to enable Regenerate heats from entries. Ticking it alone changes nothing. Current heat assignments, including manual changes, are replaced only when you click Regenerate heats from entries.")
+            generate_label="Regenerate heats from entries" if has_heats else "Generate heats from entries"
+            generate_help="This reruns automatic heat generation and replaces the current heat assignments, including manual changes." if has_heats else None
+            if st.button(generate_label,type="primary",help=generate_help,disabled=bool(pending) or (has_heats and not replace_manual)):
+                try:
+                    rows = generate_heats(entries,event,profile=profile)
+                    save_heat_assignments(db_path,event_id,rows,event["heat_revision"],generation_profile=profile)
+                except ValueError as exc:
+                    st.error(str(exc))
+                else:
+                    st.rerun()
     if event["heat_status"]=="stale":
         st.warning("Assignments changed after approval. Existing operational files are stale; review both disciplines, approve and regenerate them.")
-    st.header(("3. " if event["heat_source"]=="generated" else "") +
-        ("Organise and confirm heats" if has_heats else "Add, remove or confirm entries"))
-    render_workbench(db_path,event,entries,state,has_heats)
     if not has_heats:
         return
+    st.header(("4. " if event["heat_source"]=="generated" else "") + "Organise and approve heats")
+    render_workbench(db_path,event,entries,state,has_heats)
     errors,warnings=validate_heats(entries,event)
     if warnings:
         with st.expander(f"Heat notices ({len(warnings)})"):

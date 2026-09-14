@@ -45,7 +45,7 @@ The selector **Heat generation profile** defaults to the event type, but may be
 changed deliberately without changing the competition type. The policies are
 **League — Efficient**, **Interprovincial — Conservative**, and **SA Champs — Strict**.
 The profile and generated revision are saved atomically with assignments and in
-the audit log. Review displays **Generated using:** the last generation policy.
+the audit log. Review displays **Last generated with:** the last generation policy.
 Manual edits retain this provenance; selecting a profile alone changes no heats.
 Older events have unknown provenance until regenerated, rather than a guessed label.
 
@@ -256,7 +256,7 @@ An incomplete swim heat keeps the centre-lane pattern; it does not start at lane
   heat, edit **New Position** to reorder whole heats, or move/swap athletes by editing
   their Heat cells. Enter does not submit; explicit buttons apply edits. The selected
   discipline stays active. Counts/categories refresh on form submission.
-- **Save heat changes** saves both disciplines together, removes all empty
+- **Save all changes** saves both disciplines together, removes all empty
   heats and closes numbering gaps. Draft heat
   IDs remain stable while editing; saved heat numbers follow the programme order.
   **Discard unsaved changes** restores both disciplines to the saved state.

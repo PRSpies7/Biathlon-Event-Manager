@@ -138,6 +138,37 @@ def _remember_tab(event_id, label):
     st.session_state[f"heat_review_tabs_{event_id}"] = label
 
 
+def _remember_current_tab(event_id):
+    label = st.session_state.get(f"heat_review_tabs_{event_id}")
+    if label:
+        st.session_state[f"heat_review_active_{event_id}"] = label
+
+
+def _render_entry_roster(event, state):
+    """One roster view feeds the existing discipline-specific save handler."""
+    records = [{"Athlete":r["athlete_number"],"Name":r["athlete_name"],
+        "Age group":r["group_name"],"Gender":r.get("gender"),
+        **{f"{d.title()} {field}": (display_seed(r.get(d+"_seed")) if field=="seed" else r.get(d+"_distance"))
+           if r.get(d+"_entered") else None for d in DISCIPLINES for field in ("distance","seed")},
+        "Remove from event":False} for r in state["rows"]]
+    edited = st.data_editor(pd.DataFrame(records),hide_index=True,num_rows="fixed",
+        key=f"entry_roster_{event['id']}_{state['revision']}_{state['version']}",
+        disabled=["Athlete","Name"],column_config={
+            "Gender":st.column_config.SelectboxColumn(options=["F","M"]),
+            **{f"{d.title()} distance":st.column_config.NumberColumn(min_value=1,step=1) for d in DISCIPLINES},
+            "Remove from event":st.column_config.CheckboxColumn(help="Select entries, then use Remove selected entries. Removes both disciplines; historical results are retained.")}).to_dict("records")
+    by_number = {r["Athlete"]:r for r in edited}
+    tables = {}
+    for d in DISCIPLINES:
+        athletes = []
+        for baseline in state["drafts"][d]["athletes"]:
+            row = by_number[baseline["Athlete"]]
+            athletes.append(dict(baseline,**{c:row[c] for c in ("Age group","Gender","Remove from event")},
+                Distance=row[f"{d.title()} distance"],Seed=row[f"{d.title()} seed"]))
+        tables[d] = ([],athletes)
+    return tables
+
+
 def _save(db_path,event,previous,working,has_heats):
     rows = working["rows"]
     old = {r["athlete_number"] for r in previous}
@@ -160,13 +191,19 @@ def render_workbench(db_path,event,entries,state,has_heats):
     state_key = f"heat_review_tables_{event['id']}"
     added = {r["athlete_number"] for r in state["rows"]}-{r["athlete_number"] for r in entries}
     show_entry_notices(duplicate_name_notices(state["rows"],only_numbers=added))
-    save_label = "Save heat changes" if has_heats else "Save entry changes"
+    save_label = "Save all changes"
     if state["dirty"]:
-        st.info(f"Changes are pending. {save_label} to apply them, or discard them.")
+        st.info("Unsaved changes. Save all changes to apply them, or discard them.")
     action, tables = None, {}
     labels = ["Running heats","Swimming heats"] if has_heats else ["Running entries","Swimming entries"]
     with st.form(f"heat_review_form_{event['id']}",enter_to_submit=False):
-        tabs = st.tabs(labels,key=f"heat_review_tabs_{event['id']}",on_change="rerun")
+        st.caption("Edits, additions and combinations remain unsaved until you save all changes or save and approve." if has_heats else
+                   "Entry edits and additions remain unsaved until you save all changes.")
+        if not has_heats:
+            tables = _render_entry_roster(event,state)
+        tabs = st.tabs(labels,key=f"heat_review_tabs_{event['id']}",
+            default=st.session_state.get(f"heat_review_active_{event['id']}",labels[0]),
+            on_change="rerun") if has_heats else []
         for tab,(discipline,prefix),label in zip(tabs,DISCIPLINES.items(),labels):
             with tab:
                 draft = state["drafts"][discipline]
@@ -187,9 +224,9 @@ def render_workbench(db_path,event,entries,state,has_heats):
                         if "New Position" in changes:
                             programme[int(index)]["_position_edited"] = True
                     with st.container(horizontal=True):
-                        if st.form_submit_button("Combine",key=f"combine_heats_{discipline}",on_click=_remember_tab,args=(event["id"],label)):
+                        if st.form_submit_button("Combine",key=f"combine_heats_{discipline}",on_click=_remember_tab,args=(event["id"],label),help="Prepares a combined draft. Save all changes to keep it."):
                             action = ("combine",discipline)
-                        if st.form_submit_button("Add heat",key=f"add_heat_{discipline}",on_click=_remember_tab,args=(event["id"],label)):
+                        if st.form_submit_button("Add heat",key=f"add_heat_{discipline}",on_click=_remember_tab,args=(event["id"],label),help="Adds an empty draft heat. Assign athletes and save all changes to keep it."):
                             action = ("add_heat",discipline)
                 else:
                     programme = []
@@ -207,9 +244,6 @@ def render_workbench(db_path,event,entries,state,has_heats):
                     st.info("No athletes entered in this discipline.")
                     athletes = []
                 tables[discipline] = (programme,athletes)
-                if st.form_submit_button(save_label,key=f"save_heats_{discipline}",type="primary",
-                    on_click=_remember_tab,args=(event["id"],label),help="Saves both disciplines and roster edits." + (" Empty heats disappear and numbering gaps close." if has_heats else "")):
-                    action = ("save",discipline)
         with st.expander("Add athlete to this event"):
             number = st.text_input("Athlete number",key=f"late_number_{event['id']}")
             name = st.text_input("Full name",key=f"late_name_{event['id']}")
@@ -218,14 +252,23 @@ def render_workbench(db_path,event,entries,state,has_heats):
             gender = st.selectbox("Gender",["F","M"],key=f"late_gender_{event['id']}")
             run = st.checkbox("Enter running",value=True,key=f"late_run_{event['id']}")
             swim = st.checkbox("Enter swimming",value=True,key=f"late_swim_{event['id']}")
-            if st.form_submit_button("Add athlete",key=f"add_athlete_{event['id']}"):
+            if st.form_submit_button("Add athlete",key=f"add_athlete_{event['id']}",on_click=_remember_current_tab,args=(event["id"],),help="Adds an athlete to the draft. Save all changes to keep the entry."):
                 action = ("add_athlete",None)
-        if st.form_submit_button("Discard unsaved changes",key=f"discard_heats_{event['id']}"):
-            action = ("discard",None)
+        with st.container(horizontal=True):
+            if st.form_submit_button("Remove selected entries",key=f"remove_review_entries_{event['id']}",
+                on_click=_remember_current_tab,args=(event["id"],),
+                help="Removes the ticked entries from the draft in both disciplines. Save all changes to confirm. Historical results are retained."):
+                action = ("remove",None)
+            if st.form_submit_button(save_label,key=f"save_all_changes_{event['id']}",type="primary",
+                on_click=_remember_current_tab,args=(event["id"],),
+                help="Saves both disciplines, additions and selected removals. Empty heats disappear and numbering gaps close."):
+                action = ("save",None)
+            if st.form_submit_button("Discard unsaved changes",key=f"discard_heats_{event['id']}",on_click=_remember_current_tab,args=(event["id"],)):
+                action = ("discard",None)
         if has_heats and event["heat_status"]!="approved":
             reviewed_run = st.checkbox("I have reviewed the running heats",key=f"review_run_{event['id']}_{event['heat_revision']}")
             reviewed_swim = st.checkbox("I have reviewed the swimming heats",key=f"review_swim_{event['id']}_{event['heat_revision']}")
-            if st.form_submit_button("Approve final run and swim heats",key=f"approve_heats_{event['id']}"):
+            if st.form_submit_button("Save and approve final heats",key=f"approve_heats_{event['id']}",on_click=_remember_current_tab,args=(event["id"],)):
                 action = ("approve",None)
     if action is None:
         return
@@ -234,6 +277,8 @@ def render_workbench(db_path,event,entries,state,has_heats):
         del st.session_state[state_key]
         st.rerun()
     try:
+        if kind=="remove" and not any(r["Remove from event"] for _,athletes in tables.values() for r in athletes):
+            raise ValueError("Select entries in the Remove from event column first.")
         working = _collect(state,tables,has_heats)
         if kind=="add_heat":
             programme = working["drafts"][discipline]["programme"]

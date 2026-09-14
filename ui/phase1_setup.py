@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+from hashlib import sha256
 from pathlib import Path
 
 import pandas as pd
@@ -59,8 +60,8 @@ def render_operational_outputs(db_path,event_id):
     import json
     from database.db import get_conn
     from services.heat_outputs import current_outputs,generate_outputs
-    st.subheader("Phase 1 Exports")
     event=dict(get_event(db_path,event_id))
+    st.subheader("5. Generate and download operational files" if event["heat_source"]=="generated" else "Phase 1 Exports")
     files=current_outputs(db_path,event_id)
     # Stale files remain stored but are hidden by current_outputs. Read their
     # existence only to distinguish first generation from rebuilding in the UI.
@@ -107,6 +108,8 @@ def render(db_path: str, reference_json: dict):
     heat_source = st.radio("Start event", ["Generate heats from entries", "Use existing heats"],
         index=1, horizontal=True, key=f"heat_source_{st.session_state.get('new_session_token', 0)}")
     generated = heat_source == "Generate heats from entries"
+    if generated:
+        st.subheader("1. Upload entries and set event details")
     uploaded = st.file_uploader(
         "Master Entries Excel or PDF",
         type=["xlsx", "pdf"],
@@ -114,7 +117,8 @@ def render(db_path: str, reference_json: dict):
         help="Drop either the Master Entries Excel workbook or the Meet Program PDF. The application detects the format automatically.",
     )
     if not uploaded:
-        st.info("Upload the Master Entries Excel or PDF file to begin. This will create the Master Dataset, meet_program.json, and Swim Lane Sheets.")
+        st.info("Upload entries to review athletes and set up the event." if generated else
+                "Upload an existing heat document to review its assignments and set up the event.")
         return
 
     source_type = Path(uploaded.name).suffix.lower()
@@ -147,7 +151,7 @@ def render(db_path: str, reference_json: dict):
         [int(r["lane"]) for r in parsed["swimming_records"] if r["lane"] is not None] or [8]
     )
 
-    if is_pdf:
+    if is_pdf and not generated:
         st.info(
             "PDF detected. The athlete, heat and lane data has been imported. "
             "Review or edit the Phase 1 event settings below before initializing the event."
@@ -177,6 +181,8 @@ def render(db_path: str, reference_json: dict):
     with col3:
         pool_lanes = st.number_input("Pool lanes", min_value=1, max_value=12,
             value=metadata.get("pool_lanes",inferred_lanes), step=1)
+        capacity_confirmed = st.checkbox(f"Confirm pool capacity: {pool_lanes} lanes",
+            key=f"confirm_lanes_{sha256(uploaded.getvalue()).hexdigest()[:12]}_{season_year}_{pool_lanes}") if generated else False
         meet_types=["Local", "Interprovincial", "National"]
         meet_type = st.selectbox("Meet type", meet_types, index=meet_types.index(defaults.get("meet_type","Local")))
 
@@ -191,7 +197,7 @@ def render(db_path: str, reference_json: dict):
             "province": "Province",
             "running_heat": "Run Heat", "running_lane": "Run Lane", "swimming_heat": "Swim Heat", "swimming_lane": "Swim Lane"
         })
-        st.dataframe(preview, use_container_width=True, hide_index=True)
+        st.dataframe(preview, width="stretch", hide_index=True)
         st.caption(f"{len(athletes)} unique athletes · {len(parsed['running_heats'])} running heats · {len(parsed['swimming_heats'])} swimming heats")
 
     if parsed["swimming_only_athletes"]:
@@ -200,7 +206,7 @@ def render(db_path: str, reference_json: dict):
     if generated:
         from ui.heat_review import render_entries
         render_entries(db_path, parsed, uploaded, meet_name, host_team, start_date,
-                       course, int(pool_lanes), meet_type, int(season_year))
+                       course, int(pool_lanes), meet_type, int(season_year), capacity_confirmed)
         return
 
     if st.button("Confirm Data Set and Initialize Event", type="primary"):
