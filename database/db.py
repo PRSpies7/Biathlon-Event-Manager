@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
 """
 
 HEAT_EVENT_COLUMNS = {
+    "generation_metadata": "TEXT",
     "heat_source": "TEXT NOT NULL DEFAULT 'imported'",
     "heat_status": "TEXT NOT NULL DEFAULT 'approved'",
     "heat_revision": "INTEGER NOT NULL DEFAULT 0",

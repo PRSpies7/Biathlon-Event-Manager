@@ -1,6 +1,31 @@
 """Shared biathlon season, category and distance rules."""
 from datetime import date
 import re
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class GenerationPolicy:
+    label: str
+    description: str
+    competition: str
+    repack_clusters: bool = False
+
+
+GENERATION_PROFILES = {
+    "league": GenerationPolicy("League — Efficient", "Reduce the number of heats while keeping combinations competitively sensible.", "Local", True),
+    "interprovincial": GenerationPolicy("Interprovincial — Conservative", "Prioritise age group and gender separation; incomplete heats are acceptable.", "Interprovincial"),
+    "sa_champs": GenerationPolicy("SA Champs — Strict", "Keep age groups and genders separate automatically.", "National"),
+}
+
+
+def default_profile(meet_type):
+    return {"Local":"league", "Interprovincial":"interprovincial", "National":"sa_champs"}[meet_type]
+
+
+def running_capacity(distance):
+    """Preferred and hard automatic sizes; retain 12 for nonstandard distances."""
+    return {400:(10,12), 800:(12,15)}.get(distance,(12,12))
 
 
 def infer_season(value):

@@ -108,9 +108,13 @@ def get_athletes(db_path: str, event_id: int) -> list[dict[str, Any]]:
         return [dict(r) for r in conn.execute("SELECT * FROM athletes WHERE event_id = ? ORDER BY sort_order", (event_id,)).fetchall()]
 
 
-def save_heat_assignments(db_path, event_id, rows, expected_revision):
+def save_heat_assignments(db_path, event_id, rows, expected_revision, *, generation_profile=None):
     """Save manual/generator output without touching captured finish positions or times."""
     fields = ["running_heat","running_lane","swimming_heat","swimming_lane","group_name",*HEAT_ATHLETE_COLUMNS]
+    if generation_profile is not None:
+        from services.competition import GENERATION_PROFILES
+        if generation_profile not in GENERATION_PROFILES:
+            raise ValueError("Select a valid heat generation profile.")
     with get_conn(db_path) as conn:
         conn.execute("BEGIN IMMEDIATE")
         event = conn.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()
@@ -122,6 +126,14 @@ def save_heat_assignments(db_path, event_id, rows, expected_revision):
         for row in rows:
             conn.execute(f"UPDATE athletes SET {','.join(f+'=?' for f in fields)} WHERE event_id=? AND athlete_number=?",
                 (*[row.get(f) for f in fields],event_id,row["athlete_number"]))
+        if generation_profile is not None:
+            # Also invalidate a previous approval when regeneration happens to
+            # produce identical assignments; record provenance atomically.
+            conn.execute("UPDATE events SET heat_revision=heat_revision+1,approved_revision=NULL,exports_revision=NULL,heat_status=CASE WHEN heat_status='draft' THEN 'draft' ELSE 'stale' END WHERE id=?",(event_id,))
+            revision = conn.execute("SELECT heat_revision FROM events WHERE id=?",(event_id,)).fetchone()[0]
+            metadata = json.dumps({"profile":generation_profile,"revision":revision})
+            conn.execute("UPDATE events SET generation_metadata=? WHERE id=?",(metadata,event_id))
+            conn.execute("INSERT INTO audit_log(event_id,action,details) VALUES (?,?,?)",(event_id,"HEATS_GENERATED",metadata))
         _touch_event(conn,event_id)
 
 

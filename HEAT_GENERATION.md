@@ -70,47 +70,47 @@ The earlier interface remains available at `4ff87df`.
 There is no database migration or new persistent heat format to reverse. Reverting
 the interface does not undo heat assignments or event roster edits already saved; those
 remain normal event data. Use **Discard unsaved changes** before saving a draft
-you do not want. No GitHub push is part of this change.
+you do not want. These checkpoints predate the generation-profile refinement.
 
 ## Competition structure
 
-Generation is deterministic and rule-based. It uses current entries, competition
-type, capacity and historical seed times; previous heat assignments are never
-learning/training data. Manual changes in one event do not influence later events.
+One deterministic generator uses the selected **Heat generation profile**:
 
-The sequence is strict discipline/distance/age/gender groups → sensible same-group
-heats → protect satisfactory heats → identify incomplete groups/remainders → combine
-compatible whole remainders → compare seeds → compare occupancy → assign programme
-order, positions and lanes. Running groups are balanced first (16 → 8 + 8, not
-12 + 4); swimming reserves full faster heats and a slower remainder.
+| Profile | Behaviour |
+| --- | --- |
+| League � Efficient | Repack valid same-distance clusters to remove unnecessary heats. Satisfactory heats may participate. |
+| Interprovincial � Conservative | Preserve satisfactory groups; only consider compatible whole remainders. More than six runners or at most two empty swim lanes normally protects a heat. |
+| SA Champs � Strict | Never automatically mix categories or genders. Incomplete heats are acceptable. |
 
-`services/competition.py` centralises discipline/distance compatibility tiers.
-`services/heats.py` separates grouping, protection reasons, eligibility, destination
-ranking, merging and final assignment. Protected heats never donate or receive
-athletes automatically. Each successful merge is checked for protection again.
+The selector defaults from event type but can be overridden without changing that
+actual event type. Its descriptions explain each policy. **Generated using:** shows
+the last saved profile, not an unsubmitted selector choice. A nullable event metadata
+field stores the profile and generated revision, also recorded in the audit log,
+in the assignment-save transaction. Existing events migrate without rewriting data;
+unknown old generation provenance remains blank. Manual edits retain provenance.
 
-| Event type | Swimming | Running |
-| --- | --- | --- |
-| Local league | Protect heats with 0–1 empty lanes. With 2+ empty lanes, consider compatible whole remainders. | Protect satisfactory 7–12-person heats; consider smaller compatible groups. Seven is a protection guideline, not a minimum heat size. |
-| Interprovincial | Protect heats with 0–2 empty lanes. With 3+ empty lanes, consider conservative combinations. | Protect heats above six runners. Five/six-person heats may remain intact without a strong alternative. |
-| National / SA Championships | No automatic age or gender mixing. | No automatic age or gender mixing. |
+All policies form strict distance/category/gender groups first. Running uses
+**400 m preferred 10 / hard 12**, **800 m preferred 12 / hard 15**. Preferred sizes
+are not hard split points: 14 same-group 800 m athletes can use one heat. Larger
+groups split sensibly, e.g. 16 becomes 8 + 8. Swimming never exceeds pool capacity.
+Manual Combine remains its existing separate operation, including its 12-runner
+split rule; choosing a generation profile does not rerun manual edits or exports.
 
-All combinations require equal discipline distances. Automatic run heats never
-exceed 12. NT athletes generally enter slower heats within their competition groups.
-Eligible never means mandatory mixing. League ranks category compatibility before
-gender, then seed similarity, then occupancy. Interprovincial prioritises same
-category/gender and nearby same-gender groups; mixed genders require same/strong
-categories and a satisfactory resulting heat. Weak pairs stay separate there.
-No weighted occupancy score can override those tiers. Special Needs uses flexible
-same-distance options, with gender then seed suitability deciding destinations;
-protected Masters heats are never dismantled to accommodate it.
-Swim lanes use centre-out seeding; faster runners receive outer starting positions.
-For example, seven runners use positions 1–7, with the fastest runner at 7.
-Use **Reseed run starting positions** to apply this to saved heats without
-regenerating their membership; this replaces manual run-position overrides.
-The complete current rules are written out in [HEAT_RULES.md](HEAT_RULES.md).
-Special Needs Male and Female both use a 400 m run and a 50 m swim.
-Manual unusual combinations/capacities warn; technically invalid outputs are blocked.
+League evaluates all-pairs-compatible clusters, not just one remainder and one heat.
+Within valid arrangements it prioritises heat-count reduction. At equal heat count,
+running prefers gender/category then seed coherence; swimming prefers seed coherence
+then gender/category. Preferred sizes and utilisation break later ties. Deterministic
+relative seed partitions use no arbitrary time-gap thresholds. NT stays unseeded.
+A repack must remove a heat, not merely improve trivial occupancy. Overlapping
+clusters are compared deterministically; this is not an exhaustive global solver.
+Interprovincial keeps protection and conservative pair merging; SA Champs stays strict.
+
+Distance and category compatibility remain hard feasibility checks. Special Needs
+may use valid same-distance Masters or younger destinations based on performance,
+without hard-coded athlete routes. Neither history assignments nor manual moves
+train future generation. Historical seed lookup remains season/discipline/distance
+specific. Swim lanes stay centre-out; faster runners receive higher outside positions.
+See [HEAT_RULES.md](HEAT_RULES.md) for full policies and unchanged programme sequences.
 
 Running follows older Masters/Special Needs (women then men), Under 8, Under 9, Under 11,
 junior/senior/Masters 40–50, then Under 13/15/17/19. Programme sequence does not imply

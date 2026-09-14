@@ -3,6 +3,7 @@ from pathlib import Path
 from hashlib import sha256
 
 import pandas as pd
+import json
 import streamlit as st
 
 from database.repository import create_event, get_event, get_athletes, replace_athletes, update_event
@@ -146,6 +147,18 @@ def render(db_path, event_id):
     if event["heat_source"]=="imported":
         entries=enrich_imported(entries)
     has_heats=any(a.get("running_heat") or a.get("swimming_heat") for a in entries)
+    from services.competition import GENERATION_PROFILES, default_profile
+    profile = default_profile(event["meet_type"])
+    metadata = json.loads(event.get("generation_metadata") or "{}")
+    if event["heat_source"]=="generated":
+        options = list(GENERATION_PROFILES)
+        profile = st.selectbox("Heat generation profile",options,
+            index=options.index(metadata.get("profile",profile)),
+            format_func=lambda value:GENERATION_PROFILES[value].label,
+            key=f"generation_profile_{event_id}",disabled=bool(pending))
+        st.caption(GENERATION_PROFILES[profile].description)
+    if metadata.get("profile") in GENERATION_PROFILES:
+        st.caption("Generated using: " + GENERATION_PROFILES[metadata["profile"]].label)
     replace_manual=False
     if has_heats and event["heat_source"]=="generated":
         replace_manual=st.checkbox("Replace current assignments with newly generated heats",key=f"regenerate_{event_id}_{event['heat_revision']}",
@@ -154,8 +167,8 @@ def render(db_path, event_id):
     generate_help="This reruns automatic heat generation and replaces the current heat assignments, including manual changes." if has_heats else None
     if event["heat_source"]=="generated" and st.button(generate_label,type="primary",help=generate_help,disabled=bool(pending) or (has_heats and not replace_manual)):
         try:
-            rows = generate_heats(entries,event)
-            save_heat_assignments(db_path,event_id,rows,event["heat_revision"])
+            rows = generate_heats(entries,event,profile=profile)
+            save_heat_assignments(db_path,event_id,rows,event["heat_revision"],generation_profile=profile)
         except ValueError as exc:
             st.error(str(exc))
         else:

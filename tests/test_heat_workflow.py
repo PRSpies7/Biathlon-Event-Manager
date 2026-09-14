@@ -71,9 +71,9 @@ def test_programme_sequence_protected_opening_and_reseeded_moves():
     field=entries(6,"MASTERS 60+ WOMEN")+entries(2,"MASTERS 70+ WOMEN",10)+entries(2,"SPECIAL NEEDS FEMALE",20)+entries(3,"U/08 GIRLS",30)
     rows=generate_heats(field,settings())
     opening=[r for r in rows if r["running_heat"]==1]
-    assert len(opening)==8  # Protect the satisfactory Masters heat after merging.
-    assert {r["group_name"] for r in opening}=={"MASTERS 60+ WOMEN","MASTERS 70+ WOMEN"}
-    field=generate_heats(entries(13),settings(),optimise=False)
+    assert len(opening)==10  # Efficient League absorbs the compatible Special Needs remainder.
+    assert {r["group_name"] for r in opening}=={"MASTERS 60+ WOMEN","MASTERS 70+ WOMEN","SPECIAL NEEDS FEMALE"}
+    field=generate_heats(entries(16),settings(),optimise=False)
     before={r["athlete_number"]:dict(r) for r in field}
     selected=field[0]
     destination=next(r["running_heat"] for r in field if r["running_heat"]!=selected["running_heat"])
@@ -199,7 +199,7 @@ def test_initial_structure_nt_and_lane_assignment():
         for heat in heats:
             members=[r for r in rows if r[prefix+"_heat"]==heat]
             assert len({r["gender"] for r in members})==1
-            assert len(members)<=(12 if discipline=="run" else 6)
+            assert len(members)<=(15 if discipline=="run" else 6)
         assert rows[0][prefix+"_heat"]==min(r[prefix+"_heat"] for r in rows if r["gender"]=="F")
     assert centre_out(6)==[3,4,2,5,1,6]
     assert centre_out(8)==[4,5,3,6,2,7,1,8]
@@ -224,7 +224,7 @@ def test_local_interprovincial_and_national_underfill_rules():
     field=entries(3)+entries(3,"U/13 BOYS",10)
     assert swim_count(generate_heats(field,settings("Interprovincial")))==1
     field=entries(5)+entries(1,"U/13 BOYS",10)
-    assert swim_count(generate_heats(field,settings("Local")))==2
+    assert swim_count(generate_heats(field,settings("Local")))==1
     field=entries(6)+entries(6,"U/15 GIRLS",10)
     rows=generate_heats(field,settings("Interprovincial"))
     assert len({r["running_heat"] for r in rows})==1
@@ -234,16 +234,13 @@ def test_local_interprovincial_and_national_underfill_rules():
 def test_whole_group_mixing_fast_swim_heats_and_protected_runs():
     from services.competition import distances,category_key
     assert category_key("U/10 GIRLS") is None and distances("U/12 BOYS")== (None,None)
-    rows=generate_heats(entries(8,"U/15 GIRLS")+entries(4,"U/17 GIRLS",20),settings())
+    rows=generate_heats(entries(8,"U/15 GIRLS")+entries(4,"U/17 GIRLS",20),settings("Interprovincial"))
     fast=[r for r in rows if r["athlete_number"] in {str(100+i) for i in range(6)}]
     assert len({r["swimming_heat"] for r in fast})==1
     heat=fast[0]["swimming_heat"]
     assert len([r for r in rows if r["swimming_heat"]==heat])==6
     rows=generate_heats(entries(4,"U/15 GIRLS")+entries(4,"U/17 GIRLS",10)+entries(2,"U/19 GIRLS",20),settings())
     assert len({r["swimming_heat"] for r in rows if r["group_name"]=="U/19 GIRLS"})==1
-    rows=generate_heats(entries(4,"U/15 GIRLS")+entries(2,"U/15 BOYS",10)+entries(2,"U/17 GIRLS",20),settings())
-    first=[r for r in rows if r["swimming_heat"]==1]
-    assert len(first)==6 and {r["group_name"] for r in first}=={"U/15 GIRLS","U/15 BOYS"}
     for women,men,count in ((3,4,1),(6,6,1)):
         rows=generate_heats(entries(women,"MASTERS 60+ WOMEN")+entries(men,"MASTERS 70+ MEN",20),settings())
         assert len({r["running_heat"] for r in rows})==count
@@ -257,17 +254,17 @@ def test_whole_group_mixing_fast_swim_heats_and_protected_runs():
 
 def test_balanced_same_group_runs_are_protected_from_other_remainders():
     field=entries(16,"U/11 GIRLS")+entries(4,"U/09 GIRLS",20)
-    rows=generate_heats(field,settings())
+    rows=generate_heats(field,settings("Interprovincial"))
     u11=[r for r in rows if r["group_name"]=="U/11 GIRLS"]
     assert sorted(sum(r["running_heat"]==h for r in u11) for h in {r["running_heat"] for r in u11})==[8,8]
     assert not {r["running_heat"] for r in u11} & {r["running_heat"] for r in rows if r not in u11}
     field=entries(7,"U/15 GIRLS")+entries(3,"U/17 GIRLS",20)
-    rows=generate_heats(field,settings())
+    rows=generate_heats(field,settings("Interprovincial"))
     assert len({r["running_heat"] for r in rows})==2
 
 
 @pytest.mark.parametrize("meet,count,protected",[
-    ("Local",6,True),("Local",5,True),("Local",4,False),
+    ("Local",6,False),("Local",5,False),("Local",4,False),
     ("Interprovincial",5,True),("Interprovincial",4,True),("Interprovincial",3,False),
 ])
 def test_swim_protection_and_remainder_eligibility(meet,count,protected):
@@ -316,24 +313,10 @@ def test_distance_national_boundaries_and_representative_compatible_pairs():
     assert len({r["running_heat"] for r in rows})==len({r["swimming_heat"] for r in rows})==2
 
 
-def test_category_then_gender_then_seed_then_occupancy_priorities():
+def test_league_heat_count_precedes_former_destination_preferences():
     field=entries(4,"U/13 GIRLS")+entries(3,"U/15 BOYS",20)+entries(6,"U/17 GIRLS",30)
     rows=generate_heats(field,settings())
-    target=next(r["running_heat"] for r in rows if r["group_name"]=="U/13 GIRLS")
-    assert {r["group_name"] for r in rows if r["running_heat"]==target}=={"U/13 GIRLS","U/15 BOYS"}
-    # Equally compatible, same-gender smaller group wins on seed suitability.
-    field=entries(4,"U/15 GIRLS")+entries(3,"U/17 GIRLS",20)+entries(6,"U/19 GIRLS",30)
-    for row in field:
-        row["run_seed"]=30000 if row["group_name"]=="U/19 GIRLS" else 10000
-    rows=generate_heats(field,settings())
-    target=next(r["running_heat"] for r in rows if r["group_name"]=="U/15 GIRLS")
-    assert {r["group_name"] for r in rows if r["running_heat"]==target}=={"U/15 GIRLS","U/17 GIRLS"}
-    # Occupancy breaks a genuine category/gender/seed tie only.
-    for row in field:
-        row["run_seed"]=10000
-    rows=generate_heats(field,settings())
-    target=next(r["running_heat"] for r in rows if r["group_name"]=="U/15 GIRLS")
-    assert {r["group_name"] for r in rows if r["running_heat"]==target}=={"U/15 GIRLS","U/19 GIRLS"}
+    assert len({r["running_heat"] for r in rows})==1
 
 
 @pytest.mark.parametrize("discipline,prefix",[("run","running"),("swim","swimming")])
@@ -350,13 +333,13 @@ def test_special_needs_uses_same_distance_gender_and_seeds(discipline,prefix):
     rows=generate_heats(field,settings())
     target=next(r[prefix+"_heat"] for r in rows if r["group_name"]=="SPECIAL NEEDS FEMALE")
     assert {r["group_name"] for r in rows if r[prefix+"_heat"]==target}=={"SPECIAL NEEDS FEMALE","MASTERS 60+ WOMEN"}
-    # Gender remains ahead of seed similarity for flexible Special Needs options.
+    # Running favours gender; swimming favours seed coherence within valid options.
     field=entries(2,"SPECIAL NEEDS FEMALE")+entries(4,"MASTERS 60+ MEN",20)+entries(4,"U/09 GIRLS",30)
     for row in field:
         row[discipline+"_seed"]=20000 if row["group_name"]=="U/09 GIRLS" else 10000
     rows=generate_heats(field,settings())
     target=next(r[prefix+"_heat"] for r in rows if r["group_name"]=="SPECIAL NEEDS FEMALE")
-    assert {r["group_name"] for r in rows if r[prefix+"_heat"]==target}=={"SPECIAL NEEDS FEMALE","U/09 GIRLS"}
+    assert {r["group_name"] for r in rows if r[prefix+"_heat"]==target}=={"SPECIAL NEEDS FEMALE", "U/09 GIRLS" if discipline=="run" else "MASTERS 60+ MEN"}
 
 
 def test_adult_cluster_and_u19_bridge_in_both_disciplines():

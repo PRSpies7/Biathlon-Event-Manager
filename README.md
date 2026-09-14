@@ -7,16 +7,18 @@ import, historical seeds, run/swim generation and manual approval before Phase 1
 Approved heats export to the existing accepted PDF/Excel structures and supply
 the operational lane sheets and TimeDrops JSON from one saved state.
 
-Automatic generation is deterministic: strict discipline/distance/age/gender
-groups first, balanced running heats or full fast swimming heats next, then
-protection of satisfactory heats and combination of compatible whole remainders.
-Distance is a hard automatic boundary. League uses category compatibility before
-gender; Interprovincial preserves age/gender more strongly; National never mixes
-automatically. Seeds are a later preference and occupancy comes last. Special
-Needs can use suitable same-distance destinations based on gender and seed times,
-without dismantling protected heats. Manual overrides remain available, and previous
-heat assignments never train or influence future generation. See the complete
-[heat rules and programme sequences](HEAT_RULES.md) for tiers and protection thresholds.
+Automatic generation uses one deterministic generator with three selectable policies:
+**League — Efficient**, **Interprovincial — Conservative**, and **SA Champs — Strict**.
+The selector defaults from event type but can be overridden without changing it;
+the used profile is saved with the generated revision and displayed during review.
+All policies group by discipline/distance/category/gender first. League repacks
+compatible clusters to eliminate unnecessary heats, using relative seed coherence
+inside valid combinations. Interprovincial protects sensible same-group heats;
+SA Champs never mixes categories/genders. Distance always remains a hard boundary.
+Running preferred/hard sizes are **10/12 at 400 m** and **12/15 at 800 m**; pool lanes
+remain the swimming limit. Manual overrides and output regeneration stay separate.
+Previous heat assignments never train future generation. See the complete
+[heat rules and programme sequences](HEAT_RULES.md).
 
 ## V1.15 scope
 

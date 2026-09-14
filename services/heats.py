@@ -1,14 +1,15 @@
 """Strict base heats, protection, compatible remainder merging and assignment.
 
 Generation uses entries and seed times, never previous heat/lane assignments.
-Preferences are lexicographic: occupancy cannot outweigh compatibility or gender.
+Profiles compare only valid arrangements; League may repack to remove heats.
 """
-from collections import defaultdict
+from collections import Counter, defaultdict
 from copy import deepcopy
 from math import ceil
 import json
 
 from services.competition import category_key, category_order, compatibility, gender_for_group, distances
+from services.competition import GENERATION_PROFILES, default_profile, running_capacity
 
 
 DISCIPLINES = {"run": "running", "swim": "swimming"}
@@ -247,6 +248,8 @@ def combine_selected_heats(entries, event, discipline, programme, selected):
 
 
 def protection_reason(heat, discipline, capacity, meet_type):
+    if meet_type == "Local":
+        return None  # Preferred structures may be repacked to eliminate a heat.
     """Explain why a heat cannot donate or receive athletes automatically."""
     if meet_type == "National":
         return "National age/gender groups remain separate."
@@ -353,10 +356,106 @@ def optimise_heats(heats, discipline, capacity, meet_type):
         heats[right] = []
 
 
+def compatible_clusters(heats, discipline):
+    """Enumerate maximal all-pairs-compatible category clusters, never graph paths.
+
+    A bridge (including Special Needs) cannot legitimise an incompatible pair.
+    Include pair/single-category alternatives so overlapping clusters can compete.
+    """
+    categories = sorted({category_key(a["group_name"]) or a["group_name"] for h in heats for a in h})
+    distance = heats[0][0][discipline+"_distance"]
+    neighbours = {c:{d for d in categories if c!=d and compatibility(c,d,discipline,distance) is not None} for c in categories}
+    found = {frozenset([c]) for c in categories}
+    found.update(frozenset((c,d)) for c in categories for d in neighbours[c])
+    def visit(chosen, possible, excluded):
+        if not possible and not excluded:
+            found.add(frozenset(chosen))
+        for c in sorted(possible.copy()):
+            visit(chosen|{c},possible & neighbours[c],excluded & neighbours[c])
+            possible.remove(c)
+            excluded.add(c)
+    visit(set(),set(categories),set())
+    return sorted(found,key=lambda c:tuple(sorted(c)))
+
+
+def arrangement_rank(heats, discipline, capacity, preferred):
+    """Lexicographic comparison AFTER feasibility: count, then discipline policy.
+
+    Running keeps gender/category ahead of seed spread; swimming puts measured
+    seed coherence first. No absolute seed-gap cut-off or occupancy weight.
+    """
+    gender, age, spread, unknown = 0,0,0,0
+    for heat in heats:
+        known = sorted(a[discipline+"_seed"] for a in heat if a.get(discipline+"_seed") is not None)
+        if known:
+            mean = sum(known)/len(known)
+            spread += sum((x-mean)**2 for x in known)
+        unknown += len(known)*(len(heat)-len(known))
+        genders = Counter(a["gender"] for a in heat)
+        gender += genders["F"]*genders["M"]
+        categories = Counter(a["group_name"] for a in heat)
+        names = sorted(categories)
+        for i,a in enumerate(names):
+            for b in names[i+1:]:
+                age += categories[a]*categories[b]*(compatibility(a,b,discipline,heat[0][discipline+"_distance"]) or 0)
+    preference = (gender,age,unknown,spread) if discipline=="run" else (unknown,spread,gender,age)
+    return (len(heats),*preference,sum(max(0,len(h)-preferred) for h in heats),
+            sum((capacity-len(h))**2 for h in heats),tuple(sorted(_heat_identity(h) for h in heats)))
+
+
+def repack_league_clusters(heats, discipline, capacity, preferred):
+    """Repack whole compatible pools only when doing so removes at least one heat.
+
+    Evaluate seed-, gender- and category-ordered partitions, comparing feasible
+    alternatives lexicographically. Repeat the best reduction. This deterministic
+    cluster search is intentionally not an unrestricted weighted optimiser.
+    """
+    while True:
+        candidates = []
+        for cluster in compatible_clusters(heats,discipline):
+            for gender in (None,"F","M"):
+                indexes = [i for i,h in enumerate(heats) if all(
+                    (category_key(a["group_name"]) or a["group_name"]) in cluster and
+                    (gender is None or a["gender"]==gender) for a in h)]
+                members = [a for i in indexes for a in heats[i]]
+                count = ceil(len(members)/capacity)
+                if not members or count>=len(indexes):
+                    continue
+                base,extra = divmod(len(members),count)
+                sizes = {tuple(base+(i<extra) for i in range(count)),
+                         (len(members)-capacity*(count-1),)+(capacity,)*(count-1)}
+                if len(members)>preferred*(count-1):
+                    sizes.add((len(members)-preferred*(count-1),)+(preferred,)*(count-1))
+                orderings = [lambda a:seed_order(a,discipline),
+                    lambda a:(a["gender"],seed_order(a,discipline)),
+                    lambda a:(category_key(a["group_name"]) or a["group_name"],a["gender"],seed_order(a,discipline))]
+                for ordering in orderings:
+                    ranked = sorted(members,key=ordering,reverse=True)
+                    for partition in sorted(sizes):
+                        if min(partition)<1 or max(partition)>capacity:
+                            continue
+                        packed,offset = [],0
+                        for size in partition:
+                            packed.append(ranked[offset:offset+size])
+                            offset += size
+                        # Explicit feasibility guard remains independent of ranking.
+                        if any(compatibility_tier(h,[],discipline) is None for h in packed):
+                            continue
+                        result = [h for i,h in enumerate(heats) if i not in indexes]+packed
+                        candidates.append((arrangement_rank(result,discipline,capacity,preferred),result,packed))
+        if not candidates:
+            return heats
+        _,heats,packed = min(candidates,key=lambda c:c[0])
+        anchor = min(a.get("_generation_order",programme_order(a["group_name"],a["gender"],discipline)) for h in packed for a in h)
+        for h in packed:
+            for a in h:
+                a["_generation_order"] = anchor
+
+
 def assign_positions_or_lanes(heats, discipline, capacity):
     """Apply programme order after grouping, then slow-to-fast heats and seeding."""
     def order(heat):
-        programme = min(programme_order(a["group_name"], a["gender"], discipline) for a in heat)
+        programme = min(a.get("_generation_order",programme_order(a["group_name"], a["gender"], discipline)) for a in heat)
         seeds = [a.get(f"{discipline}_seed") for a in heat]
         known = [seed for seed in seeds if seed is not None]
         # NT heats precede fully seeded heats; larger times precede smaller times.
@@ -370,10 +469,14 @@ def assign_positions_or_lanes(heats, discipline, capacity):
             row[prefix+"_heat"], row[prefix+"_lane"] = number, lane
 
 
-def generate_heats(entries, event, *, optimise=True):
+def generate_heats(entries, event, *, optimise=True, profile=None):
     rows = deepcopy(entries)
     if event["meet_type"] not in {"Local","Interprovincial","National"}:
         raise ValueError("Select Local, Interprovincial or National event type.")
+    profile = profile or default_profile(event["meet_type"])
+    if profile not in GENERATION_PROFILES:
+        raise ValueError("Select a valid heat generation profile.")
+    policy = GENERATION_PROFILES[profile]
     for row in rows:
         if not row.get("group_name") or row.get("gender") not in {"F","M"}:
             raise ValueError(f"Confirm age group and gender for {row['athlete_name']}.")
@@ -382,14 +485,20 @@ def generate_heats(entries, event, *, optimise=True):
             if row.get(discipline+"_entered") and not row.get(discipline+"_distance"):
                 raise ValueError(f"Confirm {discipline} distance for {row['athlete_name']}.")
     for discipline,prefix in DISCIPLINES.items():
-        capacity = RUN_CAPACITY if discipline == "run" else int(event["pool_lanes"])
-        if capacity < 1:
-            raise ValueError("Heat capacity must be positive.")
         groups = build_strict_groups(rows, discipline)
-        heats = build_balanced_base_heats(groups, discipline, capacity)
-        if optimise:
-            heats = optimise_heats(heats,discipline,capacity,event["meet_type"])
-        assign_positions_or_lanes(heats, discipline, capacity)
+        heats = []
+        for distance in sorted({key[0] for key in groups}):
+            preferred,capacity = running_capacity(distance) if discipline=="run" else (int(event["pool_lanes"]),)*2
+            if capacity < 1:
+                raise ValueError("Heat capacity must be positive.")
+            base = build_balanced_base_heats({k:v for k,v in groups.items() if k[0]==distance},discipline,capacity)
+            if optimise:
+                base = (repack_league_clusters(base,discipline,capacity,preferred) if policy.repack_clusters else
+                        optimise_heats(base,discipline,capacity,policy.competition))
+            heats.extend(base)
+        assign_positions_or_lanes(heats, discipline, int(event["pool_lanes"]))
+        for row in rows:
+            row.pop("_generation_order",None)
     return rows
 
 
@@ -418,8 +527,9 @@ def validate_heats(rows,event):
             errors.append(f"{discipline.title()} Heat {heat}: duplicate starting positions/lanes.")
         if len({r.get(discipline+"_distance") for r in members}) > 1:
             warnings.append(f"{discipline.title()} Heat {heat}: manual combination of different distances; check operational arrangements.")
-        if discipline == "run" and len(members)>12:
-            warnings.append(f"Run Heat {heat} has {len(members)} runners, exceeding the automatic maximum of 12.")
+        run_limit = min(running_capacity(a.get("run_distance"))[1] for a in members)
+        if discipline == "run" and len(members)>run_limit:
+            warnings.append(f"Run Heat {heat} has {len(members)} runners, exceeding the distance's automatic maximum of {run_limit}.")
         if discipline == "run" and any(lane not in json.loads(event["run_positions"]) for lane in lanes):
             warnings.append(f"Run Heat {heat} uses a manually extended starting position.")
         if len({category_key(r["group_name"]) or r["group_name"] for r in members}) > 1:

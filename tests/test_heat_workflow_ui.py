@@ -47,7 +47,7 @@ def opened(tmp_path,monkeypatch,rows):
 
 
 def test_form_batches_both_disciplines_and_remembers_swimming(tmp_path,monkeypatch):
-    app,db,eid,_=opened(tmp_path,monkeypatch,generate_heats(entries(13),settings(),optimise=False))
+    app,db,eid,_=opened(tmp_path,monkeypatch,generate_heats(entries(16),settings(),optimise=False))
     before=get_athletes(db,eid)
     assert not any(s.value=="Saved entries, heats and seeds" for s in app.subheader)
     run=table(app,f"heat_editor_{eid}_run_")
@@ -64,7 +64,7 @@ def test_form_batches_both_disciplines_and_remembers_swimming(tmp_path,monkeypat
     assert not app.error,[e.value for e in app.error]
     saved={r["athlete_number"]:r for r in get_athletes(db,eid)}
     assert saved[identifiers[0]]["running_heat"]==3
-    assert saved[identifiers[1]]["swimming_heat"]==3
+    assert saved[identifiers[1]]["swimming_heat"]==4
     assert app.session_state[f"heat_review_active_{eid}"]=="Swimming heats"
     assert app.session_state[f"heat_review_tabs_{eid}"]=="Swimming heats"
     submit(app,f"discard_heats_{eid}")
@@ -72,7 +72,20 @@ def test_form_batches_both_disciplines_and_remembers_swimming(tmp_path,monkeypat
     assert len(saved)==len(before)
 
 
-@pytest.mark.parametrize("discipline,prefix,count",[("run","running",25),("swim","swimming",12)])
+def test_profile_choice_changes_generation_not_event_type(tmp_path,monkeypatch):
+    app,db,eid,_=opened(tmp_path,monkeypatch,generate_heats(entries(4)+entries(2,"U/13 BOYS",20),settings()))
+    assert app.selectbox(key=f"generation_profile_{eid}").value=="league"
+    app.selectbox(key=f"generation_profile_{eid}").set_value("interprovincial").run()
+    assert get_event(db,eid)["generation_metadata"] is None
+    next(c for c in app.checkbox if c.label.startswith("Replace current assignments")).check()
+    next(b for b in app.button if b.label=="Regenerate heats from entries").click().run()
+    assert not app.exception and not app.error
+    assert get_event(db,eid)["meet_type"]=="Local"
+    assert len({r["swimming_heat"] for r in get_athletes(db,eid)})==2
+    assert any(c.value=="Generated using: Interprovincial — Conservative" for c in app.caption)
+
+
+@pytest.mark.parametrize("discipline,prefix,count",[("run","running",31),("swim","swimming",12)])
 def test_checkbox_combine_three_heats_is_draft_then_saves_fastest_last(tmp_path,monkeypatch,discipline,prefix,count):
     rows=generate_heats(entries(count),settings(),optimise=False)
     if discipline=="swim":
@@ -124,7 +137,7 @@ def test_add_remove_duplicates_history_and_stale_outputs(tmp_path,monkeypatch):
 
 
 def test_add_discard_and_multiple_new_positions(tmp_path,monkeypatch):
-    app,db,eid,_=opened(tmp_path,monkeypatch,generate_heats(entries(25),settings()))
+    app,db,eid,_=opened(tmp_path,monkeypatch,generate_heats(entries(31),settings()))
     before=get_athletes(db,eid)
     submit(app,"add_heat_run")
     assert len(table(app,f"programme_editor_{eid}_run_").value)==4

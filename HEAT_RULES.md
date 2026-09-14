@@ -39,31 +39,28 @@ Under 15 covers 13–14, Under 17 covers 15–16 and Under 19 covers 17–18.
 - Seasons run August–July and are named for their ending year. September 2026
   therefore defaults to Season 2027. The organiser can override the season.
 
-## 3. Strict groups, sensible base heats and protection
+## 3. Generation profiles and base heats
 
-For each discipline, create separate groups for distance, age category and gender
-first. Large running groups are split into reasonably balanced heats with a
-maximum of 12: 16 U11 girls become 8 + 8, not 12 + 4. Large swimming groups put their
-fastest athletes into full, same-age/gender heats, leaving any remainder in an
-earlier, slower heat. Within each group, slower seeds and NT athletes are placed
-in earlier heats; faster seeds are placed in later heats.
+The selector **Heat generation profile** defaults to the event type, but may be
+changed deliberately without changing the competition type. The policies are
+**League � Efficient**, **Interprovincial � Conservative**, and **SA Champs � Strict**.
+The profile and generated revision are saved atomically with assignments and in
+the audit log. Review displays **Generated using:** the last generation policy.
+Manual edits retain this provenance; selecting a profile alone changes no heats.
+Older events have unknown provenance until regenerated, rather than a guessed label.
 
-The pipeline is: strict groups → sensible same-group heats → protect satisfactory
-heats → identify remainders → combine compatible remainders → compare seeds →
-compare occupancy → assign programme order, positions and lanes.
+All profiles start with discipline/distance/category/gender groups. Running uses
+preferred/hard capacities of **10/12 for 400 m** and **12/15 for 800 m**.
+Preferred is not a split point: 14 same-group 800 m runners can use one heat;
+16 must split, normally 8 + 8. Balanced sizes avoid tiny additional run heats.
+Other explicitly supplied run distances retain the former maximum of 12.
+Swimming reserves full faster base heats and a slower remainder, within pool
+capacity. NT is unseeded/slower, never an invented time.
 
-Protection excludes a heat from both donating and receiving athletes. No athletes
-are removed from a protected heat, including for Special Needs placement. Once a
-combination becomes satisfactory it is also protected. Incomplete heats are valid;
-eligibility is permission to consider a combination, never a requirement to fill it.
-
-The optimisation pass merges whole eligible incomplete heats. A small age/gender group,
-such as two Under 19 athletes, stays together rather than being distributed
-one athlete at a time across different heats. Full fast swim heats stay intact;
-mixing takes place among the slower incomplete heats.
-
-NT athletes stay within their age/gender structure initially. They are not all
-collected into one unrelated NT group.
+Interprovincial protects satisfactory heats and merges only compatible whole
+remainders. SA Champs never mixes groups. League instead searches compatible
+clusters and may repartition satisfactory heats when it removes an entire heat.
+No profile mixes distances or uses previous heat assignments as training data.
 
 ## 4. Programme sequence
 
@@ -91,24 +88,37 @@ After combinations are decided, a combined heat takes the earliest programme
 category/gender among its members. Within that category, slower/NT heats come first.
 The organiser can subsequently move an entire heat to any place in the programme.
 
-## 5. Local league optimisation
+## 5. League � Efficient
 
-**Running:** 7–12 athletes normally make a satisfactory heat. The automatic
-protection guideline is 7; this is not a minimum permitted heat size. Groups of
-six or fewer may combine if compatible and the whole groups fit within 12.
-An isolated group of five, or even one, can remain intact. Protection also applies
-to balanced same-group heats, such as both eight-person heats from a group of 16.
-The former opening-heat target of 10 and full-Masters redistribution exception
-have been replaced by these protection rules.
+Compatibility defines feasibility; heat count and seed coherence choose among
+feasible arrangements. A good same-group heat is preferred, not immutable. It can
+receive a remainder or be repartitioned with compatible categories if that removes
+an unnecessary heat. Without a heat-count reduction, good heats remain unchanged.
 
-**Swimming:** protect full heats and heats with one empty lane. Two or more empty
-lanes make a heat eligible. Preserve good faster same-group heats; optimise only
-eligible slower remainders. Do not split a small group across destinations.
+The optimiser considers whole same-distance, all-pairs-compatible category pools,
+including same-gender alternatives and overlapping pair clusters. A compatible
+bridge does not permit a forbidden pairing. For each candidate pool it targets
+ceil(athletes / hard capacity) heats and compares deterministic seed-, gender- and
+category-ordered partitions, with balanced, preferred-size and full-heat options.
+It applies the best heat-count reduction and repeats. This is a deterministic
+candidate search, not a claim of exhaustive global optimisation across overlapping
+incompatible clusters.
 
-After enforcing distance, protection and whole-remainder integrity, rank valid
-combinations by **category compatibility → same gender → seed similarity →
-occupancy**. Category compatibility precedes gender at League. Both age and gender
-mixing are allowed within valid tiers; occupancy cannot overcome either preference.
+Within valid candidates, fewer total heats comes first. For **running**, equal-count
+solutions prefer same gender, nearer category tiers, seed coherence, then preferred
+size and balanced utilisation. For **swimming**, equal-count solutions prefer seed
+coherence, same gender, nearer category tiers, then balanced utilisation. Seed
+coherence separates NT where practical and compares within-heat squared deviations
+of known times; there are no absolute time-gap thresholds or invented NT values.
+Athlete numbers break final ties. Occupancy never legitimises an incompatible pair.
+
+Thus 8 older Masters + 2 Special Needs can run together over 400 m; 15 compatible
+800 m runners can use one heat. A valid six-lane cluster of 5 + 5 + 6 + 2 swimmers
+can become 6 + 6 + 6. Juniors can be split between faster Seniors and slower Masters
+when their relative seeds suit those heats. No category has a hard-coded destination.
+A small heat remains acceptable when reducing it would violate compatibility.
+Repacked blocks use their earliest category programme position, with slower/NT
+heats first and faster heats last; standard position/lane seeding still applies.
 
 ## 6. Interprovincial optimisation
 
@@ -129,8 +139,8 @@ mixing are allowed within valid tiers; occupancy cannot overcome either preferen
 ## 7. National / South African Championships
 
 Keep age categories and genders separate. No automatic mixing. Incomplete heats
-are acceptable. Automatic run capacity remains 12; swim capacity is the confirmed
-pool lane count.
+are acceptable. The distance-aware running hard limits are 12 (400 m) and 15
+(800 m); swim capacity is the confirmed pool lane count.
 
 ## 8. Which categories can combine?
 
@@ -148,36 +158,22 @@ Needs has the flexible exception described below.
 | Swim 100 m | Any U15/U17/U19 pair; any adult-cluster pair | U19 with adult cluster | U17 with adult cluster |
 
 Older Masters means 60+, 70+, 80+. The adult cluster means Junior, Senior,
-Masters 40+, Masters 50+. U11 and U13 stay standalone whenever their heats are
-satisfactory. Older Masters and U8/U9 no longer have a direct automatic pairing;
+Masters 40+, Masters 50+. Interprovincial preserves satisfactory U11/U13 heats;
+League may repack them within valid neighbouring clusters to remove a heat. Older Masters and U8/U9 no longer have a direct automatic pairing;
 Special Needs flexibility does not make those otherwise separate groups compatible.
 
 **Special Needs:** any recognised same-distance category is a flexible tier-2
-option. Prefer the same gender, then seed suitability. Older Masters is a common
-destination, but an eligible younger group can win if its seeds fit better. There
-is no forced Masters destination and no exception to protection. Interprovincial
-gender restrictions still apply. Equal flexible tiers let seeds influence the
-destination before occupancy. No individual athlete is hard-coded.
+option. Older Masters or suitable younger groups can be destinations. League
+compares performance within valid clusters, with running gender/category preferences
+and swimming seed coherence as described above. Interprovincial retains protection
+and gender restrictions. No individual athlete is hard-coded.
 
-Every athlete joining a heat must be compatible with every category already
-in that heat. Compatibility does not automatically extend through another group.
-
-The optimiser compares all currently eligible pairs and merges the highest-ranked
-valid pair, then rechecks protection before considering another merge. It never
-dismantles a heat or splits a remainder. This avoids using programme order as an
-accidental destination preference. It is a deterministic greedy procedure, not
-an exhaustive search for the fullest possible programme.
-
-Seed similarity is the mean absolute time difference across the two groups' known
-seeds. Without usable times on both sides, similarity is unknown and ranks after
-measured similarity. NT is never given an invented time. Occupancy (fewer empty
-spaces) breaks ties only after all grouping and seed preferences. Remaining ties
-use athlete numbers, so input row order and previous assignments cannot change
-the result.
-
-Implementation: `services/competition.py` centralises discipline/distance category
-tiers; `services/heats.py` separates strict grouping, base heats, protection reasons,
-eligibility, destination ranking, whole-remainder merging and final assignment.
+Every category in a generated heat must be compatible with every other category.
+Interprovincial compares eligible whole-remainder pairs, then rechecks protection
+following each merge. Its seed similarity uses mean absolute known-time differences,
+with unknown similarity last. League uses cluster partition comparisons instead.
+Implementation is centralised in `services/competition.py` (profiles, capacities,
+compatibility) and `services/heats.py` (base heats, profile policies and assignment).
 
 ## 9. Starting positions and swim lanes
 
