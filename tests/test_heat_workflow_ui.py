@@ -85,6 +85,46 @@ def test_profile_choice_changes_generation_not_event_type(tmp_path,monkeypatch):
     assert any(c.value=="Generated using: Interprovincial — Conservative" for c in app.caption)
 
 
+def test_entry_notices_and_explicit_removal_preserve_other_corrections(tmp_path,monkeypatch):
+    app=app_test(tmp_path,monkeypatch)
+    event=dict(settings(),name="Entry review",host_team="GN",start_date="2026-09-01",season_year=2027,course="SCM")
+    rows=generate_heats(entries(3),event)
+    rows[1]["athlete_name"]=rows[0]["athlete_name"]
+    upload=BytesIO(build_heats_xlsx(rows,event).getvalue())
+    upload.name="Entries.xlsx"
+    with patch("streamlit.file_uploader",side_effect=lambda label,*a,**k: upload if label=="Master Entries Excel or PDF" else None):
+        app.radio(key="heat_source_0").set_value("Generate heats from entries").run()
+        issue=next(e for e in app.expander if "potential issue" in e.label)
+        assert issue.label=="1 potential issue found" and not issue.proto.expanded
+        editor=table(app,"entry_metadata_")
+        duplicate_indexes=list(editor.value.index[editor.value["Name"]==rows[0]["athlete_name"]])
+        first_index,second_index=map(int,duplicate_indexes)
+        first=editor.value.loc[first_index,"Athlete"]
+        second=editor.value.loc[second_index,"Athlete"]
+        changes={first_index:{"Remove from event":True},second_index:{"Run distance":400}}
+        states=app._tree.get_widget_states()
+        states.widgets.append(WidgetState(id=editor.proto.id,string_value=json.dumps(
+            {"edited_rows":changes,"added_rows":[],"deleted_rows":[]})))
+        app._run(widget_state=states)
+        assert len(table(app,"entry_metadata_").value)==3  # Ticking alone does not delete.
+        remove_button=next(b for b in app.button if b.label=="Remove selected entries")
+        submit(app,remove_button.key,{"entry_metadata_":changes})
+        assert not app.exception and not app.error
+        remaining=table(app,"entry_metadata_").value
+        assert len(remaining)==2 and first not in set(remaining["Athlete"])
+        assert remaining.loc[remaining["Athlete"]==second,"Run distance"].item()==400
+        assert not any("Same full name" in w.value for w in app.warning)
+        next(c for c in app.checkbox if c.label.startswith("Confirm pool capacity")).check()
+        next(b for b in app.button if b.label=="Confirm Entries and Initialize Event").click().run()
+        assert not app.exception and not app.error
+        assert app.button(key="save_heats_run").label=="Save entry changes"
+        assert [h.value for h in app.header if h.value[:2] in {"1.","2.","3."}]==[
+            "1. Choose a heat generation profile","2. Generate heats from entries","3. Add, remove or confirm entries"]
+        db=tmp_path/"data/biathlon_events.sqlite"
+        saved=get_athletes(db,app.session_state.event_id)
+        assert len(saved)==2 and next(r for r in saved if r["athlete_number"]==second)["run_distance"]==400
+
+
 @pytest.mark.parametrize("discipline,prefix,count",[("run","running",31),("swim","swimming",12)])
 def test_checkbox_combine_three_heats_is_draft_then_saves_fastest_last(tmp_path,monkeypatch,discipline,prefix,count):
     rows=generate_heats(entries(count),settings(),optimise=False)

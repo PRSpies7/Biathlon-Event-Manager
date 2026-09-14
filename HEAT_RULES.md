@@ -202,10 +202,13 @@ retains its existing relationship table. U9/older Masters remains incompatible.
 Neither U9 nor Special Needs can act as a bridge to permit forbidden pairs.
 
 **Special Needs:** any recognised same-distance category is a flexible tier-2
-option. Older Masters or suitable younger groups can be destinations. League
-compares performance within valid clusters, with running gender/category preferences
-and swimming seed coherence as described above. Interprovincial retains protection
-and gender restrictions. No individual athlete is hard-coded.
+option. In both disciplines, prefer companions from Masters 60+, 70+ or 80+ among
+feasible candidate arrangements. Otherwise prefer the compatible destination with
+the closest known seed times. Unknown similarity ranks last; no NT time is invented.
+This preference sits within League's heat-count objective and Interprovincial's
+sparse-repair/protection policy. Distance, hard capacity and profile gender rules
+remain mandatory; SA Champs still does not automatically mix categories. No
+individual athlete is hard-coded.
 
 Every category in a generated heat must be compatible with every other category.
 Interprovincial compares eligible whole-remainder pairs, then rechecks protection

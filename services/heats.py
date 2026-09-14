@@ -10,7 +10,7 @@ from itertools import combinations, product
 import json
 
 from services.competition import category_key, category_order, compatibility, gender_for_group, distances
-from services.competition import GENERATION_PROFILES, default_profile, running_capacity, RUN_CONTINUITY
+from services.competition import GENERATION_PROFILES, default_profile, running_capacity, RUN_CONTINUITY, OLDER_MASTERS
 
 
 DISCIPLINES = {"run": "running", "swim": "swimming"}
@@ -303,8 +303,8 @@ def rank_destination(left, right, discipline, capacity, meet_type):
     League: category, gender, seeds, occupancy. Interprovincial allows same-gender
     strong/neighbouring pairs; cross-gender pairs must be same/strong categories
     AND form a satisfactory heat. Weak pairs remain separate at Interprovincials.
-    Special Needs shares one flexible tier across same-distance destinations,
-    so measured seed suitability decides after gender, without a Masters bias.
+    Special Needs shares one flexible compatibility tier; the outer arrangement
+    ranking adds its older-Masters preference and seed-based fallback.
     """
     if not all(is_heat_eligible_for_optimisation(h, discipline, capacity, meet_type)
                for h in (left, right)) or len(left)+len(right) > capacity:
@@ -330,6 +330,28 @@ def rank_destination(left, right, discipline, capacity, meet_type):
 
 def _heat_identity(heat):
     return tuple(sorted(str(a["athlete_number"]) for a in heat))
+
+
+def special_needs_rank(heats, discipline):
+    """Prefer older Masters companions; otherwise compare real seed suitability.
+
+    Called only for already feasible candidates: distance, capacity and profile
+    restrictions cannot be overridden. Unknown seed similarity ranks last.
+    """
+    fallback, unknown, gap = 0,0,0
+    for heat in heats:
+        special = [a for a in heat if category_key(a["group_name"])=="SPECIAL NEEDS"]
+        if not special:
+            continue
+        companions = [a for a in heat if category_key(a["group_name"])!="SPECIAL NEEDS"]
+        if not any(category_key(a["group_name"]) in OLDER_MASTERS for a in companions):
+            fallback += len(special)
+        measured = _seed_gap(special,companions,discipline)
+        if measured==float("inf"):
+            unknown += len(special)
+        else:
+            gap += measured
+    return fallback,unknown,gap
 
 
 def final_heat_is_compatible(heat, discipline, capacity, meet_type):
@@ -433,7 +455,7 @@ def reconsider_sparse_running(heats, capacity):
                 # Category tiers define feasibility, not a fixed U8 destination;
                 # compare performance before age cost for these sparse repairs.
                 ranking = (score[1],score[4],score[5],score[3],*score[6:])
-                candidates.append(((repaired,category_continuity_penalty(result,capacity),*ranking),result))
+                candidates.append(((repaired,*special_needs_rank(result,"run"),category_continuity_penalty(result,capacity),*ranking),result))
         if not candidates:
             return heats
         heats = min(candidates,key=lambda c:c[0])[1]
@@ -456,7 +478,8 @@ def optimise_heats(heats, discipline, capacity, meet_type):
                 rank = rank_destination(heats[left], heats[right], discipline, capacity, meet_type)
                 if rank is not None:
                     identity = tuple(sorted((_heat_identity(heats[left]), _heat_identity(heats[right]))))
-                    candidates.append((rank, identity, left, right))
+                    arrangement = [h for i,h in enumerate(heats) if h and i not in {left,right}]+[heats[left]+heats[right]]
+                    candidates.append(((*special_needs_rank(arrangement,discipline),*rank), identity, left, right))
         if not candidates:
             return [h for h in heats if h]
         _, _, left, right = min(candidates)
@@ -550,7 +573,8 @@ def repack_league_clusters(heats, discipline, capacity, preferred):
                         if any(compatibility_tier(h,[],discipline) is None for h in packed):
                             continue
                         result = [h for i,h in enumerate(heats) if i not in indexes]+packed
-                        candidates.append((arrangement_rank(result,discipline,capacity,preferred),result,packed))
+                        rank = arrangement_rank(result,discipline,capacity,preferred)
+                        candidates.append(((rank[0],*special_needs_rank(result,discipline),*rank[1:]),result,packed))
         if not candidates:
             return heats
         _,heats,packed = min(candidates,key=lambda c:c[0])

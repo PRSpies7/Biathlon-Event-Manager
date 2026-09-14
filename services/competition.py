@@ -117,8 +117,8 @@ for scope, pairs in {
 def compatibility(left, right, discipline, distance, meet_type=None):
     """Category tier within a discipline/distance; callers enforce equal distances.
 
-    Special Needs has equally valid same-distance destinations, allowing gender
-    and measured seed suitability to choose rather than a fixed Masters route.
+    Special Needs has flexible same-distance destinations. Candidate ranking
+    prefers older Masters, then measured seed suitability when that is infeasible.
     """
     left, right = category_key(left), category_key(right)
     if left is None or right is None:

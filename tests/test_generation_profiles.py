@@ -187,3 +187,27 @@ def test_league_continuity_breaks_structural_ties_without_changing_swim_scoring(
     assert arrangement_rank(continuous,"run",15,12)<arrangement_rank(skipped,"run",15,12)
     # Swimming retains its previous seed/gender/category ordering (no continuity).
     assert arrangement_rank(skipped,"swim",6,6)<arrangement_rank(continuous,"swim",6,6)
+
+
+@pytest.mark.parametrize("discipline",["run","swim"])
+def test_special_needs_seed_fallback_when_older_masters_are_full(discipline):
+    capacity=12 if discipline=="run" else 6
+    field=entries(capacity,"MASTERS 70+ WOMEN")+entries(1,"SPECIAL NEEDS FEMALE",30)+entries(capacity//2,"U/09 GIRLS",40)+entries(capacity//2,"U/11 GIRLS",60)
+    for closer in ("U/09 GIRLS","U/11 GIRLS"):
+        for row in field:
+            row[discipline+"_seed"]=10000 if row["group_name"] in {closer,"SPECIAL NEEDS FEMALE"} else 30000
+        rows=generate_heats(field,settings(),profile="league")
+        target=next(h for h in heats(rows,discipline) if any(r["group_name"]=="SPECIAL NEEDS FEMALE" for r in h))
+        assert {r["group_name"] for r in target}=={"SPECIAL NEEDS FEMALE",closer}
+
+
+def test_special_needs_interprovincial_preference_keeps_profile_boundaries():
+    field=entries(2,"SPECIAL NEEDS FEMALE")+entries(3,"MASTERS 80+ WOMEN",20)+entries(3,"U/09 GIRLS",40)
+    for row in field:
+        row["run_seed"]=row["swim_seed"]=30000 if row["group_name"]=="MASTERS 80+ WOMEN" else 10000
+    rows=generate_heats(field,settings(),profile="interprovincial")
+    for discipline in ("run","swim"):
+        target=next(h for h in heats(rows,discipline) if any(r["group_name"]=="SPECIAL NEEDS FEMALE" for r in h))
+        assert {r["group_name"] for r in target}=={"SPECIAL NEEDS FEMALE","MASTERS 80+ WOMEN"}
+    strict=generate_heats(field,settings(),profile="sa_champs")
+    assert all(len({r["group_name"] for r in h})==1 for d in ("run","swim") for h in heats(strict,d))

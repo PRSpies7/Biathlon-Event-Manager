@@ -322,26 +322,26 @@ def test_league_heat_count_precedes_former_destination_preferences():
 
 
 @pytest.mark.parametrize("discipline,prefix",[("run","running"),("swim","swimming")])
-def test_special_needs_uses_same_distance_gender_and_seeds(discipline,prefix):
+def test_special_needs_prefers_older_masters_when_feasible(discipline,prefix):
     field=entries(2,"SPECIAL NEEDS FEMALE")+entries(4,"MASTERS 60+ WOMEN",20)+entries(4,"U/09 GIRLS",30)
     for row in field:
         row[discipline+"_seed"]=20000 if row["group_name"]=="MASTERS 60+ WOMEN" else 10000
     rows=generate_heats(field,settings())
     target=next(r[prefix+"_heat"] for r in rows if r["group_name"]=="SPECIAL NEEDS FEMALE")
-    assert {r["group_name"] for r in rows if r[prefix+"_heat"]==target}=={"SPECIAL NEEDS FEMALE","U/09 GIRLS"}
-    # Changing only seed suitability selects the older Masters instead.
+    assert {r["group_name"] for r in rows if r[prefix+"_heat"]==target}=={"SPECIAL NEEDS FEMALE","MASTERS 60+ WOMEN"}
+    # The family preference also holds when the Masters are closer by seed.
     for row in field:
         row[discipline+"_seed"]=20000 if row["group_name"]=="U/09 GIRLS" else 10000
     rows=generate_heats(field,settings())
     target=next(r[prefix+"_heat"] for r in rows if r["group_name"]=="SPECIAL NEEDS FEMALE")
     assert {r["group_name"] for r in rows if r[prefix+"_heat"]==target}=={"SPECIAL NEEDS FEMALE","MASTERS 60+ WOMEN"}
-    # Running favours gender; swimming favours seed coherence within valid options.
+    # League permits this mixed-gender Masters destination.
     field=entries(2,"SPECIAL NEEDS FEMALE")+entries(4,"MASTERS 60+ MEN",20)+entries(4,"U/09 GIRLS",30)
     for row in field:
         row[discipline+"_seed"]=20000 if row["group_name"]=="U/09 GIRLS" else 10000
     rows=generate_heats(field,settings())
     target=next(r[prefix+"_heat"] for r in rows if r["group_name"]=="SPECIAL NEEDS FEMALE")
-    assert {r["group_name"] for r in rows if r[prefix+"_heat"]==target}=={"SPECIAL NEEDS FEMALE", "U/09 GIRLS" if discipline=="run" else "MASTERS 60+ MEN"}
+    assert {r["group_name"] for r in rows if r[prefix+"_heat"]==target}=={"SPECIAL NEEDS FEMALE", "MASTERS 60+ MEN"}
 
 
 def test_adult_cluster_and_u19_bridge_in_both_disciplines():

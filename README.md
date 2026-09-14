@@ -22,6 +22,9 @@ five is a sensible-size guideline, not a mandatory minimum. Running continuity
 favours available intermediate categories with suitable relative seeds. League's
 existing optimiser gains only that tie-break and the U8/U11 safeguard; swimming
 behaviour is preserved.
+Special Needs athletes preferentially join Masters 60+/70+/80+ within valid
+generation candidates; otherwise seed similarity selects a compatible destination.
+Distance, capacity and profile restrictions remain mandatory.
 Running preferred/hard sizes are **10/12 at 400 m** and **12/15 at 800 m**; pool lanes
 remain the swimming limit. Manual overrides and output regeneration stay separate.
 Previous heat assignments never train future generation. See the complete

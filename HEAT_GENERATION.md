@@ -17,9 +17,19 @@ Both use the approved Master Entries Excel/PDF parsers and the same saved event.
    seed sources. Current-season fastest takes priority, then previous season,
    then two seasons previously. Wrong-distance/older results cannot supply seeds.
    No usable history produces NT, including visiting athletes.
+   Nonblocking name/distance notices are grouped in a collapsed **N potential
+   issues found** panel. Tick entries to remove and click **Remove selected entries**;
+   ticking alone does not remove them. Corrections to remaining entries are retained.
 4. Click **Generate heats from entries** to generate both disciplines, then review
    the linked programme and athlete tables in each discipline's tab.
    Manual edits remain authoritative; regeneration explicitly replaces assignments.
+   The initialized event shows numbered steps: **1. Choose a heat generation
+   profile**, **2. Generate heats from entries**, and **3. Add, remove or confirm
+   entries** (changing to **Organise and confirm heats** after generation).
+   Before generation, the save action reads **Save entry changes**. Previously
+   reviewed duplicate-name notices are not repeated here; a newly added duplicate
+   still receives a collapsed notice. Programme Categories has a bounded width
+   and the Combine checkbox column stays pinned and visible.
    Once heats exist, the action is **Regenerate heats from entries**. Its hover tooltip
    states: "This reruns automatic heat generation and replaces the current heat
    assignments, including manual changes." The existing **Replace current assignments
@@ -121,8 +131,9 @@ running heat**, even through U9. Final heat checks enforce all pairwise constrai
 distance, profile restrictions and hard capacity. Swimming rules are unchanged.
 
 Distance and category compatibility remain hard feasibility checks. Special Needs
-may use valid same-distance Masters or younger destinations based on performance,
-without hard-coded athlete routes. Neither history assignments nor manual moves
+prefers Masters 60+/70+/80+ companions in both disciplines, then the compatible
+destination with the closest known seed times if that family is unavailable under
+the capacity/profile rules. SA Champs stays strictly separated. Neither history assignments nor manual moves
 train future generation. Historical seed lookup remains season/discipline/distance
 specific. Swim lanes stay centre-out; faster runners receive higher outside positions.
 See [HEAT_RULES.md](HEAT_RULES.md) for full policies and unchanged programme sequences.

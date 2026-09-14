@@ -46,10 +46,22 @@ def review_state(event, entries):
     return state
 
 
-def show_duplicate_names(rows):
+def duplicate_name_notices(rows, only_numbers=None):
+    notices = []
     for group in duplicate_names(rows):
+        if only_numbers is not None and not any(r["athlete_number"] in only_numbers for r in group):
+            continue
         details = "; ".join(f"#{r['athlete_number']} ({r.get('group_name') or 'no category'})" for r in group)
-        st.warning(f"Same full name: {group[0]['athlete_name']} — {details}. Check whether these are separate people or an incorrect entry.")
+        notices.append(f"Same full name: {group[0]['athlete_name']} — {details}. Check whether these are separate people or an incorrect entry.")
+    return notices
+
+
+def show_entry_notices(notices):
+    if notices:
+        label = f"{len(notices)} potential {'issue' if len(notices)==1 else 'issues'} found"
+        with st.expander(label):
+            for notice in notices:
+                st.warning(notice)
 
 
 def _whole_number(value, label):
@@ -146,11 +158,13 @@ def _save(db_path,event,previous,working,has_heats):
 
 def render_workbench(db_path,event,entries,state,has_heats):
     state_key = f"heat_review_tables_{event['id']}"
-    show_duplicate_names(state["rows"])
+    added = {r["athlete_number"] for r in state["rows"]}-{r["athlete_number"] for r in entries}
+    show_entry_notices(duplicate_name_notices(state["rows"],only_numbers=added))
+    save_label = "Save heat changes" if has_heats else "Save entry changes"
     if state["dirty"]:
-        st.info("Changes are pending. Save heat changes to apply them, or discard them.")
+        st.info(f"Changes are pending. {save_label} to apply them, or discard them.")
     action, tables = None, {}
-    labels = ["Running heats","Swimming heats"]
+    labels = ["Running heats","Swimming heats"] if has_heats else ["Running entries","Swimming entries"]
     with st.form(f"heat_review_form_{event['id']}",enter_to_submit=False):
         tabs = st.tabs(labels,key=f"heat_review_tabs_{event['id']}",on_change="rerun")
         for tab,(discipline,prefix),label in zip(tabs,DISCIPLINES.items(),labels):
@@ -161,13 +175,12 @@ def render_workbench(db_path,event,entries,state,has_heats):
                     st.subheader(f"{prefix.title()} heat programme")
                     summary = [dict(p,Athletes=sum(a["Heat"]==p["Heat"] for a in draft["athletes"]),
                         Categories=", ".join(sorted({a["Age group"] for a in draft["athletes"] if a["Heat"]==p["Heat"]}))) for p in draft["programme"]]
-                    width = max([220,*[len(p["Categories"])*8 for p in summary]])
-                    programme = st.data_editor(pd.DataFrame(summary,columns=["Heat","New Position","Athletes","Categories","Combine"]),
-                        key=f"programme_editor_{suffix}",hide_index=True,num_rows="fixed",width="content",
+                    programme = st.data_editor(pd.DataFrame(summary,columns=["Heat","New Position","Athletes","Combine","Categories"]),
+                        key=f"programme_editor_{suffix}",hide_index=True,num_rows="fixed",width="stretch",
                         disabled=["Heat","Athletes","Categories"],column_config={
                             "New Position":st.column_config.NumberColumn(min_value=1,step=1,help="Move this whole heat here when applying changes."),
-                            "Categories":st.column_config.TextColumn(width=width),
-                            "Combine":st.column_config.CheckboxColumn(help="Select two or more heats, then click Combine. Only selected heats are rebuilt.")}).to_dict("records")
+                            "Categories":st.column_config.TextColumn(width="medium"),
+                            "Combine":st.column_config.CheckboxColumn(width="small",pinned=True,help="Select two or more heats, then click Combine. Only selected heats are rebuilt.")}).to_dict("records")
                     for index,changes in st.session_state.get(f"programme_editor_{suffix}",{}).get("edited_rows",{}).items():
                         if "New Position" in changes:
                             programme[int(index)]["_position_edited"] = True
@@ -192,8 +205,8 @@ def render_workbench(db_path,event,entries,state,has_heats):
                     st.info("No athletes entered in this discipline.")
                     athletes = []
                 tables[discipline] = (programme,athletes)
-                if st.form_submit_button("Save heat changes",key=f"save_heats_{discipline}",type="primary",
-                    on_click=_remember_tab,args=(event["id"],label),help="Saves both disciplines and roster edits. Empty heats disappear and numbering gaps close."):
+                if st.form_submit_button(save_label,key=f"save_heats_{discipline}",type="primary",
+                    on_click=_remember_tab,args=(event["id"],label),help="Saves both disciplines and roster edits." + (" Empty heats disappear and numbering gaps close." if has_heats else "")):
                     action = ("save",discipline)
         with st.expander("Add athlete to this event"):
             number = st.text_input("Athlete number",key=f"late_number_{event['id']}")

@@ -46,6 +46,10 @@ def render_entries(db_path, parsed, uploaded, name, host, start_date, course, la
     history_path = season_database_path(Path(__file__).resolve().parents[1])
     init_season_db(history_path)
     token = sha256(uploaded.getvalue()).hexdigest()[:12] + f"_{year}"
+    removed_key = f"entry_removals_{token}"
+    removed = st.session_state.get(removed_key,set())
+    parsed = dict(parsed,athletes=[r for r in parsed["athletes"] if r["athlete_number"] not in removed])
+    notices = []
     matches = {}
     try:
         entries, ambiguous = prepare_entries(parsed, history_path, year)
@@ -54,13 +58,13 @@ def render_entries(db_path, parsed, uploaded, name, host, start_date, course, la
         return
     unresolved = False
     blockers = []
-    if ambiguous:
+    if any(not issue.get("number_matched") for issue in ambiguous):
         st.subheader("Check historical identities")
         st.caption("Athletes are linked by athlete number. Name differences are highlighted for reference; the uploaded name is retained.")
     for issue in ambiguous:
         row = issue["entry"]
         if issue.get("number_matched"):
-            st.warning(f"{row['athlete_number']}: entry name {row['athlete_name']} differs from historical name {issue['candidates'][0]['athlete_name']}. Linked by athlete number; no action required.")
+            notices.append(f"{row['athlete_number']}: entry name {row['athlete_name']} differs from historical name {issue['candidates'][0]['athlete_name']}. Linked by athlete number; no action required.")
             continue
         choices = {a["id"]: f"Link historical record: {a['athlete_number']} · {a['athlete_name']}" for a in issue["candidates"]}
         choices[0] = "New / visiting athlete - no historical link"
@@ -79,22 +83,30 @@ def render_entries(db_path, parsed, uploaded, name, host, start_date, course, la
             st.error(str(exc))
             return
     st.subheader("Entries and event distances")
-    from ui.heat_review_tables import show_duplicate_names
-    show_duplicate_names(entries)
+    from ui.heat_review_tables import duplicate_name_notices,show_entry_notices
+    notices.extend(duplicate_name_notices(entries))
+    notice_area = st.container()
+    cached = st.session_state.get(f"entry_values_{token}",{})
     metadata = pd.DataFrame([{"Athlete": r["athlete_number"], "Name": r["athlete_name"],
         "Age group": r["group_name"], "Gender": r["gender"],
-        "Run distance": r["run_distance"], "Swim distance": r["swim_distance"], "Remove from event": False} for r in entries])
-    edited = st.data_editor(metadata, hide_index=True, key=f"entry_metadata_{token}",
+        "Run distance": r["run_distance"], "Swim distance": r["swim_distance"],
+        **cached.get(r["athlete_number"],{}),"Remove from event": False} for r in entries])
+    edited = st.data_editor(metadata, hide_index=True, key=f"entry_metadata_{token}_{len(removed)}",
         disabled=["Athlete", "Name"], column_config={
             "Gender": st.column_config.SelectboxColumn(options=["F", "M"]),
             "Run distance": st.column_config.NumberColumn(min_value=1, step=1),
             "Swim distance": st.column_config.SelectboxColumn(options=[25,50,100])})
+    selected = set(edited.loc[edited["Remove from event"],"Athlete"])
+    if st.button("Remove selected entries",key=f"remove_entries_{token}",disabled=not selected,
+                 help="Remove the ticked entries from this upload before initializing the event. Historical results are retained."):
+        if len(selected)==len(entries):
+            st.error("Keep at least one entry to initialize the event.")
+        else:
+            st.session_state[removed_key] = removed|selected
+            st.session_state[f"entry_values_{token}"] = {r["Athlete"]:r for r in edited.to_dict("records") if r["Athlete"] not in selected}
+            st.rerun()
     invalid = unresolved
-    removed = set()
     for entry, (_, row) in zip(entries, edited.iterrows()):
-        if row["Remove from event"]:
-            removed.add(entry["athlete_number"])
-            continue
         entry["group_name"], entry["gender"] = str(row["Age group"] or ""), str(row["Gender"] or "")
         if entry["gender"] not in {"F", "M"} or not entry["group_name"].strip():
             invalid = True
@@ -107,12 +119,13 @@ def render_entries(db_path, parsed, uploaded, name, host, start_date, course, la
                 invalid = True
                 blockers.append(f"{entry['athlete_number']} · {entry['athlete_name']}: enter the {discipline} distance in the table above.")
             if distance and expected[index] and distance != expected[index]:
-                st.warning(f"{entry['athlete_name']}: {discipline} distance {distance} m differs from the category rule ({expected[index]} m). The confirmed event distance will be used.")
+                notices.append(f"{entry['athlete_name']}: {discipline} distance {distance} m differs from the category rule ({expected[index]} m). The confirmed event distance will be used.")
             if entry[f"{discipline}_distance"] != distance:
                 entry[f"{discipline}_seed"], entry[f"{discipline}_seed_source"] = select_seed(
                     history_path, entry["history_athlete_id"], discipline, distance, year)
             entry[f"{discipline}_distance"] = distance
-    entries = [entry for entry in entries if entry["athlete_number"] not in removed]
+    with notice_area:
+        show_entry_notices(notices)
     if not entries:
         invalid = True
         blockers.append("Keep at least one entry to initialize the event.")
@@ -124,7 +137,8 @@ def render_entries(db_path, parsed, uploaded, name, host, start_date, course, la
     positions = list(range(1,13))
     if invalid:
         st.warning("Before initializing, complete these items:\n\n" + "\n".join(f"- {item}" for item in blockers))
-    if st.button("Confirm Entries and Initialize Event", type="primary", disabled=invalid or not confirmed):
+    if st.button("Confirm Entries and Initialize Event", type="primary", disabled=invalid or not confirmed or bool(selected),
+                 help="Apply Remove selected entries first if any entries are ticked for removal."):
         if not name.strip() or not host.strip():
             st.error("Meet name and host/team name are required.")
             return
@@ -151,6 +165,7 @@ def render(db_path, event_id):
     profile = default_profile(event["meet_type"])
     metadata = json.loads(event.get("generation_metadata") or "{}")
     if event["heat_source"]=="generated":
+        st.header("1. Choose a heat generation profile")
         options = list(GENERATION_PROFILES)
         profile = st.selectbox("Heat generation profile",options,
             index=options.index(metadata.get("profile",profile)),
@@ -160,6 +175,8 @@ def render(db_path, event_id):
     if metadata.get("profile") in GENERATION_PROFILES:
         st.caption("Generated using: " + GENERATION_PROFILES[metadata["profile"]].label)
     replace_manual=False
+    if event["heat_source"]=="generated":
+        st.header("2. Generate heats from entries")
     if has_heats and event["heat_source"]=="generated":
         replace_manual=st.checkbox("Replace current assignments with newly generated heats",key=f"regenerate_{event_id}_{event['heat_revision']}",
             help="Tick this to enable Regenerate heats from entries. Ticking it alone changes nothing. Current heat assignments, including manual changes, are replaced only when you click Regenerate heats from entries.")
@@ -175,6 +192,8 @@ def render(db_path, event_id):
             st.rerun()
     if event["heat_status"]=="stale":
         st.warning("Assignments changed after approval. Existing operational files are stale; review both disciplines, approve and regenerate them.")
+    st.header(("3. " if event["heat_source"]=="generated" else "") +
+        ("Organise and confirm heats" if has_heats else "Add, remove or confirm entries"))
     render_workbench(db_path,event,entries,state,has_heats)
     if not has_heats:
         return
