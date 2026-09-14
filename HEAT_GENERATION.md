@@ -28,8 +28,9 @@ Both use the approved Master Entries Excel/PDF parsers and the same saved event.
    entries** (changing to **Organise and confirm heats** after generation).
    Before generation, the save action reads **Save entry changes**. Previously
    reviewed duplicate-name notices are not repeated here; a newly added duplicate
-   still receives a collapsed notice. Programme Categories has a bounded width
-   and the Combine checkbox column stays pinned and visible.
+   still receives a collapsed notice. Programme columns are Heat, New Position,
+   Categories, Athletes, then Combine on the right. Numeric columns use compact
+   widths and Categories has a bounded width.
    Once heats exist, the action is **Regenerate heats from entries**. Its hover tooltip
    states: "This reruns automatic heat generation and replaces the current heat
    assignments, including manual changes." The existing **Replace current assignments

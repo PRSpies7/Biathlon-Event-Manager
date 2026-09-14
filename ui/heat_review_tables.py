@@ -175,12 +175,14 @@ def render_workbench(db_path,event,entries,state,has_heats):
                     st.subheader(f"{prefix.title()} heat programme")
                     summary = [dict(p,Athletes=sum(a["Heat"]==p["Heat"] for a in draft["athletes"]),
                         Categories=", ".join(sorted({a["Age group"] for a in draft["athletes"] if a["Heat"]==p["Heat"]}))) for p in draft["programme"]]
-                    programme = st.data_editor(pd.DataFrame(summary,columns=["Heat","New Position","Athletes","Combine","Categories"]),
-                        key=f"programme_editor_{suffix}",hide_index=True,num_rows="fixed",width="stretch",
+                    programme = st.data_editor(pd.DataFrame(summary,columns=["Heat","New Position","Categories","Athletes","Combine"]),
+                        key=f"programme_editor_{suffix}",hide_index=True,num_rows="fixed",width="content",
                         disabled=["Heat","Athletes","Categories"],column_config={
-                            "New Position":st.column_config.NumberColumn(min_value=1,step=1,help="Move this whole heat here when applying changes."),
-                            "Categories":st.column_config.TextColumn(width="medium"),
-                            "Combine":st.column_config.CheckboxColumn(width="small",pinned=True,help="Select two or more heats, then click Combine. Only selected heats are rebuilt.")}).to_dict("records")
+                            "Heat":st.column_config.NumberColumn(width=64),
+                            "New Position":st.column_config.NumberColumn(width=112,min_value=1,step=1,help="Move this whole heat here when applying changes."),
+                            "Categories":st.column_config.TextColumn(width=320),
+                            "Athletes":st.column_config.NumberColumn(width=88),
+                            "Combine":st.column_config.CheckboxColumn(width=88,help="Select two or more heats, then click Combine. Only selected heats are rebuilt.")}).to_dict("records")
                     for index,changes in st.session_state.get(f"programme_editor_{suffix}",{}).get("edited_rows",{}).items():
                         if "New Position" in changes:
                             programme[int(index)]["_position_edited"] = True

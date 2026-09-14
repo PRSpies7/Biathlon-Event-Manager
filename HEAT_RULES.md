@@ -136,17 +136,25 @@ heats first and faster heats last; standard position/lane seeding still applies.
 - Conservative implementation: same-gender combinations can use strong or
   neighbouring tiers (0–2); weak tier 3 remains separate. Different genders may
   combine only in the same category or strong tier (0–1), and only if the combined
-  heat becomes satisfactory (normally seven runners for ordinary pair merging,
-  at least five for sparse-running repair, or at most two empty swim lanes).
-  Eligibility alone does not justify combining.
+  heat becomes satisfactory for ordinary pair merging (normally seven runners,
+  or at most two empty swim lanes). Running sparse repair may also create a
+  two-/three-person mixed heat rather than leave singletons: one U8 boy plus one
+  U8 girl can run together. Swimming thresholds are unchanged.
+  Two sensible running heats of five or more are not merged across genders merely
+  to improve occupancy. Cross-gender running is a sparse-heat fallback.
 - Sparse repair compares complete resulting arrangements: fewer singletons, then
-  fewer two-/three-person heats, then fewer fours; continuity; gender; seed
+  fewer two-/three-person heats, then fewer fours; gender; continuity; seed
   coherence; category suitability; utilisation. Heat count alone never triggers it.
   Consider an intact tiny group first, or distribute a mixed tiny heat's category/
   gender blocks between two destinations. Only if those blocks cannot be placed,
   consider splitting the tiny group between two heats with spare capacity. Good
   recipient groups remain intact. Repeat until no such compatible repair improves
   sparse-heat quality. A small heat can remain if these sensible repairs are impossible.
+  Prefer a viable same-gender placement for each tiny source before cross-gender
+  alternatives; do not pair two opposing-gender singles when each can join a
+  suitable same-gender heat. If no such solution exists, use a valid cross-gender
+  fallback rather than preserve the singleton. Special Needs retains its older
+  Masters preference inside the viable same-gender/profile choices.
 - A singleton U8 runner can join suitable U9 or older Masters (60+/70+/80+) over
   400 m. Both are equally valid strong relationships at Interprovincial; size,
   gender and relative seed fit choose the destination, without a fixed preference.
@@ -161,6 +169,16 @@ capacity when the distance/gender/compatibility fit and its relative seed gap is
 no worse than the selected endpoints' gap. This prevents labels from forcing a
 poor performance match. Missing categories incur no penalty. The same logic applies
 to both genders and looks across the whole candidate arrangement.
+
+**Conservative running school-age exception:** U13 → U15 → U17 → U19 has a strong
+no-skipping rule. A heat cannot contain both ends of a gap while the intermediate
+school category is present elsewhere at the same run distance, even in a full or
+mixed-gender heat. For example, U15/U19 cannot skip available U17, and U13/U17
+cannot skip available U15. Candidate arrangements and final automatic heats both
+enforce this; seed differences do not relax it. Prefer contiguous same-gender
+school heats before sending an intermediate girls/boys group into a mixed heat.
+Adult continuity remains softer and performance/capacity-aware. League's existing
+continuity tie-break, SA Champs and all swimming rules remain unchanged.
 
 League uses continuity only within its existing candidate ranking; it keeps its
 heat-count objective and cluster repacking. Interprovincial uses it during local

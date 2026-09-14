@@ -56,6 +56,7 @@ def test_form_batches_both_disciplines_and_remembers_swimming(tmp_path,monkeypat
     assert "Seed" in run.value and "Seed" in swim.value and "Lane" in swim.value
     programme=table(app,f"programme_editor_{eid}_run_")
     assert "New Position" in programme.value and "Combine" in programme.value and "Delete" not in programme.value
+    assert list(programme.value.columns)==["Heat","New Position","Categories","Athletes","Combine"]
     # The form explicitly disables Enter submission; edits have no callbacks.
     form=next(f for f in app.get("form") if f.proto.form.form_id==f"heat_review_form_{eid}")
     assert form.proto.form.enter_to_submit is False

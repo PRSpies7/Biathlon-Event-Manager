@@ -316,6 +316,8 @@ def rank_destination(left, right, discipline, capacity, meet_type):
     if meet_type == "Interprovincial":
         if tier > 2:
             return None
+        if discipline=="run" and mixed_gender and min(len(left),len(right))>=5:
+            return None  # Two sensible heats do not need a cross-gender fallback.
         if mixed_gender and (tier > 1 or not is_heat_protected(
                 [*left, *right], discipline, capacity, meet_type)):
             return None
@@ -368,7 +370,9 @@ def final_heat_is_compatible(heat, discipline, capacity, meet_type):
         if tier>2:
             return False
         if len(genders)>1:
-            return tier<=1 and (len(heat)>=5 if discipline=="run" else capacity-len(heat)<=2)
+            # Sparse running repair may need even a two-person mixed heat to
+            # eliminate singletons. Swimming keeps its existing occupancy rule.
+            return tier<=1 and (len(heat)>=2 if discipline=="run" else capacity-len(heat)<=2)
     return True
 
 
@@ -420,7 +424,41 @@ def _sparse_placements(heats, source_index, blocks, capacity):
             if any(not final_heat_is_compatible(result[i],"run",capacity,"Interprovincial") for i in targets):
                 continue
             result.pop(source_index)
+            if not conservative_school_continuity(result):
+                continue
             yield result
+
+
+def conservative_school_continuity(heats):
+    """Running-only structural guard: never skip a present school-age category.
+
+    Availability is evaluated across the same-distance arrangement, including
+    full or mixed-gender heats; seed gaps do not relax this school-age rule.
+    """
+    school = RUN_CONTINUITY[:4]
+    available = defaultdict(set)
+    for heat in heats:
+        for athlete in heat:
+            available[athlete["run_distance"]].add(category_key(athlete["group_name"]))
+    for heat in heats:
+        groups = {category_key(a["group_name"]) for a in heat}
+        indexes = [school.index(c) for c in groups if c in school]
+        if len(indexes)>1:
+            skipped = set(school[min(indexes):max(indexes)+1])-groups
+            if skipped & available[heat[0]["run_distance"]]:
+                return False
+    return True
+
+
+def conservative_running_rank(heats, capacity):
+    """Compare viable sparse repairs with same gender before soft continuity.
+
+    Reuse existing performance and Special Needs rules after gender. League and
+    swimming retain their own ranking; no unrestricted weighted score is used.
+    """
+    score = arrangement_rank(heats,"run",capacity,capacity)
+    return (heat_size_quality(heats),score[1],*special_needs_rank(heats,"run"),
+            category_continuity_penalty(heats,capacity),score[4],score[5],score[3],*score[6:])
 
 
 def reconsider_sparse_running(heats, capacity):
@@ -445,17 +483,18 @@ def reconsider_sparse_running(heats, capacity):
                 # Only split a tiny category if intact blocks cannot be placed.
                 placements = list(_sparse_placements(heats,source_index,
                     [[a] for a in sorted(source,key=lambda a:seed_order(a,"run"))],capacity))
+            # Do not greedily pair two singles of different genders when each
+            # can join a sensible same-gender heat on successive repair steps.
+            existing_mixing = arrangement_rank(heats,"run",capacity,capacity)[1]
+            same_gender = [result for result in placements if heat_size_quality(result)<quality
+                and arrangement_rank(result,"run",capacity,capacity)[1]<=existing_mixing]
+            if same_gender:
+                placements = same_gender
             for result in placements:
                 repaired = heat_size_quality(result)
                 if repaired>=quality:
                     continue
-                # Existing scoring supplies gender/seed/occupancy ties; its
-                # League heat-count objective is deliberately omitted here.
-                score = arrangement_rank(result,"run",capacity,capacity)
-                # Category tiers define feasibility, not a fixed U8 destination;
-                # compare performance before age cost for these sparse repairs.
-                ranking = (score[1],score[4],score[5],score[3],*score[6:])
-                candidates.append(((repaired,*special_needs_rank(result,"run"),category_continuity_penalty(result,capacity),*ranking),result))
+                candidates.append((conservative_running_rank(result,capacity),result))
         if not candidates:
             return heats
         heats = min(candidates,key=lambda c:c[0])[1]
@@ -479,7 +518,13 @@ def optimise_heats(heats, discipline, capacity, meet_type):
                 if rank is not None:
                     identity = tuple(sorted((_heat_identity(heats[left]), _heat_identity(heats[right]))))
                     arrangement = [h for i,h in enumerate(heats) if h and i not in {left,right}]+[heats[left]+heats[right]]
-                    candidates.append(((*special_needs_rank(arrangement,discipline),*rank), identity, left, right))
+                    if discipline=="run" and meet_type=="Interprovincial":
+                        if not conservative_school_continuity(arrangement):
+                            continue
+                        rank = conservative_running_rank(arrangement,capacity)
+                    else:
+                        rank = (*special_needs_rank(arrangement,discipline),*rank)
+                    candidates.append((rank, identity, left, right))
         if not candidates:
             return [h for h in heats if h]
         _, _, left, right = min(candidates)
@@ -635,6 +680,8 @@ def generate_heats(entries, event, *, optimise=True, profile=None):
                     base = reconsider_sparse_running(base,capacity)
             if any(not final_heat_is_compatible(h,discipline,capacity,policy.competition) for h in base):
                 raise ValueError("Automatic heat generation produced an incompatible heat.")
+            if discipline=="run" and policy.competition=="Interprovincial" and not conservative_school_continuity(base):
+                raise ValueError("Automatic Conservative running heats cannot skip an available school-age category.")
             heats.extend(base)
         assign_positions_or_lanes(heats, discipline, int(event["pool_lanes"]))
         for row in rows:

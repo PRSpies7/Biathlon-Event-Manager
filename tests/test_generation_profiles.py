@@ -211,3 +211,52 @@ def test_special_needs_interprovincial_preference_keeps_profile_boundaries():
         assert {r["group_name"] for r in target}=={"SPECIAL NEEDS FEMALE","MASTERS 80+ WOMEN"}
     strict=generate_heats(field,settings(),profile="sa_champs")
     assert all(len({r["group_name"] for r in h})==1 for d in ("run","swim") for h in heats(strict,d))
+
+
+def test_conservative_senior_men_choose_available_male_adults_before_female_heat():
+    field=entries(2,"SENIOR MEN")+entries(5,"SENIOR WOMEN",20)+entries(8,"MASTERS 40+ MEN",40)+entries(5,"MASTERS 40+ WOMEN",60)+entries(5,"MASTERS 50+ WOMEN",80)
+    for row in field:
+        row["run_seed"]=30000 if row["group_name"]=="MASTERS 40+ MEN" else 10000
+    rows=generate_heats(field,settings(),profile="interprovincial")
+    target=next(h for h in heats(rows,"run") if any(r["athlete_number"]=="100" for r in h))
+    assert {r["group_name"] for r in target}=={"SENIOR MEN","MASTERS 40+ MEN"}
+
+
+@pytest.mark.parametrize("categories",[("U/15","U/17","U/19"),("U/13","U/15","U/17")])
+def test_conservative_school_gap_is_forbidden_even_with_full_or_differently_seeded_middle(categories):
+    field=entries(4,categories[0]+" GIRLS")+entries(15,categories[1]+" GIRLS",20)+entries(4,categories[2]+" GIRLS",40)
+    for row in field:
+        row["run_seed"]=50000 if row["group_name"]==categories[1]+" GIRLS" else 10000
+    rows=generate_heats(field,settings(),profile="interprovincial")
+    forbidden={categories[0]+" GIRLS",categories[2]+" GIRLS"}
+    assert all(not forbidden<={r["group_name"] for r in h} for h in heats(rows,"run"))
+
+
+def test_conservative_keeps_contiguous_girls_before_sending_middle_category_to_boys():
+    field=entries(3,"U/15 GIRLS")+entries(2,"U/17 GIRLS",20)+entries(3,"U/19 GIRLS",40)+entries(8,"U/17 BOYS",60)
+    rows=generate_heats(field,settings(),profile="interprovincial")
+    groups=heats(rows,"run")
+    assert sorted(map(len,groups))==[8,8]
+    assert all(len({r["gender"] for r in h})==1 for h in groups)
+    girls=next(h for h in groups if h[0]["gender"]=="F")
+    assert {r["group_name"] for r in girls}=={"U/15 GIRLS","U/17 GIRLS","U/19 GIRLS"}
+    replay=generate_heats(list(reversed(field)),settings(),profile="interprovincial")
+    assert sorted(rows,key=lambda r:r["athlete_number"])==sorted(replay,key=lambda r:r["athlete_number"])
+
+
+def test_conservative_cross_gender_fallback_still_available():
+    field=entries(2,"SENIOR MEN")+entries(4,"SENIOR WOMEN",20)
+    rows=generate_heats(field,settings(),profile="interprovincial")
+    assert len(heats(rows,"run"))==1
+    assert {r["gender"] for r in rows}=={"M","F"}
+
+
+def test_conservative_u8_singletons_combine_unless_same_gender_destinations_exist():
+    field=entries(1,"U/08 BOYS")+entries(1,"U/08 GIRLS",20)
+    rows=generate_heats(field,settings(),profile="interprovincial")
+    assert [len(h) for h in heats(rows,"run")]==[2]
+    assert len(heats(rows,"swim"))==2  # Running exception does not change swimming.
+    field+=entries(4,"U/09 BOYS",40)+entries(4,"U/09 GIRLS",60)
+    rows=generate_heats(field,settings(),profile="interprovincial")
+    assert sorted(map(len,heats(rows,"run")))==[5,5]
+    assert all(len({r["gender"] for r in h})==1 for h in heats(rows,"run"))
