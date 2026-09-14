@@ -17,9 +17,13 @@ Both use the approved Master Entries Excel/PDF parsers and the same saved event.
    seed sources. Current-season fastest takes priority, then previous season,
    then two seasons previously. Wrong-distance/older results cannot supply seeds.
    No usable history produces NT, including visiting athletes.
-4. Generate both disciplines, review their tabs, move/swap athletes or edit heat
+4. Click **Generate heats from entries** to generate both disciplines, review their tabs, move/swap athletes or edit heat
    numbers, positions and seeds, then save. Lower heat numbers move athletes earlier.
    Manual edits remain authoritative; regeneration explicitly replaces assignments.
+   Once heats exist, the action is **Regenerate heats from entries**. Its warning
+   states: "This reruns automatic heat generation and replaces the current heat
+   assignments, including manual changes." The existing **Replace current assignments
+   with newly generated heats** checkbox is still required.
    Click **Save run heats and recalculate starting positions** or **Save swim heat edits** below the table before
    moving athletes or whole heats. Unsaved table edits block those actions;
    saving one discipline preserves pending edits in the other.
@@ -30,7 +34,11 @@ Both use the approved Master Entries Excel/PDF parsers and the same saved event.
    discipline's programme. Other heats shift and are renumbered; athletes and
    lane assignments within each heat remain intact. Reapprove and regenerate
    operational files after changing the order.
-5. Confirm review of both disciplines, approve, and generate the operational files.
+5. Confirm review of both disciplines, approve, and click **Generate operational files**.
+   Once files have been generated, this becomes **Regenerate operational files**,
+   including after saved edits make the previous files stale and you reapprove.
+   The helper states: "Uses the approved heat assignments exactly as currently saved.
+   Does not regenerate heats." This action only rebuilds downstream files.
    Continue through the existing phases. Phase 2 retains its runner-movement controls.
 
 ## Competition structure

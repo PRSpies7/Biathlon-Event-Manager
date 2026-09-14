@@ -57,13 +57,20 @@ def _render_persistent_event(db_path: str, event_id: int):
 
 def render_operational_outputs(db_path,event_id):
     import json
+    from database.db import get_conn
     from services.heat_outputs import current_outputs,generate_outputs
     st.subheader("Phase 1 Exports")
     event=dict(get_event(db_path,event_id))
     files=current_outputs(db_path,event_id)
+    # Stale files remain stored but are hidden by current_outputs. Read their
+    # existence only to distinguish first generation from rebuilding in the UI.
+    with get_conn(db_path) as conn:
+        outputs_existed=conn.execute("SELECT 1 FROM event_outputs WHERE event_id=? LIMIT 1",(event_id,)).fetchone() is not None
     if not files:
         st.info("Operational files need generation for the approved assignments.")
-    if st.button("Generate / regenerate operational files",type="primary",key=f"generate_outputs_{event_id}"):
+    st.caption("Uses the approved heat assignments exactly as currently saved. Does not regenerate heats.")
+    output_label="Regenerate operational files" if outputs_existed else "Generate operational files"
+    if st.button(output_label,type="primary",key=f"generate_outputs_{event_id}"):
         reference=json.loads((Path(__file__).resolve().parents[1]/"data"/"TimeDrops JSON example.json").read_text(encoding="utf-8"))
         try:
             generate_outputs(db_path,event_id,reference)

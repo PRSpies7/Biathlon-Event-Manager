@@ -138,7 +138,10 @@ def test_both_start_paths_reach_exports_results_and_season_reports(tmp_path, mon
         if generated:
             next(c for c in app.checkbox if c.label.startswith("Confirm pool capacity")).check()
             click("Confirm Entries and Initialize Event")
-            click("Generate run and swim heats")
+            click("Generate heats from entries")
+            assert next(b for b in app.button if b.label=="Regenerate heats from entries").disabled
+            assert any(c.label=="Replace current assignments with newly generated heats" for c in app.checkbox)
+            assert any(w.value=="This reruns automatic heat generation and replaces the current heat assignments, including manual changes." for w in app.warning)
             app.selectbox(key="move_athlete_run").set_value("100").run()
             app.number_input(key="target_heat_run_100").set_value(4)
             app.button(key="apply_move_run").click().run()
@@ -150,17 +153,35 @@ def test_both_start_paths_reach_exports_results_and_season_reports(tmp_path, mon
             next(c for c in app.checkbox if c.label=="I have reviewed the running heats").check()
             next(c for c in app.checkbox if c.label=="I have reviewed the swimming heats").check()
             click("Approve final run and swim heats")
-            click("Generate / regenerate operational files")
+            assert any(c.value=="Uses the approved heat assignments exactly as currently saved. Does not regenerate heats." for c in app.caption)
+            click("Generate operational files")
         else:
             click("Confirm Data Set and Initialize Event")
         workflow=tmp_path/"data/biathlon_events.sqlite"
         eid=app.session_state.event_id
         assert get_event(workflow,eid)["season_year"]==2027
         assert len(current_outputs(workflow,eid))==5
+        assert app.button(key=f"generate_outputs_{eid}").label=="Regenerate operational files"
         if generated:
             athlete=next(a for a in get_athletes(workflow,eid) if a["athlete_number"]=="100")
             assert (athlete["running_heat"],athlete["swimming_heat"])==(4,3)
             assert athlete["run_seed"]==15000
+            # A saved move hides stale files. Reapproval restores the rebuild
+            # action, whose label must remember that files existed previously.
+            app.number_input(key="target_heat_run_100").set_value(5)
+            app.button(key="apply_move_run").click().run()
+            assert get_event(workflow,eid)["heat_status"]=="stale"
+            assert not current_outputs(workflow,eid)
+            assert not any(b.key==f"generate_outputs_{eid}" for b in app.button)
+            next(c for c in app.checkbox if c.label=="I have reviewed the running heats").check()
+            next(c for c in app.checkbox if c.label=="I have reviewed the swimming heats").check()
+            click("Approve final run and swim heats")
+            assert not current_outputs(workflow,eid)
+        before=get_athletes(workflow,eid)
+        with patch("services.heats.generate_heats",side_effect=AssertionError("Output regeneration must not generate heats")):
+            click("Regenerate operational files")
+        assert get_athletes(workflow,eid)==before
+        assert len(current_outputs(workflow,eid))==5
         for phase in (2,3,4):
             app.button(key=f"side_nav_{phase}").click().run()
             assert not app.exception
