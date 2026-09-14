@@ -125,6 +125,40 @@ def save_heat_assignments(db_path, event_id, rows, expected_revision):
         _touch_event(conn,event_id)
 
 
+def save_review_roster(db_path, event_id, rows, expected_revision, *, added=(), removed=()):
+    """Atomically save explicit event-only roster changes and reviewed assignments.
+
+    Existing timing/capture fields and historical results are never overwritten.
+    Removed event rows are retained in the audit details for traceability.
+    """
+    from services.seeding import number_key
+    added, removed = set(added), set(removed)
+    fields = ["running_heat", "running_lane", "swimming_heat", "swimming_lane", "group_name", *HEAT_ATHLETE_COLUMNS]
+    with get_conn(db_path) as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        event = conn.execute("SELECT * FROM events WHERE id=?", (event_id,)).fetchone()
+        if event is None or event["heat_revision"] != expected_revision:
+            raise ValueError("The event changed in another session. Reload before saving.")
+        existing = {r["athlete_number"]: dict(r) for r in conn.execute("SELECT * FROM athletes WHERE event_id=?", (event_id,))}
+        numbers = [r["athlete_number"] for r in rows]
+        if (added & set(existing) or not removed <= set(existing) or
+                set(numbers) != (set(existing)-removed) | added or len(numbers) != len(set(numbers))):
+            raise ValueError("The roster change must explicitly identify every addition and removal.")
+        if len({number_key(n) for n in numbers}) != len(numbers):
+            raise ValueError("Athlete numbers must be unique within this event.")
+        for number in removed:
+            conn.execute("INSERT INTO audit_log(event_id,action,details) VALUES (?,?,?)",
+                         (event_id, "EVENT_ATHLETE_REMOVED", json.dumps(existing[number])))
+            conn.execute("DELETE FROM athletes WHERE event_id=? AND athlete_number=?", (event_id, number))
+        for row in rows:
+            if row["athlete_number"] in added:
+                conn.execute("INSERT INTO athletes(event_id,sort_order,athlete_number,athlete_name,province) VALUES (?,?,?,?,?)",
+                             (event_id,row["sort_order"],row["athlete_number"],row["athlete_name"],row.get("province")))
+            conn.execute(f"UPDATE athletes SET {','.join(f+'=?' for f in fields)} WHERE event_id=? AND athlete_number=?",
+                         (*[row.get(f) for f in fields],event_id,row["athlete_number"]))
+        _touch_event(conn,event_id)
+
+
 def approve_heats(db_path,event_id,expected_revision):
     from services.heats import validate_heats
     with get_conn(db_path) as conn:

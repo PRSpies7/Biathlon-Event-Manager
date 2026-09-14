@@ -119,6 +119,46 @@ def settings(meet_type="Local",lanes=6):
     return dict(meet_type=meet_type,pool_lanes=lanes,run_positions=json.dumps(list(range(1,13))))
 
 
+@pytest.mark.parametrize("discipline,prefix",[("run","running"),("swim","swimming")])
+def test_manual_combine_preserves_unselected_and_rejects_other_distance(discipline,prefix):
+    from services.heats import combine_selected_heats
+    rows=generate_heats(entries(16),settings(),optimise=False)
+    for i,row in enumerate(rows):
+        row[prefix+"_heat"]=i//4+1
+        row[prefix+"_lane"]=i%4+1
+    programme=[{"Heat":h,"New Position":h,"Combine":False} for h in range(1,5)]
+    result,_=combine_selected_heats(rows,settings(),discipline,programme,{1,3,4})
+    assert [r for r in result if r["athlete_number"] in {a["athlete_number"] for a in rows[4:8]}]==rows[4:8]
+    rows[-1][discipline+"_distance"]*=2
+    with pytest.raises(ValueError,match="distance"):
+        combine_selected_heats(rows,settings(),discipline,programme,{1,3,4})
+
+
+def test_roster_save_is_explicit_atomic_and_preserves_capture(tmp_path):
+    from database.repository import create_event,replace_athletes,get_event,get_athletes,save_review_roster,update_manual_time
+    db=tmp_path/"event.sqlite"
+    init_db(db)
+    eid=create_event(db,"Review","GN","2026-09-01","SCM",6)
+    replace_athletes(db,eid,generate_heats(entries(3),settings()))
+    update_manual_time(db,eid,"100","run_time","02:40.00")
+    before=get_athletes(db,eid)
+    revision=get_event(db,eid)["heat_revision"]
+    rows=[dict(r) for r in before[:2]]
+    rows[0]["run_time"]="00:01.00"  # Heat review must not overwrite capture.
+    with pytest.raises(ValueError,match="explicitly"):
+        save_review_roster(db,eid,rows,revision)
+    assert get_athletes(db,eid)==before
+    with pytest.raises(ValueError,match="another session"):
+        save_review_roster(db,eid,rows,revision-1,removed={"102"})
+    assert get_athletes(db,eid)==before
+    save_review_roster(db,eid,rows,revision,removed={"102"})
+    after=get_athletes(db,eid)
+    assert len(after)==2 and after[0]["run_time"]=="02:40.00"
+    with sqlite3.connect(db) as conn:
+        audit=conn.execute("SELECT details FROM audit_log WHERE action='EVENT_ATHLETE_REMOVED'").fetchone()
+    assert json.loads(audit[0])["athlete_number"]=="102"
+
+
 def test_special_needs_distances_backfill_and_seeds(tmp_path):
     from services.competition import distances
     from exporters.timedrops_json import event_for_group

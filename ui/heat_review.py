@@ -78,16 +78,22 @@ def render_entries(db_path, parsed, uploaded, name, host, start_date, course, la
             st.error(str(exc))
             return
     st.subheader("Entries and event distances")
+    from ui.heat_review_tables import show_duplicate_names
+    show_duplicate_names(entries)
     metadata = pd.DataFrame([{"Athlete": r["athlete_number"], "Name": r["athlete_name"],
         "Age group": r["group_name"], "Gender": r["gender"],
-        "Run distance": r["run_distance"], "Swim distance": r["swim_distance"]} for r in entries])
+        "Run distance": r["run_distance"], "Swim distance": r["swim_distance"], "Remove from event": False} for r in entries])
     edited = st.data_editor(metadata, hide_index=True, key=f"entry_metadata_{token}",
         disabled=["Athlete", "Name"], column_config={
             "Gender": st.column_config.SelectboxColumn(options=["F", "M"]),
             "Run distance": st.column_config.NumberColumn(min_value=1, step=1),
             "Swim distance": st.column_config.SelectboxColumn(options=[25,50,100])})
     invalid = unresolved
+    removed = set()
     for entry, (_, row) in zip(entries, edited.iterrows()):
+        if row["Remove from event"]:
+            removed.add(entry["athlete_number"])
+            continue
         entry["group_name"], entry["gender"] = str(row["Age group"] or ""), str(row["Gender"] or "")
         if entry["gender"] not in {"F", "M"} or not entry["group_name"].strip():
             invalid = True
@@ -105,6 +111,10 @@ def render_entries(db_path, parsed, uploaded, name, host, start_date, course, la
                 entry[f"{discipline}_seed"], entry[f"{discipline}_seed_source"] = select_seed(
                     history_path, entry["history_athlete_id"], discipline, distance, year)
             entry[f"{discipline}_distance"] = distance
+    entries = [entry for entry in entries if entry["athlete_number"] not in removed]
+    if not entries:
+        invalid = True
+        blockers.append("Keep at least one entry to initialize the event.")
     st.subheader("Entries and historical seeds")
     st.dataframe([{"Athlete":r["athlete_number"], "Name":r["athlete_name"],
         "Run seed":display_seed(r["run_seed"]), "Run source":seed_source(r,"run"),
@@ -126,21 +136,13 @@ def render_entries(db_path, parsed, uploaded, name, host, start_date, course, la
 
 def render(db_path, event_id):
     event, entries = dict(get_event(db_path,event_id)), get_athletes(db_path,event_id)
-    from ui.heat_review_tables import review_state, render_tables
+    from ui.heat_review_tables import review_state, render_workbench
     state = review_state(event, entries)
-    pending = [discipline for discipline, draft in state["drafts"].items() if draft["dirty"]]
+    pending = state["dirty"]
     st.subheader(f"{event['name']} · Season {event['season_year']}")
-    if pending:
-        st.warning("Unsaved table changes: " + ", ".join(pending) + ". Save heat changes beneath the relevant athlete table, or discard the draft, before using quick moves, reseeding, approving or exporting.")
     render_event_settings(db_path,event,pending_edits=bool(pending))
-    st.subheader("Saved entries, heats and seeds")
-    st.dataframe([{"Athlete":a["athlete_number"],"Name":a["athlete_name"],"Age group":a["group_name"],
-        "Run heat":a.get("running_heat"),"Run position":a.get("running_lane"),
-        "Swim heat":a.get("swimming_heat"),"Swim lane":a.get("swimming_lane"),
-        "Run seed":display_seed(a["run_seed"]),"Run source":seed_source(a,"run"),
-        "Swim seed":display_seed(a["swim_seed"]),"Swim source":seed_source(a,"swim")} for a in entries], hide_index=True)
-    from services.heats import generate_heats, validate_heats, DISCIPLINES, enrich_imported
-    from database.repository import save_heat_assignments, approve_heats
+    from services.heats import generate_heats, validate_heats, enrich_imported
+    from database.repository import save_heat_assignments
     if event["heat_source"]=="imported":
         entries=enrich_imported(entries)
     has_heats=any(a.get("running_heat") or a.get("swimming_heat") for a in entries)
@@ -158,45 +160,11 @@ def render(db_path, event_id):
             st.error(str(exc))
         else:
             st.rerun()
-    if not has_heats:
-        return
     if event["heat_status"]=="stale":
         st.warning("Assignments changed after approval. Existing operational files are stale; review both disciplines, approve and regenerate them.")
-    for tab,(discipline,prefix) in zip(st.tabs(["Running heats","Swimming heats"]),DISCIPLINES.items()):
-        with tab:
-            participating=[a for a in entries if a.get(discipline+"_entered") or a.get(prefix+"_heat") is not None]
-            if not participating:
-                st.info(f"No {discipline} entries.")
-                continue
-            if discipline=="run" and st.button("Reseed run starting positions",key=f"reseed_run_{event_id}",
-                    disabled=bool(pending),
-                    help="Number each heat from 1, fastest on the outside. Keeps current heats and replaces run-position overrides."):
-                from services.heats import reseed_run_positions
-                try:
-                    save_heat_assignments(db_path,event_id,reseed_run_positions(entries),event["heat_revision"])
-                except ValueError as exc:
-                    st.error(str(exc))
-                else:
-                    st.rerun()
-            render_tables(db_path, event, entries, discipline, state)
-            with st.expander("Move or swap an athlete"):
-                choices={a["athlete_number"]:a for a in participating}
-                labels={key:f"{row['athlete_name']} · {row['group_name']} · Heat {row.get(prefix+'_heat') or 'unassigned'} · #{key}"
-                    for key,row in choices.items()}
-                athlete=st.selectbox("Athlete",list(choices),format_func=labels.get,key=f"move_athlete_{discipline}")
-                heat=st.number_input("Move to heat (lower = earlier)",min_value=1,value=int(choices[athlete].get(prefix+"_heat") or 1),key=f"target_heat_{discipline}_{athlete}")
-                swap=st.selectbox("Swap with",[None,*[a for a in choices if a!=athlete]],
-                    format_func=lambda key, labels=labels:"No swap" if key is None else labels[key],key=f"swap_{discipline}")
-                st.caption("Moves and swaps reseed positions in both affected heats." + ("" if discipline=="run" else " Use the table for a manual swim lane override."))
-                if st.button("Apply move / swap",key=f"apply_move_{discipline}",disabled=bool(pending)):
-                    try:
-                        from services.heats import move_or_swap
-                        moved=move_or_swap(entries,event,discipline,athlete,int(heat),swap)
-                        save_heat_assignments(db_path,event_id,moved,event["heat_revision"])
-                    except ValueError as exc:
-                        st.error(str(exc))
-                    else:
-                        st.rerun()
+    render_workbench(db_path,event,entries,state,has_heats)
+    if not has_heats:
+        return
     errors,warnings=validate_heats(entries,event)
     if warnings:
         with st.expander(f"Heat notices ({len(warnings)})"):
@@ -204,14 +172,7 @@ def render(db_path, event_id):
                 st.write(f"• {warning}")
     for error in errors:
         st.error(error)
-    if event["heat_status"]!="approved":
-        reviewed_run=st.checkbox("I have reviewed the running heats",key=f"review_run_{event_id}_{event['heat_revision']}")
-        reviewed_swim=st.checkbox("I have reviewed the swimming heats",key=f"review_swim_{event_id}_{event['heat_revision']}")
-        if st.button("Approve final run and swim heats",type="primary",disabled=bool(pending) or bool(errors) or not(reviewed_run and reviewed_swim)):
-            save_heat_assignments(db_path,event_id,entries,event["heat_revision"])
-            approve_heats(db_path,event_id,get_event(db_path,event_id)["heat_revision"])
-            st.rerun()
-    elif not pending:
+    if event["heat_status"]=="approved" and not pending:
         st.success("Both disciplines approved. Operational files use these exact assignments.")
         from ui.phase1_setup import render_operational_outputs
         render_operational_outputs(db_path,event_id)

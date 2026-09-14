@@ -130,7 +130,7 @@ def reset_saved_sessions():
     delete_all_events(str(DB_PATH))
     start_new_session()
     for key in list(st.session_state.keys()):
-        if key.startswith(("phase2_", "phase3_", "phase4_", "heat_review_tables_")):
+        if key.startswith(("phase2_", "phase3_", "phase4_", "heat_review_tables_", "heat_review_active_", "heat_review_tabs_")):
             st.session_state.pop(key, None)
     st.session_state.pop("confirm_reset_sessions", None)
 

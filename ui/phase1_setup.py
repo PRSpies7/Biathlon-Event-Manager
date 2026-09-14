@@ -25,7 +25,7 @@ def _json_path(db_path: str, event_id: int) -> Path:
 def _render_persistent_event(db_path: str, event_id: int):
     event = get_event(db_path, event_id)
     athletes = get_athletes(db_path, event_id)
-    if not event or not athletes:
+    if not event:
         return False
 
     from ui.heat_review import render as render_heat_review

@@ -17,6 +17,39 @@ def number_key(value):
     return str(int(text)) if text.isdigit() else text.casefold()
 
 
+def duplicate_names(rows):
+    """Flag equal full names (ignoring case/spacing), without merging identities."""
+    names = {}
+    for row in rows:
+        key = " ".join(str(row["athlete_name"]).casefold().split())
+        if key:
+            names.setdefault(key, []).append(row)
+    return [group for group in names.values() if len(group) > 1]
+
+
+def prepare_late_entry(existing, event, history_path, number, name, category, gender, run=True, swim=True, province=""):
+    """Create one event entry with real historical seeds and separate draft heats."""
+    number, name = str(number).strip(), str(name).strip()
+    if not number or not name or gender not in {"F", "M"} or not (run or swim):
+        raise ValueError("Enter athlete number, name, gender and at least one discipline.")
+    if any(number_key(a["athlete_number"]) == number_key(number) for a in existing):
+        raise ValueError("That athlete number already exists in this event.")
+    run_distance, swim_distance = distances(category)
+    if run_distance is None or swim_distance is None:
+        raise ValueError("Choose a recognised age category.")
+    group = category + (" FEMALE" if gender == "F" else " MALE")
+    raw = dict(athlete_number=number, athlete_name=name, group_name=group, province=province,
+               sort_order=max((a.get("sort_order",0) for a in existing),default=0)+1,
+               running_heat=1 if run else None, swimming_heat=1 if swim else None)
+    prepared, _ = prepare_entries({"athletes":[raw]}, history_path, event["season_year"])
+    row = prepared[0]
+    for discipline,prefix,entered in (("run","running",run),("swim","swimming",swim)):
+        if entered:
+            row[prefix+"_heat"] = max((a.get(prefix+"_heat") or 0 for a in existing),default=0)+1
+            row[prefix+"_lane"] = 1 if discipline == "run" else (int(event["pool_lanes"])+1)//2
+    return row
+
+
 def time_hundredths(value):
     text = str(value or "").strip()
     # Reject annotated/non-finishes; accept published seconds or minute formats.

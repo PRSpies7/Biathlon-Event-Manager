@@ -195,18 +195,18 @@ An incomplete swim heat keeps the centre-lane pattern; it does not start at lane
 
 ## 10. Manual review and approval
 
-- Each discipline has linked programme and athlete tables. Add a draft heat, edit
-  programme positions to reorder whole heats, move athletes by editing their Heat
-  cells, and mark empty heats for deletion. Counts/categories update from the draft.
-- **Save heat changes** saves both tables for that discipline, removes all empty
-  heats and closes numbering gaps. A populated heat cannot be deleted. Draft heat
+- Each discipline has programme and athlete tables in one shared form. Add a draft
+  heat, edit **New Position** to reorder whole heats, or move/swap athletes by editing
+  their Heat cells. Enter does not submit; explicit buttons apply edits. The selected
+  discipline stays active. Counts/categories refresh on form submission.
+- **Save heat changes** saves both disciplines together, removes all empty
+  heats and closes numbering gaps. Draft heat
   IDs remain stable while editing; saved heat numbers follow the programme order.
-  **Discard unsaved changes** restores the saved state for that discipline.
+  **Discard unsaved changes** restores both disciplines to the saved state.
 - Moving or swapping athletes between heats reseeds positions in both affected
-  heats. Other heats retain their assignments. The optional quick move/swap controls
-  still save immediately; they are blocked while table drafts are pending.
+  heats. Other heats retain their assignments.
 - The running table permits heat and seed edits. Saving automatically recalculates
-  all run starting positions from 1, fastest outermost; that column is read-only.
+  all run starting positions from 1, fastest outermost; that column is hidden.
   Saving swim table membership changes reseeds only affected heats, reserving any
   explicitly edited lanes. Other heats keep their lanes. The swimming table permits
   explicit lane overrides; these must be unique and within the pool.
@@ -217,8 +217,17 @@ An incomplete swim heat keeps the centre-lane pattern; it does not start at lane
   a mixed-distance swim heat must be resolved before generating that output package.
 - Changing a whole heat's programme position shifts other heats. Membership stays
   intact. Swim lanes are preserved; run positions follow the normal save/reseed rule.
-- Reseed run starting positions numbers the existing run heats from 1 without
-  changing membership; it replaces any manual run-position overrides.
+- Select **Combine** beside two or more programme rows and click **Combine** to
+  pool/reseed only those heats, in either discipline. Equal distance is required.
+  This manual request can cross age/gender boundaries. Running splits into balanced
+  heats of at most 12; swimming uses pool capacity, slower/NT first, fastest last,
+  with normal centre-out lanes. Unselected memberships remain unchanged. The new
+  block occupies the earliest selected programme position and remains a draft until
+  saved. Ordinary saves do not reorder heats by speed against manual programme order.
+- **Add athlete to this event** stages a new entry with number-based historical seeds
+  or NT, initially in a separate heat. **Remove from event** in either athlete table
+  removes the entry from both disciplines on save. Historical results are retained.
+  Duplicate-full-name warnings are nonblocking; athlete number remains the identity.
 - Review and approve both disciplines before generating the output package.
   Assignment changes invalidate the old files: reapprove, regenerate and replace
   downloaded copies.

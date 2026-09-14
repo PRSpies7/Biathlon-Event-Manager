@@ -65,7 +65,7 @@ def reseed_run_positions(entries):
     return rows
 
 
-def apply_heat_programme(entries, previous, event, discipline, programme, lane_overrides=()):
+def apply_heat_programme(entries, previous, event, discipline, programme, lane_overrides=(), *, validate=True):
     """Save a manual programme: remove empty heats, close gaps and seed positions.
 
     Programme rows have stable draft heat IDs; their list order is the requested
@@ -116,9 +116,10 @@ def apply_heat_programme(entries, previous, event, discipline, programme, lane_o
             row[field] = mapping[row[field]]
     if discipline == "run":
         rows = reseed_run_positions(rows)
-    errors, _ = validate_heats(rows, event)
-    if errors:
-        raise ValueError("\n".join(errors))
+    if validate:
+        errors, _ = validate_heats(rows, event)
+        if errors:
+            raise ValueError("\n".join(errors))
     return rows
 
 
@@ -206,6 +207,43 @@ def build_balanced_base_heats(groups, discipline, capacity):
             heats.append(ranked[offset:offset+size])
             offset += size
     return heats
+
+
+def combine_selected_heats(entries, event, discipline, programme, selected):
+    """Manually pool any number of selected same-distance heats and reseed them.
+
+    Selected heats become a consecutive block at the first selected position.
+    Other memberships stay unchanged. Slow/NT athletes precede full fast swims;
+    runs use the usual balanced split, capped at twelve.
+    """
+    rows = deepcopy(entries)
+    prefix = DISCIPLINES[discipline]
+    selected = set(selected)
+    ordered = [p["Heat"] for p in programme]
+    if len(selected) < 2 or not selected <= set(ordered):
+        raise ValueError("Select at least two heats to combine.")
+    members = [r for r in rows if r.get(prefix+"_heat") in selected]
+    if {r[prefix+"_heat"] for r in members} != selected:
+        raise ValueError("Select heats containing athletes; empty heats disappear on save.")
+    distances = {r.get(discipline+"_distance") for r in members}
+    if len(distances) != 1 or None in distances:
+        raise ValueError("Combined heats must use the same event distance.")
+    capacity = RUN_CAPACITY if discipline == "run" else int(event["pool_lanes"])
+    # This is an explicit manual selection, so category/gender mixing is allowed.
+    heats = build_balanced_base_heats({(next(iter(distances)), "Manual selection", ""): members}, discipline, capacity)
+    identifiers = [h for h in ordered if h in selected]
+    next_heat = max(ordered, default=0)+1
+    while len(identifiers) < len(heats):
+        identifiers.append(next_heat)
+        next_heat += 1
+    identifiers = identifiers[:len(heats)]
+    for heat, number in zip(heats, identifiers):
+        lanes = range(len(heat), 0, -1) if discipline == "run" else centre_out(capacity)
+        for row, lane in zip(sorted(heat, key=lambda r: seed_order(r, discipline)), lanes):
+            row[prefix+"_heat"], row[prefix+"_lane"] = number, lane
+    first = min(ordered.index(h) for h in selected)
+    order = [h for h in ordered[:first] if h not in selected] + identifiers + [h for h in ordered[first:] if h not in selected]
+    return rows, [{"Heat": h, "New Position": i, "Combine": False} for i, h in enumerate(order, 1)]
 
 
 def protection_reason(heat, discipline, capacity, meet_type):
