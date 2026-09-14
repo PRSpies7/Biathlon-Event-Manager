@@ -55,23 +55,50 @@ def category_order(group):
             "MASTERS 60+": 60, "MASTERS 70+": 70, "MASTERS 80+": 80}.get(key, 99)
 
 
-# Lower values mean closer competition groups. Unlisted pairs stay separate.
-COMPATIBILITY = {}
-for family in (("MASTERS 40+", "MASTERS 50+"),
-               ("MASTERS 60+", "MASTERS 70+", "MASTERS 80+"),
-               ("U/08", "U/09", "U/11"),
-               ("U/13", "U/15"), ("U/15", "U/17", "U/19"),
-               ("U/19", "JNR", "SENIOR")):
+# Automatic compatibility tiers: 0 same category, 1 strong, 2 neighbouring,
+# 3 weak/last resort. Unlisted pairs are incompatible, regardless of occupancy.
+OLDER_MASTERS = ("MASTERS 60+", "MASTERS 70+", "MASTERS 80+")
+ADULT_GROUPS = ("JNR", "SENIOR", "MASTERS 40+", "MASTERS 50+")
+COMPATIBILITY = {("run", 400): {}, ("run", 800): {},
+                 ("swim", 25): {}, ("swim", 50): {}, ("swim", 100): {}}
+
+
+def _add_family(table, family):
     for left in family:
         for right in family:
-            COMPATIBILITY[frozenset((left, right))] = 1
-COMPATIBILITY[frozenset(("U/13", "U/17"))] = 2
-COMPATIBILITY[frozenset(("U/13", "U/19"))] = 3
-for youth in ("U/08", "U/09"):
-    for masters in ("MASTERS 60+", "MASTERS 70+", "MASTERS 80+"):
-        COMPATIBILITY[frozenset((youth, masters))] = 2
+            if left != right:
+                table[frozenset((left, right))] = 1
 
 
-def compatibility(left, right):
-    left, right = category_key(left) or left, category_key(right) or right
-    return 0 if left == right else COMPATIBILITY.get(frozenset((left, right)))
+for scope in (("run", 400), ("swim", 50)):
+    _add_family(COMPATIBILITY[scope], OLDER_MASTERS)
+for scope in (("run", 800), ("swim", 100)):
+    table = COMPATIBILITY[scope]
+    _add_family(table, ("U/15", "U/17", "U/19"))
+    _add_family(table, ADULT_GROUPS)
+    for adult in ADULT_GROUPS:
+        table[frozenset(("U/19", adult))] = 2
+        table[frozenset(("U/17", adult))] = 3
+for scope, pairs in {
+    ("run", 400): (("U/08", "U/09", 1), ("U/09", "U/11", 2), ("U/08", "U/11", 3)),
+    ("run", 800): (("U/13", "U/15", 1), ("U/13", "U/17", 2), ("U/13", "U/19", 3)),
+    ("swim", 50): (("U/09", "U/11", 1), ("U/11", "U/13", 2), ("U/09", "U/13", 3)),
+}.items():
+    for left, right, tier in pairs:
+        COMPATIBILITY[scope][frozenset((left, right))] = tier
+
+
+def compatibility(left, right, discipline, distance):
+    """Category tier within a discipline/distance; callers enforce equal distances.
+
+    Special Needs has equally valid same-distance destinations, allowing gender
+    and measured seed suitability to choose rather than a fixed Masters route.
+    """
+    left, right = category_key(left), category_key(right)
+    if left is None or right is None:
+        return None
+    if left == right:
+        return 0
+    if "SPECIAL NEEDS" in (left, right):
+        return 2
+    return COMPATIBILITY.get((discipline, distance), {}).get(frozenset((left, right)))

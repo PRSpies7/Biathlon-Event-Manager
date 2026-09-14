@@ -7,6 +7,17 @@ import, historical seeds, run/swim generation and manual approval before Phase 1
 Approved heats export to the existing accepted PDF/Excel structures and supply
 the operational lane sheets and TimeDrops JSON from one saved state.
 
+Automatic generation is deterministic: strict discipline/distance/age/gender
+groups first, balanced running heats or full fast swimming heats next, then
+protection of satisfactory heats and combination of compatible whole remainders.
+Distance is a hard automatic boundary. League uses category compatibility before
+gender; Interprovincial preserves age/gender more strongly; National never mixes
+automatically. Seeds are a later preference and occupancy comes last. Special
+Needs can use suitable same-distance destinations based on gender and seed times,
+without dismantling protected heats. Manual overrides remain available, and previous
+heat assignments never train or influence future generation. See the complete
+[heat rules and programme sequences](HEAT_RULES.md) for tiers and protection thresholds.
+
 ## V1.15 scope
 
 - Phase 1: Upload either the Master Entries Excel workbook or the standard Meet Program PDF through the same uploader. The application detects the format automatically, parses the source into the persistent Master Dataset workflow, then lets the operator review/edit the Phase 1 event settings before initialization. The confirmed settings are used to generate `meet_program.json` and one printable Swim Timekeeper workbook with one tab per swimming lane.

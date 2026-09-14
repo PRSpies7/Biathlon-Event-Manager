@@ -1,4 +1,8 @@
-"""Deterministic two-pass heat generation and validation, independent of Streamlit."""
+"""Strict base heats, protection, compatible remainder merging and assignment.
+
+Generation uses entries and seed times, never previous heat/lane assignments.
+Preferences are lexicographic: occupancy cannot outweigh compatibility or gender.
+"""
 from collections import defaultdict
 from copy import deepcopy
 from math import ceil
@@ -9,6 +13,9 @@ from services.competition import category_key, category_order, compatibility, ge
 
 DISCIPLINES = {"run": "running", "swim": "swimming"}
 OLDER_GROUPS = {"MASTERS 60+", "MASTERS 70+", "MASTERS 80+", "SPECIAL NEEDS"}
+RUN_CAPACITY = 12
+SATISFACTORY_RUN_SIZE = 7  # Protection guideline, not a minimum valid heat size.
+ACCEPTABLE_EMPTY_SWIM_LANES = {"Local": 1, "Interprovincial": 2}
 
 
 def programme_order(group, gender, discipline):
@@ -25,12 +32,6 @@ def programme_order(group, gender, discipline):
         sequence += ["U/13", "U/15", "U/17", "U/19"] if discipline == "run" else ["U/15", "U/17", "U/19"]
         bucket = sequence.index(key)+2 if key in sequence else 99
     return bucket, gender, category_order(group), key
-
-
-def preferred_heat_size(heat, discipline, capacity, meet_type):
-    if discipline == "run" and meet_type == "Local" and any(category_key(a["group_name"]) in OLDER_GROUPS for a in heat):
-        return min(10, capacity)
-    return capacity
 
 
 def reorder_heat(entries, discipline, heat_number, new_position):
@@ -123,13 +124,19 @@ def seed_order(row, discipline):
     return (value is None, value if value is not None else 0, str(row["athlete_number"]))
 
 
-def _initial(rows, discipline, capacity, meet_type="Local"):
+def build_strict_groups(rows, discipline):
+    """Partition participants by distance, category and gender before any mixing."""
     groups = defaultdict(list)
     for row in rows:
         if not row.get(f"{discipline}_entered"):
             continue
         key = (row[f"{discipline}_distance"], category_key(row["group_name"]) or row["group_name"], row["gender"])
         groups[key].append(row)
+    return groups
+
+
+def build_balanced_base_heats(groups, discipline, capacity):
+    """Balance runs (16 -> 8+8); reserve full fast swims and a slow remainder."""
     heats = []
     for key in sorted(groups, key=lambda k: (*programme_order(k[1],k[2],discipline), k[0])):
         ranked = sorted(groups[key],key=lambda r:seed_order(r,discipline),reverse=True)
@@ -144,114 +151,132 @@ def _initial(rows, discipline, capacity, meet_type="Local"):
     return heats
 
 
-def _eligible(heat, discipline, capacity, meet_type):
+def protection_reason(heat, discipline, capacity, meet_type):
+    """Explain why a heat cannot donate or receive athletes automatically."""
     if meet_type == "National":
-        return False
+        return "National age/gender groups remain separate."
+    if len(heat) >= capacity:
+        return "The heat is full."
     if discipline == "swim":
-        return capacity-len(heat) >= (3 if meet_type == "Interprovincial" else 2)
-    return len(heat) <= 6 if meet_type == "Interprovincial" else len(heat) < capacity
+        if capacity-len(heat) <= ACCEPTABLE_EMPTY_SWIM_LANES[meet_type]:
+            return "The number of empty swim lanes is acceptable."
+    elif len(heat) >= SATISFACTORY_RUN_SIZE:
+        return "Seven or more runners make a satisfactory heat."
+    return None
 
 
-def _candidate_score(target, row, discipline, meet_type):
-    if any(a[f"{discipline}_distance"] != row[f"{discipline}_distance"] for a in target):
+def is_heat_protected(heat, discipline, capacity, meet_type):
+    return protection_reason(heat, discipline, capacity, meet_type) is not None
+
+
+def is_heat_eligible_for_optimisation(heat, discipline, capacity, meet_type):
+    """Eligibility permits consideration; it never requires filling a heat."""
+    return bool(heat) and not is_heat_protected(heat, discipline, capacity, meet_type)
+
+
+def compatibility_tier(left, right, discipline):
+    """Require a valid distance and category pair for EVERY athlete combination.
+
+    A compatible intermediary never licenses an otherwise incompatible pair.
+    """
+    members = [*left, *right]
+    distance_set = {a[f"{discipline}_distance"] for a in members}
+    if len(distance_set) != 1 or not next(iter(distance_set)):
         return None
-    def rank_for(a):
-        left, right = category_key(a["group_name"]), category_key(row["group_name"])
-        pair = {left,right}
-        if "SPECIAL NEEDS" in pair:
-            if pair <= OLDER_GROUPS:
-                return 1
-            if discipline == "run" and meet_type == "Local" and pair <= {"SPECIAL NEEDS","U/08","U/09"}:
-                return 2
-        return compatibility(a["group_name"],row["group_name"])
-    ranks = [rank_for(a) for a in target]
-    if any(rank is None for rank in ranks):
+    distance = next(iter(distance_set))
+    categories = sorted({a["group_name"] for a in members})
+    tiers = [compatibility(a, b, discipline, distance)
+             for index, a in enumerate(categories) for b in categories[index:]]
+    return None if any(tier is None for tier in tiers) else max(tiers)
+
+
+def _seed_gap(left, right, discipline):
+    """Mean cross-group time gap; missing times never masquerade as a close seed."""
+    first = [a.get(f"{discipline}_seed") for a in left]
+    second = [a.get(f"{discipline}_seed") for a in right]
+    gaps = [abs(a-b) for a in first for b in second if a is not None and b is not None]
+    return sum(gaps)/len(gaps) if gaps else float("inf")
+
+
+def rank_destination(left, right, discipline, capacity, meet_type):
+    """Return ordered preferences, or None if this combination is not justified.
+
+    League: category, gender, seeds, occupancy. Interprovincial allows same-gender
+    strong/neighbouring pairs; cross-gender pairs must be same/strong categories
+    AND form a satisfactory heat. Weak pairs remain separate at Interprovincials.
+    Special Needs shares one flexible tier across same-distance destinations,
+    so measured seed suitability decides after gender, without a Masters bias.
+    """
+    if not all(is_heat_eligible_for_optimisation(h, discipline, capacity, meet_type)
+               for h in (left, right)) or len(left)+len(right) > capacity:
         return None
-    # Younger children/older masters pairing applies specifically to the 400m run.
-    keys = {category_key(a["group_name"]) for a in [*target,row]}
-    if any(k in {"U/08","U/09"} for k in keys) and any(k and k.startswith("MASTERS") for k in keys):
-        if discipline != "run" or row[f"{discipline}_distance"] != 400:
+    tier = compatibility_tier(left, right, discipline)
+    if tier is None:
+        return None
+    mixed_gender = len({a["gender"] for a in [*left, *right]}) > 1
+    if meet_type == "Interprovincial":
+        if tier > 2:
             return None
-    gender = 0 if all(a["gender"] == row["gender"] for a in target) else 1
-    seeds = [a.get(f"{discipline}_seed") for a in target if a.get(f"{discipline}_seed") is not None]
-    seed = row.get(f"{discipline}_seed")
-    difference = abs(seed-sum(seeds)/len(seeds)) if seed is not None and seeds else float("inf")
-    rank = max(ranks)
-    same_group = all(category_key(a["group_name"]) == category_key(row["group_name"]) and a["gender"] == row["gender"] for a in target)
-    return (0 if same_group else 1,gender,rank,difference)
+        if mixed_gender and (tier > 1 or not is_heat_protected(
+                [*left, *right], discipline, capacity, meet_type)):
+            return None
+        # Same group/gender, compatible same gender, same category mixed,
+        # then strong compatible mixed. Capacity cannot promote a lower tier.
+        priority = (2 if tier == 0 else 3) if mixed_gender else (0 if tier == 0 else 1)
+        grouping = (priority, tier)
+    else:
+        grouping = (tier, int(mixed_gender))
+    return (*grouping, _seed_gap(left, right, discipline), capacity-len(left)-len(right))
 
 
-def _join_special_needs_runs(heats, capacity):
-    """Place Special Needs with older Masters, keeping the Special Needs group whole."""
-    masters = OLDER_GROUPS - {"SPECIAL NEEDS"}
-    for special in list(heats):
-        if not special or not all(category_key(a["group_name"])=="SPECIAL NEEDS" for a in special):
-            continue
-        candidates=[]
-        for index,heat in enumerate(heats):
-            if not heat or not all(category_key(a["group_name"]) in masters for a in heat):
-                continue
-            if len(special)>=capacity or any(a["run_distance"]!=special[0]["run_distance"] for a in heat):
-                continue
-            same_gender=all(a["gender"]==special[0]["gender"] for a in heat)
-            candidates.append((not same_gender,len(heat)+len(special)>10,index,heat))
-        if not candidates:
-            continue
-        _,_,_,heat=min(candidates,key=lambda c:c[:3])
-        total=len(heat)+len(special)
-        same_gender=all(a["gender"]==special[0]["gender"] for a in heat)
-        if total<=capacity and (same_gender or total<=10):
-            heat.extend(special)
-            special.clear()
-        else:
-            # A full Masters heat can share some runners with the Special Needs
-            # heat without exceeding capacity or separating Special Needs athletes.
-            count=min(len(heat)-1,capacity-len(special),max(1,ceil(total/2)-len(special)))
-            if count>0:
-                special.extend(heat[:count])
-                del heat[:count]
-    return [h for h in heats if h]
+def _heat_identity(heat):
+    return tuple(sorted(str(a["athlete_number"]) for a in heat))
 
 
 def optimise_heats(heats, discipline, capacity, meet_type):
-    """Merge whole incomplete heats, preserving small age/gender groups."""
-    if meet_type == "National":
-        return heats
-    if discipline=="run" and meet_type=="Local":
-        heats=_join_special_needs_runs(heats,capacity)
-    eligible = {i for i,h in enumerate(heats) if _eligible(h,discipline,capacity,meet_type)}
-    for index in sorted(eligible):
-        target = heats[index]
-        if not target:
-            continue
-        while len(target) < preferred_heat_size(target,discipline,capacity,meet_type):
-            candidates = []
-            for donor in sorted(eligible):
-                if donor <= index or not heats[donor]:
-                    continue
-                members=heats[donor]
-                total=len(target)+len(members)
-                if total>capacity:
-                    continue
-                combined=[*target,*members]
-                opening=discipline=="run" and meet_type=="Local" and any(category_key(a["group_name"]) in OLDER_GROUPS for a in combined)
-                if opening and total>10 and len({a["gender"] for a in combined})>1:
-                    continue
-                scores=[_candidate_score(target,row,discipline,meet_type) for row in members]
-                if any(score is None for score in scores):
-                    continue
-                candidates.append((opening and total>10,max(scores),len(members),donor))
-            if not candidates:
-                break
-            *_,donor = min(candidates)
-            target.extend(heats[donor])
-            heats[donor].clear()
-    return [h for h in heats if h]
+    """Choose the best valid whole-remainder pair, then recheck protection.
+
+    All eligible pairs compete before committing a merge, so programme order
+    cannot steal an athlete's better destination. This is deterministic greedy
+    selection, not training or an exhaustive search for maximum occupancy.
+    """
+    heats = [list(heat) for heat in heats]
+    while True:
+        eligible = [i for i, h in enumerate(heats)
+                    if is_heat_eligible_for_optimisation(h, discipline, capacity, meet_type)]
+        candidates = []
+        for offset, left in enumerate(eligible):
+            for right in eligible[offset+1:]:
+                rank = rank_destination(heats[left], heats[right], discipline, capacity, meet_type)
+                if rank is not None:
+                    identity = tuple(sorted((_heat_identity(heats[left]), _heat_identity(heats[right]))))
+                    candidates.append((rank, identity, left, right))
+        if not candidates:
+            return [h for h in heats if h]
+        _, _, left, right = min(candidates)
+        heats[left].extend(heats[right])
+        heats[right] = []
+
+
+def assign_positions_or_lanes(heats, discipline, capacity):
+    """Apply programme order after grouping, then slow-to-fast heats and seeding."""
+    def order(heat):
+        programme = min(programme_order(a["group_name"], a["gender"], discipline) for a in heat)
+        seeds = [a.get(f"{discipline}_seed") for a in heat]
+        known = [seed for seed in seeds if seed is not None]
+        # NT heats precede fully seeded heats; larger times precede smaller times.
+        return (programme, heat[0][f"{discipline}_distance"],
+                not any(seed is None for seed in seeds),
+                -sum(known)/len(known) if known else 0, _heat_identity(heat))
+    prefix = DISCIPLINES[discipline]
+    for number, heat in enumerate(sorted(heats, key=order), 1):
+        lanes = range(len(heat), 0, -1) if discipline == "run" else centre_out(capacity)
+        for row, lane in zip(sorted(heat, key=lambda r: seed_order(r, discipline)), lanes):
+            row[prefix+"_heat"], row[prefix+"_lane"] = number, lane
 
 
 def generate_heats(entries, event, *, optimise=True):
     rows = deepcopy(entries)
-    positions = list(range(1,13))
     if event["meet_type"] not in {"Local","Interprovincial","National"}:
         raise ValueError("Select Local, Interprovincial or National event type.")
     for row in rows:
@@ -262,16 +287,14 @@ def generate_heats(entries, event, *, optimise=True):
             if row.get(discipline+"_entered") and not row.get(discipline+"_distance"):
                 raise ValueError(f"Confirm {discipline} distance for {row['athlete_name']}.")
     for discipline,prefix in DISCIPLINES.items():
-        capacity = min(12,len(positions)) if discipline == "run" else int(event["pool_lanes"])
+        capacity = RUN_CAPACITY if discipline == "run" else int(event["pool_lanes"])
         if capacity < 1:
             raise ValueError("Heat capacity must be positive.")
-        heats = _initial(rows,discipline,capacity,event["meet_type"])
+        groups = build_strict_groups(rows, discipline)
+        heats = build_balanced_base_heats(groups, discipline, capacity)
         if optimise:
             heats = optimise_heats(heats,discipline,capacity,event["meet_type"])
-        for number,heat in enumerate(heats,1):
-            lanes = range(len(heat),0,-1) if discipline == "run" else centre_out(capacity)
-            for row,lane in zip(sorted(heat,key=lambda r:seed_order(r,discipline)),lanes):
-                row[prefix+"_heat"],row[prefix+"_lane"] = number,lane
+        assign_positions_or_lanes(heats, discipline, capacity)
     return rows
 
 
@@ -299,7 +322,7 @@ def validate_heats(rows,event):
         if len(lanes) != len(set(lanes)):
             errors.append(f"{discipline.title()} Heat {heat}: duplicate starting positions/lanes.")
         if len({r.get(discipline+"_distance") for r in members}) > 1:
-            errors.append(f"{discipline.title()} Heat {heat}: different distances cannot share a heat.")
+            warnings.append(f"{discipline.title()} Heat {heat}: manual combination of different distances; check operational arrangements.")
         if discipline == "run" and len(members)>12:
             warnings.append(f"Run Heat {heat} has {len(members)} runners, exceeding the automatic maximum of 12.")
         if discipline == "run" and any(lane not in json.loads(event["run_positions"]) for lane in lanes):

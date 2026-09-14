@@ -35,17 +35,36 @@ Both use the approved Master Entries Excel/PDF parsers and the same saved event.
 
 ## Competition structure
 
-Initial heats always preserve age group, gender and correct distance. Optimisation
-is a separate pass using the compatibility table in `services/competition.py`.
+Generation is deterministic and rule-based. It uses current entries, competition
+type, capacity and historical seed times; previous heat assignments are never
+learning/training data. Manual changes in one event do not influence later events.
+
+The sequence is strict discipline/distance/age/gender groups → sensible same-group
+heats → protect satisfactory heats → identify incomplete groups/remainders → combine
+compatible whole remainders → compare seeds → compare occupancy → assign programme
+order, positions and lanes. Running groups are balanced first (16 → 8 + 8, not
+12 + 4); swimming reserves full faster heats and a slower remainder.
+
+`services/competition.py` centralises discipline/distance compatibility tiers.
+`services/heats.py` separates grouping, protection reasons, eligibility, destination
+ranking, merging and final assignment. Protected heats never donate or receive
+athletes automatically. Each successful merge is checked for protection again.
 
 | Event type | Swimming | Running |
 | --- | --- | --- |
-| Local league | Consider combining whole incomplete groups with at least two empty lanes; one empty lane is acceptable. Prefer same age/gender, then compatible categories and similar seeds. Protect full fast heats. | Prefer same age/gender; combine compatible groups without splitting small groups. Opening combinations target 10, with 12 the automatic maximum. |
-| Interprovincial | Consider combining only with at least three empty lanes. Prefer same gender, compatible age, then similar seeds. | Consider combining only with six or fewer runners, conservatively. |
+| Local league | Protect heats with 0–1 empty lanes. With 2+ empty lanes, consider compatible whole remainders. | Protect satisfactory 7–12-person heats; consider smaller compatible groups. Seven is a protection guideline, not a minimum heat size. |
+| Interprovincial | Protect heats with 0–2 empty lanes. With 3+ empty lanes, consider conservative combinations. | Protect heats above six runners. Five/six-person heats may remain intact without a strong alternative. |
 | National / SA Championships | No automatic age or gender mixing. | No automatic age or gender mixing. |
 
 All combinations require equal discipline distances. Automatic run heats never
 exceed 12. NT athletes generally enter slower heats within their competition groups.
+Eligible never means mandatory mixing. League ranks category compatibility before
+gender, then seed similarity, then occupancy. Interprovincial prioritises same
+category/gender and nearby same-gender groups; mixed genders require same/strong
+categories and a satisfactory resulting heat. Weak pairs stay separate there.
+No weighted occupancy score can override those tiers. Special Needs uses flexible
+same-distance options, with gender then seed suitability deciding destinations;
+protected Masters heats are never dismantled to accommodate it.
 Swim lanes use centre-out seeding; faster runners receive outer starting positions.
 For example, seven runners use positions 1–7, with the fastest runner at 7.
 Use **Reseed run starting positions** to apply this to saved heats without
@@ -55,11 +74,13 @@ Special Needs Male and Female both use a 400 m run and a 50 m swim.
 Manual unusual combinations/capacities warn; technically invalid outputs are blocked.
 
 Running follows older Masters/Special Needs (women then men), Under 8, Under 9, Under 11,
-junior/senior/Masters 40–50, then Under 13/15/17/19. Local opening run heats target
-10 athletes and may combine compatible younger athletes with older Masters
-and Special Needs. Initial groups remain separate before the optimisation pass.
+junior/senior/Masters 40–50, then Under 13/15/17/19. Programme sequence does not imply
+combining the listed groups; compatibility and protection govern every combination.
 Swimming follows Under 8, older Masters/Special Needs, Under 9/11/13, junior/senior/
 Masters 40–50, then Under 15/17/19. Masters 80+ follow the 60+/70+ groups.
+Manual exceptions remain authoritative, including run capacity and unusual group
+or distance combinations with notices. The existing TimeDrops format still requires
+one swimming distance per heat before the operational package can be generated.
 
 ## One compatible output package
 
