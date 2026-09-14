@@ -16,42 +16,42 @@ from database.season_repository import store_event, season_snapshot
 from parsers.season_results.models import NormalizedEvent, Result, LEAGUE
 
 
-def test_unsaved_table_edits_block_moves_and_survive_saving_other_discipline(tmp_path,monkeypatch):
+def edit_review_table(app, prefix, changes):
     import json
     from streamlit.proto.WidgetStates_pb2 import WidgetState
+    editor = next(table for table in app.dataframe if prefix in table.proto.id)
+    states = app._tree.get_widget_states()
+    states.widgets.append(WidgetState(id=editor.proto.id, string_value=json.dumps(
+        {"edited_rows": changes, "added_rows": [], "deleted_rows": []})))
+    app._run(widget_state=states)
+    assert not app.exception, app.exception
+
+
+def test_unsaved_table_edits_block_moves_and_survive_saving_other_discipline(tmp_path,monkeypatch):
     from database.repository import create_event,replace_athletes
     app=app_test(tmp_path,monkeypatch)
     db=tmp_path/"data/biathlon_events.sqlite"
     eid=create_event(db,"Table drafts","GN","2026-09-01","SCM",6,heat_source="generated")
     rows=generate_heats(entries(13),settings(),optimise=False)
     replace_athletes(db,eid,rows)
-    revision=get_event(db,eid)["heat_revision"]
     app.session_state["event_id"]=eid
     app.run()
     identifiers={}
-    states=app._tree.get_widget_states()
     for discipline,prefix in (("run","running"),("swim","swimming")):
         identifiers[discipline]=sorted(rows,key=lambda r:(r[prefix+"_heat"],r[prefix+"_lane"]))[0]["athlete_number"]
-        editor=app.dataframe[1 if discipline=="run" else 2]
-        states.widgets.append(WidgetState(id=editor.proto.id,string_value=json.dumps({"edited_rows":{0:{"Heat":9}},"added_rows":[],"deleted_rows":[]})))
-    app._run(widget_state=states)
-    assert not app.exception
+        edit_review_table(app,f"heat_editor_{eid}_{discipline}_",{0:{"Heat":9}})
     assert any("Unsaved table changes" in w.value for w in app.warning)
     assert app.button(key="apply_move_run").disabled and app.button(key="apply_move_swim").disabled
-    assert app.button(key="apply_whole_heat_run").disabled
-    app.button(key="save_heats_run").click()
-    states=app._tree.get_widget_states()
-    for editor in app.dataframe[1:]:
-        states.widgets.append(WidgetState(id=editor.proto.id,string_value=json.dumps({"edited_rows":{0:{"Heat":9}},"added_rows":[],"deleted_rows":[]})))
-    app._run(widget_state=states)
+    app.button(key="save_heats_run").click().run()
     assert not app.exception and not app.error, [e.value for e in app.error]
     assert app.button(key="apply_move_run").disabled  # Swim changes still pending.
     app.button(key="save_heats_swim").click().run()
     assert not app.exception and not app.error
     assert not app.button(key="apply_move_run").disabled
     saved={r["athlete_number"]:r for r in get_athletes(db,eid)}
-    assert saved[identifiers["run"]]["running_heat"]==9
-    assert saved[identifiers["swim"]]["swimming_heat"]==9
+    # Save closes gaps, but keeps the selected athlete in the newly created heat.
+    assert saved[identifiers["run"]]["running_heat"]==3
+    assert saved[identifiers["swim"]]["swimming_heat"]==3
 
 
 def test_whole_heat_reordering_in_both_disciplines(tmp_path,monkeypatch):
@@ -66,10 +66,11 @@ def test_whole_heat_reordering_in_both_disciplines(tmp_path,monkeypatch):
     app.run()
     for discipline,prefix,source,destination in (("run","running",3,1),("swim","swimming",1,5)):
         before=get_athletes(db,eid)
-        app.selectbox(key=f"move_whole_heat_{discipline}").set_value(source).run()
-        target=next(w for w in app.number_input if w.key and w.key.startswith(f"whole_heat_position_{eid}_{discipline}_{source}_"))
-        target.set_value(destination)
-        app.button(key=f"apply_whole_heat_{discipline}").click().run()
+        programme=next(t for t in app.dataframe if f"programme_editor_{eid}_{discipline}_" in t.proto.id)
+        index=int(programme.value.index[programme.value["Heat"]==source][0])
+        edit_review_table(app,f"programme_editor_{eid}_{discipline}_",{index:{"Programme position":destination}})
+        assert get_athletes(db,eid)==before  # Programme edits remain a draft.
+        app.button(key=f"save_heats_{discipline}").click().run()
         assert not app.exception and not app.error
         after=get_athletes(db,eid)
         for old,new in zip(before,after):
@@ -77,6 +78,93 @@ def test_whole_heat_reordering_in_both_disciplines(tmp_path,monkeypatch):
             if old[prefix+"_heat"]==source:
                 assert new[prefix+"_heat"]==destination
         assert get_event(db,eid)["heat_status"]=="stale"
+    # Pasting multiple target positions must honor all requested slots together.
+    before=get_athletes(db,eid)
+    edit_review_table(app,f"programme_editor_{eid}_run_",{0:{"Programme position":3},1:{"Programme position":2}})
+    app.button(key="save_heats_run").click().run()
+    assert not app.exception and not app.error
+    for old,new in zip(before,get_athletes(db,eid)):
+        assert new["running_heat"]=={1:3,2:2,3:1}[old["running_heat"]]
+
+
+@pytest.mark.parametrize("discipline,prefix",[("run","running"),("swim","swimming")])
+def test_linked_tables_add_delete_move_and_discard(tmp_path,monkeypatch,discipline,prefix):
+    from database.repository import create_event,replace_athletes,approve_heats
+    from services.heat_outputs import generate_outputs
+    app=app_test(tmp_path,monkeypatch)
+    db=tmp_path/"data/biathlon_events.sqlite"
+    eid=create_event(db,"Programme draft","GN","2026-09-01","SCM",6,heat_source="generated")
+    replace_athletes(db,eid,generate_heats(entries(13),settings(),optimise=False))
+    approve_heats(db,eid,get_event(db,eid)["heat_revision"])
+    generate_outputs(db,eid,{})
+    app.session_state["event_id"]=eid
+    app.run()
+    before=get_athletes(db,eid)
+    original_heats={r[prefix+"_heat"] for r in before}
+    app.button(key=f"add_heat_{discipline}").click().run()
+    programme=next(t for t in app.dataframe if f"programme_editor_{eid}_{discipline}_" in t.proto.id)
+    assert len(programme.value)==len(original_heats)+1 and programme.value.iloc[-1]["Athletes"]==0
+    assert get_athletes(db,eid)==before
+    app.button(key=f"discard_heats_{discipline}").click().run()
+    programme=next(t for t in app.dataframe if f"programme_editor_{eid}_{discipline}_" in t.proto.id)
+    assert len(programme.value)==len(original_heats)
+    assert current_outputs(db,eid)
+    app.button(key=f"add_heat_{discipline}").click().run()
+    app.button(key=f"save_heats_{discipline}").click().run()
+    assert not app.exception and not app.error
+    programme=next(t for t in app.dataframe if f"programme_editor_{eid}_{discipline}_" in t.proto.id)
+    assert len(programme.value)==len(original_heats)  # Unused added heats are removed on save.
+    assert get_athletes(db,eid)==before
+    # Deleting a populated heat cannot remove its athletes.
+    edit_review_table(app,f"programme_editor_{eid}_{discipline}_",{0:{"Delete":True}})
+    app.button(key=f"save_heats_{discipline}").click().run()
+    assert any("Move all athletes out" in e.value for e in app.error)
+    assert get_athletes(db,eid)==before
+    app.button(key=f"add_heat_{discipline}").click().run()
+    new_heat=max(original_heats)+1
+    athletes=next(t for t in app.dataframe if f"heat_editor_{eid}_{discipline}_" in t.proto.id)
+    changed={int(i):{"Heat":new_heat} for i,r in athletes.value.iterrows() if r["Heat"]==1}
+    moved_ids=set(athletes.value.loc[list(changed),"Athlete"])
+    edit_review_table(app,f"heat_editor_{eid}_{discipline}_",changed)
+    programme=next(t for t in app.dataframe if f"programme_editor_{eid}_{discipline}_" in t.proto.id)
+    assert programme.value.loc[programme.value["Heat"]==1,"Athletes"].item()==0
+    index=int(programme.value.index[programme.value["Heat"]==new_heat][0])
+    edit_review_table(app,f"programme_editor_{eid}_{discipline}_",{index:{"Programme position":1}})
+    app.button(key=f"save_heats_{discipline}").click().run()
+    assert not app.exception and not app.error
+    saved=get_athletes(db,eid)
+    assert len(saved)==len(before)
+    assert {r["athlete_number"] for r in saved}=={r["athlete_number"] for r in before}
+    assert {r[prefix+"_heat"] for r in saved}==set(range(1,len(original_heats)+1))
+    assert all(r[prefix+"_heat"]==1 for r in saved if r["athlete_number"] in moved_ids)
+    # Move the remaining first heat to the end to make a saved assignment change.
+    programme=next(t for t in app.dataframe if f"programme_editor_{eid}_{discipline}_" in t.proto.id)
+    edit_review_table(app,f"programme_editor_{eid}_{discipline}_",{0:{"Programme position":len(programme.value)}})
+    app.button(key=f"save_heats_{discipline}").click().run()
+    assert not app.exception and not app.error
+    assert get_event(db,eid)["heat_status"]=="stale" and not current_outputs(db,eid)
+
+
+def test_review_drafts_detect_external_changes_and_clear_on_session_reset(tmp_path,monkeypatch):
+    from database.repository import create_event,replace_athletes,update_event
+    app=app_test(tmp_path,monkeypatch)
+    db=tmp_path/"data/biathlon_events.sqlite"
+    eid=create_event(db,"Draft lifecycle","GN","2026-09-01","SCM",6,heat_source="generated")
+    replace_athletes(db,eid,generate_heats(entries(8),settings()))
+    app.session_state["event_id"]=eid
+    app.run()
+    app.button(key="add_heat_run").click().run()
+    update_event(db,eid,name="Externally renamed")
+    app.run()
+    assert any("saved event changed" in w.value for w in app.warning)
+    assert not any(b.key=="save_heats_run" for b in app.button)
+    app.button(key=f"reload_heat_drafts_{eid}").click().run()
+    assert not app.exception and not app.error
+    app.button(key="add_heat_run").click().run()
+    app.button(key="reset_sessions").click().run()
+    app.button(key="confirm_reset_sessions_button").click().run()
+    assert not app.exception and get_event(db,eid) is None
+    assert f"heat_review_tables_{eid}" not in app.session_state
 
 
 def test_entry_corrections_unblock_initialization(tmp_path, monkeypatch):

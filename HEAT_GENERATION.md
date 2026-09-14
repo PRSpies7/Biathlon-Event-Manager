@@ -17,8 +17,8 @@ Both use the approved Master Entries Excel/PDF parsers and the same saved event.
    seed sources. Current-season fastest takes priority, then previous season,
    then two seasons previously. Wrong-distance/older results cannot supply seeds.
    No usable history produces NT, including visiting athletes.
-4. Click **Generate heats from entries** to generate both disciplines, review their tabs, move/swap athletes or edit heat
-   numbers, positions and seeds, then save. Lower heat numbers move athletes earlier.
+4. Click **Generate heats from entries** to generate both disciplines, then review
+   the linked programme and athlete tables in each discipline's tab.
    Manual edits remain authoritative; regeneration explicitly replaces assignments.
    Once heats exist, the action is **Regenerate heats from entries**. Its hover tooltip
    states: "This reruns automatic heat generation and replaces the current heat
@@ -26,22 +26,43 @@ Both use the approved Master Entries Excel/PDF parsers and the same saved event.
    with newly generated heats** checkbox is still required. Its question-mark
    tooltip explains that ticking it only enables regeneration; assignments change
    only after clicking **Regenerate heats from entries**.
-   Click **Save run heats and recalculate starting positions** or **Save swim heat edits** below the table before
-   moving athletes or whole heats. Unsaved table edits block those actions;
-   saving one discipline preserves pending edits in the other.
-   The move/swap controls reseed the affected heats automatically. Use the table
-   for explicit swim lane overrides; run positions are read-only and recalculated
-   from seeds whenever run heat edits are saved. Heat notices are in a collapsed panel.
-   **Move an entire heat** inserts a selected run or swim heat elsewhere in that
-   discipline's programme. Other heats shift and are renumbered; athletes and
-   lane assignments within each heat remain intact. Reapprove and regenerate
-   operational files after changing the order.
+   In **Running/Swimming heat programme**, use **Add heat**, change **Programme
+   position** to move an entire heat, or tick **Delete** after moving its athletes
+   elsewhere. Athlete counts and categories reflect the pending athlete-table edits.
+   In **Running/Swimming heat assignments**, edit **Heat** to move athletes in batches,
+   or edit seeds and swim lanes. Entering an unused heat number adds it to the draft
+   programme too. Heat numbers remain stable while editing; programme positions
+   indicate their intended order after saving.
+   **Save heat changes** applies both tables for that discipline together, removes
+   unused/empty heats and renumbers remaining heats consecutively. Deleting a heat
+   containing athletes is blocked. Added empty heats are temporary until populated;
+   no athletes are ever deleted. Run positions are recalculated from 1, fastest
+   outside. Swim heats whose membership changed are reseeded around any explicitly
+   edited lanes; unchanged heats keep their lanes. Pool capacity and lane uniqueness
+   remain enforced. Automatic grouping is not rerun.
+   **Discard unsaved changes** returns that discipline to its saved assignments.
+   Drafts live only in the current app session until saved. Saving one discipline
+   preserves pending edits in the other. An external saved revision change requires
+   reloading rather than silently overwriting pending edits. Unsaved drafts block
+   automatic regeneration, approval, exports and the optional quick move/swap and
+   reseeding controls. The existing move/swap controls remain available below the
+   tables and still save immediately when there are no pending drafts.
+   Reapprove and regenerate operational files after saving assignment changes.
 5. Confirm review of both disciplines, approve, and click **Generate operational files**.
    Once files have been generated, this becomes **Regenerate operational files**,
    including after saved edits make the previous files stale and you reapprove.
    The helper states: "Uses the approved heat assignments exactly as currently saved.
    Does not regenerate heats." This action only rebuilds downstream files.
    Continue through the existing phases. Phase 2 retains its runner-movement controls.
+
+## Reverting the table-review change
+
+The linked-table review is an isolated local commit following `4ff87df`, the
+previous review interface. Reverting that commit restores the former interface.
+There is no database migration or new persistent heat format to reverse. Reverting
+the interface does not undo heat assignments already saved while testing; those
+remain normal event data. Use **Discard unsaved changes** before saving a draft
+you do not want. No GitHub push is part of this change.
 
 ## Competition structure
 

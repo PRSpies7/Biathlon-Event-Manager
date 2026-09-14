@@ -350,6 +350,58 @@ def test_manual_distance_exception_keeps_automatic_boundary():
         build_package(moved,event,{})  # The existing TimeDrops format guard remains.
 
 
+def test_manual_programme_compacts_heats_and_preserves_roster_and_capture():
+    from copy import deepcopy
+    from services.heats import apply_heat_programme
+    previous=generate_heats(entries(13),settings(),optimise=False)
+    for row in previous:
+        row.update(run_position=3,run_time="02:10.00")
+    edited=deepcopy(previous)
+    for row in edited:
+        row["running_heat"]=9
+    programme=[{"Heat":1,"Delete":True},{"Heat":2,"Delete":True},{"Heat":9},{"Heat":10}]
+    saved=apply_heat_programme(edited,previous,settings(),"run",programme)
+    assert {r["running_heat"] for r in saved}=={1}
+    assert {r["running_lane"] for r in saved}==set(range(1,14))  # Manual capacity override remains.
+    assert sorted(saved,key=lambda r:r["run_seed"])[0]["running_lane"]==13
+    assert all(r["run_position"]==3 and r["run_time"]=="02:10.00" for r in saved)
+    assert [(r["swimming_heat"],r["swimming_lane"]) for r in saved]==[(r["swimming_heat"],r["swimming_lane"]) for r in previous]
+    assert {r["running_heat"] for r in edited}=={9}  # No mutation before successful save.
+    with pytest.raises(ValueError,match="Move all athletes out"):
+        apply_heat_programme(previous,previous,settings(),"run",programme)
+
+
+def test_manual_swim_batch_moves_reseed_and_preserve_explicit_lanes_in_exports():
+    from copy import deepcopy
+    from io import BytesIO
+    from services.heats import apply_heat_programme
+    from services.heat_outputs import build_package
+    from parsers.master_entries import parse_master_entries
+    previous=generate_heats(entries(8),settings(),optimise=False)
+    edited=deepcopy(previous)
+    moving=[r for r in edited if r["swimming_heat"]==2][:2]
+    for row in moving:
+        row["swimming_heat"]=1
+    moving[0]["swimming_lane"]=1
+    override=moving[0]["athlete_number"]
+    saved=apply_heat_programme(edited,previous,settings(),"swim",[{"Heat":2},{"Heat":1},{"Heat":3}],{override})
+    assert next(r for r in saved if r["athlete_number"]==override)["swimming_lane"]==1
+    assert all(len({r["swimming_lane"] for r in saved if r["swimming_heat"]==h})==4 for h in (1,2))
+    assert [(r["running_heat"],r["running_lane"]) for r in saved]==[(r["running_heat"],r["running_lane"]) for r in previous]
+    event=dict(settings(),name="Edited programme",host_team="GN",start_date="2026-09-01",course="SCM",season_year=2027,heat_revision=1)
+    files=build_package(saved,event,{})
+    parsed=parse_master_entries(BytesIO(files["Master Entries Heats.xlsx"][1]))["athletes"]
+    assignments=lambda rows:{r["athlete_number"]:(r["running_heat"],r["running_lane"],r["swimming_heat"],r["swimming_lane"]) for r in rows}
+    assert assignments(parsed)==assignments(saved)
+    races=json.loads(files["meet_program.json"][1])["meetSessions"][0]["sessionRaces"]
+    exported={lane["laneSwimmerId"]:(race["raceHeatNumber"],lane["laneNumber"]) for race in races for lane in race["raceLanes"]}
+    assert exported=={r["athlete_number"]:(r["swimming_heat"],r["swimming_lane"]) for r in saved}
+    for row in edited:
+        row["swimming_heat"]=1
+    with pytest.raises(ValueError,match="exceeds the pool capacity"):
+        apply_heat_programme(edited,previous,settings(),"swim",[{"Heat":1}])
+
+
 def test_print_layout_and_simplified_export_headers():
     from io import BytesIO
     import pdfplumber

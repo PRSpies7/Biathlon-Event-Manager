@@ -195,18 +195,28 @@ An incomplete swim heat keeps the centre-lane pattern; it does not start at lane
 
 ## 10. Manual review and approval
 
+- Each discipline has linked programme and athlete tables. Add a draft heat, edit
+  programme positions to reorder whole heats, move athletes by editing their Heat
+  cells, and mark empty heats for deletion. Counts/categories update from the draft.
+- **Save heat changes** saves both tables for that discipline, removes all empty
+  heats and closes numbering gaps. A populated heat cannot be deleted. Draft heat
+  IDs remain stable while editing; saved heat numbers follow the programme order.
+  **Discard unsaved changes** restores the saved state for that discipline.
 - Moving or swapping athletes between heats reseeds positions in both affected
-  heats. Other heats retain their assignments.
+  heats. Other heats retain their assignments. The optional quick move/swap controls
+  still save immediately; they are blocked while table drafts are pending.
 - The running table permits heat and seed edits. Saving automatically recalculates
   all run starting positions from 1, fastest outermost; that column is read-only.
-  The swimming table also permits explicit lane overrides.
+  Saving swim table membership changes reseeds only affected heats, reserving any
+  explicitly edited lanes. Other heats keep their lanes. The swimming table permits
+  explicit lane overrides; these must be unique and within the pool.
 - Manual run heats can exceed 12, with a notice. Swimming cannot exceed pool
   capacity, and duplicate positions/lanes are blocked.
 - Manual exceptional distance combinations produce a warning instead of changing
   automatic rules. TimeDrops still requires a single swimming distance per heat;
   a mixed-distance swim heat must be resolved before generating that output package.
-- Moving a whole heat changes its programme position and shifts/renumbers other
-  heats. It preserves the athletes and lane assignments within each heat.
+- Changing a whole heat's programme position shifts other heats. Membership stays
+  intact. Swim lanes are preserved; run positions follow the normal save/reseed rule.
 - Reseed run starting positions numbers the existing run heats from 1 without
   changing membership; it replaces any manual run-position overrides.
 - Review and approve both disciplines before generating the output package.

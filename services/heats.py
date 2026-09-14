@@ -65,6 +65,63 @@ def reseed_run_positions(entries):
     return rows
 
 
+def apply_heat_programme(entries, previous, event, discipline, programme, lane_overrides=()):
+    """Save a manual programme: remove empty heats, close gaps and seed positions.
+
+    Programme rows have stable draft heat IDs; their list order is the requested
+    programme order. Never run automatic grouping or drop an athlete. Explicit
+    swim lane edits take priority over seeding within changed-membership heats.
+    """
+    rows = deepcopy(entries)
+    prefix = DISCIPLINES[discipline]
+    field, lane_field = prefix+"_heat", prefix+"_lane"
+    occupied = {r[field] for r in rows if r.get(field) is not None}
+    order = [p["Heat"] for p in programme]
+    if len(order) != len(set(order)) or any(type(h) is not int or h < 1 for h in order):
+        raise ValueError("Each programme heat must have a unique positive number.")
+    deleted = {p["Heat"] for p in programme if p.get("Delete")}
+    if occupied & deleted:
+        raise ValueError("Move all athletes out before deleting Heat " + ", ".join(map(str, sorted(occupied & deleted))) + ".")
+    if occupied - set(order):
+        raise ValueError("Every assigned heat must appear in the heat programme.")
+    if {r["athlete_number"] for r in rows} != {r["athlete_number"] for r in previous} or len(rows) != len(previous):
+        raise ValueError("Heat changes must retain every athlete.")
+    if discipline == "swim":
+        old_members, new_members = defaultdict(set), defaultdict(set)
+        for row in previous:
+            if row.get(field) is not None:
+                old_members[row[field]].add(row["athlete_number"])
+        for row in rows:
+            if row.get(field) is not None:
+                new_members[row[field]].add(row["athlete_number"])
+        overrides = set(lane_overrides)
+        capacity = int(event["pool_lanes"])
+        for heat, ids in new_members.items():
+            members = [r for r in rows if r.get(field) == heat]
+            if len(members) > capacity:
+                raise ValueError(f"Swim Heat {heat} exceeds the pool capacity of {capacity} lanes.")
+            if ids == old_members[heat]:
+                continue  # Reordering a whole heat preserves its manual lanes.
+            fixed = [r for r in members if r["athlete_number"] in overrides]
+            reserved = [r[lane_field] for r in fixed]
+            if len(reserved) != len(set(reserved)) or any(type(lane) is not int or not 1 <= lane <= capacity for lane in reserved):
+                raise ValueError(f"Swim Heat {heat}: explicit lane edits must be unique and within the pool.")
+            free = [lane for lane in centre_out(capacity) if lane not in reserved]
+            for row, lane in zip(sorted((r for r in members if r["athlete_number"] not in overrides),
+                                        key=lambda r: seed_order(r, "swim")), free):
+                row[lane_field] = lane
+    mapping = {heat: index for index, heat in enumerate((h for h in order if h in occupied), 1)}
+    for row in rows:
+        if row.get(field) is not None:
+            row[field] = mapping[row[field]]
+    if discipline == "run":
+        rows = reseed_run_positions(rows)
+    errors, _ = validate_heats(rows, event)
+    if errors:
+        raise ValueError("\n".join(errors))
+    return rows
+
+
 def move_or_swap(entries, event, discipline, athlete_number, target_heat, swap_number=None):
     """Change membership and reseed only the affected heats; keep other manual edits."""
     rows = deepcopy(entries)
