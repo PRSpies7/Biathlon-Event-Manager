@@ -452,11 +452,11 @@ def render(db_path: str, event_id: int):
         event = get_event(db_path, event_id)
         xlsx = build_run_positions_xlsx(export_athletes, export_groups)
         event_name = (event["name"] if event else "Event").strip()
-        safe_name = "".join(ch if ch.isalnum() or ch in " -_" else "_" for ch in event_name).strip() or "Event"
+        from exporters.filenames import event_filename
         st.download_button(
             "📥 Export Run Positions",
             data=xlsx,
-            file_name=f"{safe_name} Run Positions.xlsx",
+            file_name=event_filename(event_name,"Run Positions","xlsx",event["start_date"] if event else None),
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             type="primary",
             use_container_width=False,

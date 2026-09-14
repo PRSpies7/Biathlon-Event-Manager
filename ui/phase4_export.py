@@ -155,12 +155,12 @@ def render(db_path: str, event_id: int):
     col1, col2 = st.columns(2)
     with col1:
         st.download_button(
-            "Download Master Excel", data=xlsx, file_name=event_results_filename(event_name, "xlsx"),
+            "Download Master Excel", data=xlsx, file_name=event_results_filename(event_name, "xlsx", event["start_date"] if event else None),
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="primary", disabled=not complete
         )
     with col2:
         st.download_button(
-            "Download Results XML", data=xml, file_name=event_results_filename(event_name, "xml"),
+            "Download Results XML", data=xml, file_name=event_results_filename(event_name, "xml", event["start_date"] if event else None),
             mime="application/xml", type="primary", disabled=not complete
         )
 

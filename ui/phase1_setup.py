@@ -85,9 +85,12 @@ def render_operational_outputs(db_path,event_id):
         "Swim Timekeeper Sheets.xlsx":("Download Swim Timekeeper Sheets",f"download_swim_lanes_{event_id}"),
         "meet_program.json":("Download meet_program.json",f"download_meet_program_{event_id}"),
     }
+    from exporters.filenames import event_filename
     for filename,(mime,content) in files.items():
         label,key=labels[filename]
-        st.download_button(label,data=content,file_name=filename,mime=mime,key=key)
+        download_name = filename if filename=="meet_program.json" else event_filename(
+            event["name"],Path(filename).stem,Path(filename).suffix,event["start_date"])
+        st.download_button(label,data=content,file_name=download_name,mime=mime,key=key)
     st.caption("Files belong to the approved heat revision. After changing assignments, regenerate and replace any copies already downloaded.")
 
 

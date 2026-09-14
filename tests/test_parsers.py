@@ -157,3 +157,6 @@ def test_event_results_filename_uses_a_sanitised_event_name():
     assert event_results_filename("Gauteng North Championships 2026", "xlsx") == "Gauteng North Championships 2026 Master Results.xlsx"
     assert event_results_filename('GN: Finals / 2026', ".xml") == "GN_ Finals _ 2026 Master Results.xml"
     assert event_filename('GN: Finals / 2026', "Athlete List", "xlsx") == "GN_ Finals _ 2026 Athlete List.xlsx"
+    assert event_filename("GN League 3", "Combined Heats", "pdf", "2026-09-14") == "GN League 3 Combined Heats 2026-09-14.pdf"
+    assert event_filename("GN League 3", "Swim Timekeeper Sheets", "xlsx", "2026-09-14") == "GN League 3 Swim Timekeeper Sheets 2026-09-14.xlsx"
+    assert event_results_filename("GN League 3", "xml", "2026-09-14") == "GN League 3 Master Results 2026-09-14.xml"
