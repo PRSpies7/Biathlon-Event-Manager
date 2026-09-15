@@ -83,6 +83,8 @@ def _show_result(kind: str, result: dict):
 def render(db_path: str, event_id: int):
     st.header("Phase 3 · Results Ingestion")
     st.caption("Process the run and swim files independently. Valid results are committed to the persistent SQLite Master Dataset.")
+    from ui.testing_controls import render_testing_controls
+    render_testing_controls(db_path,event_id,3)
 
     col1, col2 = st.columns(2)
     with col1:
@@ -166,6 +168,7 @@ def render(db_path: str, event_id: int):
             or search in str(a.get("athlete_number", "")).lower()
             or search in str(a.get("athlete_name", "")).lower()
         ]
+        from services.event_testing import result_indicator
         df = pd.DataFrame([
             {
                 "Athlete No.": a["athlete_number"],
@@ -177,11 +180,13 @@ def render(db_path: str, event_id: int):
                 "Swim Heat": a.get("swimming_heat") or "",
                 "Swim Lane": a.get("swimming_lane") or "",
                 "Swimtime": a.get("swim_time") or "",
-                "Status": "✓ Complete" if a.get("run_time") and a.get("swim_time") else "Incomplete",
+                "Status": result_indicator(a,athletes),
             }
             for a in filtered_athletes
         ])
         st.caption(f"{len(filtered_athletes)} of {len(athletes)} athlete(s) shown.")
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.caption("🔴 No results · 🟠 Partial results or time to review · 🟢 Both results recorded")
+        st.dataframe(df, width="stretch", hide_index=True,column_config={"Status":st.column_config.TextColumn(width="small",
+            help="Amber also flags invalid times, or a time below half/above twice its seed or the median of at least three other same-distance results in its heat or age/gender group. Review only; times are never changed.")})
     else:
         st.info("The Master Dataset is currently empty.")

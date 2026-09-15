@@ -12,6 +12,7 @@ from database.repository import (
     remove_athlete_from_run_heat,
     restore_run_position_mappings,
     save_run_positions,
+    insert_run_heat,
 )
 from exporters.run_positions import build_run_positions_xlsx
 from parsers.run_positions_excel import parse_run_positions_excel
@@ -88,6 +89,43 @@ def _label(unit: list[int], total_heats: int) -> str:
     if len(unit) > 1:
         return " + ".join(f"Heat {n}" for n in unit)
     return f"Heat {unit[0]} of {total_heats}"
+
+
+def heat_description(heat, athletes):
+    groups=sorted({str(a.get("group_name") or "Unspecified category") for a in athletes if a.get("running_heat")==heat})
+    masters=[g.upper().removeprefix("MASTERS ").title() for g in groups if g.upper().startswith("MASTERS ")]
+    other=[g.title() for g in groups if not g.upper().startswith("MASTERS ")]
+    if masters:
+        other.append("Masters " + ", ".join(masters))
+    return f"Heat {heat} — " + ("; ".join(other) if other else "Empty heat")
+
+
+def _render_add_heat(db_path,event_id,heats,athletes):
+    with st.expander("Add a run heat"):
+        placement=st.selectbox("Place new heat",["At the end","At the beginning","Before a heat","After a heat"] if heats else ["At the end"],key=f"insert_run_placement_{event_id}")
+        reference=None
+        if placement in {"Before a heat","After a heat"}:
+            reference=st.selectbox("Reference heat",heats,format_func=lambda h:heat_description(h,athletes),key=f"insert_run_reference_{event_id}")
+        st.caption("Inserting before existing heats renumbers later heats. Saved finish positions and results stay with their athletes. Use the updated heat numbers on timing documents.")
+        if st.button("Add new run heat",key=f"insert_run_heat_{event_id}"):
+            issues=save_current_mapping(db_path,event_id)
+            if issues:
+                st.error("\n".join(issues))
+                return
+            before = min(heats) if placement=="At the beginning" else reference if placement=="Before a heat" else None
+            if placement=="After a heat":
+                before=next((h for h in heats if h>reference),None)
+            try:
+                heat=insert_run_heat(db_path,event_id,before)
+            except ValueError as exc:
+                st.error(str(exc))
+            else:
+                for key in list(st.session_state):
+                    if key.startswith((f"phase2_editor_{event_id}_",f"phase2_combine_{event_id}_",f"confirm_combined_{event_id}_",f"jump_heat_{event_id}_")):
+                        del st.session_state[key]
+                st.session_state.pop(f"phase2_pending_{event_id}",None)
+                st.session_state[f"phase2_heat_{event_id}"]=heat
+                st.rerun()
 
 
 def save_current_mapping(db_path: str, event_id: int) -> list[str]:
@@ -244,6 +282,9 @@ def render(db_path: str, event_id: int):
     heats = get_running_heats(db_path, event_id)
     run_groups = get_run_groups(db_path, event_id)
 
+    _render_add_heat(db_path,event_id,heats,athletes)
+    from ui.testing_controls import render_testing_controls
+    render_testing_controls(db_path,event_id,2)
     if not heats:
         st.warning("No running heats were found in the Master Dataset.")
         return
@@ -263,11 +304,7 @@ def render(db_path: str, event_id: int):
             "Jump to Heat",
             heats,
             index=heats.index(current_heat),
-            format_func=lambda x: (
-                _label(_unit_for_heat(x, units), len(heats))
-                if len(_unit_for_heat(x, units)) > 1
-                else f"Heat {x}"
-            ),
+            format_func=lambda x: heat_description(x,athletes),
             key=f"jump_heat_{event_id}_{current_heat}",
         )
         if jump != current_heat:
@@ -330,21 +367,21 @@ def render(db_path: str, event_id: int):
             "Position": "" if a.get("run_position") is None else str(a["run_position"]),
         }
         for a in current
-    ])
+    ],columns=["Athlete No.","Age Group","Athlete Name","Position"])
 
     left, middle, right = st.columns([1.55, 8.9, 1.55], vertical_alignment="center")
     with left:
         prev_clicked = st.button(
             "← Previous Heat",
             disabled=idx == 0,
-            use_container_width=True,
+            width="stretch",
             key=f"prev_heat_{event_id}",
         )
     with middle:
         st.data_editor(
             editor_df,
             hide_index=True,
-            use_container_width=True,
+            width="stretch",
             # Size the editor to the actual number of athlete rows. Keeping the
             # height row-derived prevents Streamlit from displaying spare blank rows.
             height=max(100, 35 * max(len(editor_df), 1) + 38),
@@ -365,7 +402,7 @@ def render(db_path: str, event_id: int):
         next_clicked = st.button(
             "Next Heat →",
             disabled=idx == len(units) - 1,
-            use_container_width=True,
+            width="stretch",
             key=f"next_heat_{event_id}",
         )
 
@@ -422,7 +459,7 @@ def render(db_path: str, event_id: int):
                 confirm_clicked = st.button(
                     "⚠ Confirm and Continue",
                     key=f"confirm_continue_{event_id}",
-                    use_container_width=False,
+                    width="content",
                 )
 
         if confirm_clicked:
@@ -459,7 +496,7 @@ def render(db_path: str, event_id: int):
             file_name=event_filename(event_name,"Run Positions","xlsx",event["start_date"] if event else None),
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             type="primary",
-            use_container_width=False,
+            width="content",
             key=f"export_run_positions_{event_id}",
         )
     else:

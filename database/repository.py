@@ -204,6 +204,40 @@ def get_swimming_heats(db_path: str, event_id: int) -> list[int]:
     return [int(r[0]) for r in rows]
 
 
+def insert_run_heat(db_path: str, event_id: int, before_heat: int | None = None) -> int:
+    """Insert a persisted empty heat, translating saved mappings atomically."""
+    with get_conn(db_path) as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        groups = conn.execute("SELECT * FROM run_groups WHERE event_id=?",(event_id,)).fetchall()
+        heats = {r[0] for r in conn.execute("SELECT DISTINCT running_heat FROM athletes WHERE event_id=? AND running_heat IS NOT NULL",(event_id,))}
+        for group in groups:
+            heats.update(json.loads(group["heat_numbers"]))
+        if before_heat is not None and before_heat not in heats:
+            raise ValueError("The reference heat no longer exists. Select it again.")
+        inserted = before_heat if before_heat is not None else max(heats,default=0)+1
+        mapping = {h:h+1 if h>=inserted else h for h in heats}
+        # Temporary keys prevent collisions such as saved group 1 becoming 2.
+        for group in groups:
+            conn.execute("UPDATE run_groups SET group_key=? WHERE id=?",(f"insert_{group['id']}",group["id"]))
+        conn.execute("UPDATE athletes SET running_heat=running_heat+1 WHERE event_id=? AND running_heat>=?",(event_id,inserted))
+        athlete_groups = conn.execute("SELECT id,run_group_key FROM athletes WHERE event_id=?",(event_id,)).fetchall()
+        translated = {}
+        for group in groups:
+            numbers = sorted(mapping[h] for h in json.loads(group["heat_numbers"]))
+            key = "+".join(map(str,numbers))
+            translated[group["group_key"]] = key
+            conn.execute("UPDATE run_groups SET group_key=?,heat_numbers=? WHERE id=?",(key,json.dumps(numbers),group["id"]))
+        for athlete in athlete_groups:
+            if athlete["run_group_key"] in translated:
+                conn.execute("UPDATE athletes SET run_group_key=? WHERE id=?",(translated[athlete["run_group_key"]],athlete["id"]))
+        conn.execute("INSERT INTO run_groups(event_id,group_key,heat_numbers) VALUES (?,?,?)",(event_id,str(inserted),json.dumps([inserted])))
+        conn.execute("""UPDATE events SET heat_revision=heat_revision+1,approved_revision=NULL,exports_revision=NULL,
+            heat_status=CASE WHEN heat_status='draft' THEN 'draft' ELSE 'stale' END WHERE id=?""",(event_id,))
+        _touch_event(conn,event_id)
+    audit(db_path,event_id,"RUN_HEAT_INSERTED",f"heat={inserted}; later heat numbers shifted; captured results retained")
+    return inserted
+
+
 def assign_athlete_to_run_heat(db_path: str, event_id: int, athlete_number: str, running_heat: int) -> bool:
     """Move an existing athlete into a selected run heat without creating a new record.
 

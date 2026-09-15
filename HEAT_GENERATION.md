@@ -88,6 +88,32 @@ Both use the approved Master Entries Excel/PDF parsers and the same saved event.
    Does not regenerate heats." This action only rebuilds downstream files.
    Continue through the existing phases. Phase 2 retains its runner-movement controls.
 
+## Live-event additions and testing
+
+Phase 2 provides **Add a run heat** at the beginning, end, before or after a
+selected heat. Later heat numbers shift on insertion, while saved combined-run
+groups, finish positions and captured times stay linked to the same athletes.
+The empty heat persists and can receive athletes through the existing **Add to
+Heat** control. Moving an athlete retains the existing one-event-entry behaviour;
+it does not create a second race result for that athlete. Old operational files
+become stale, and timing documents must use the updated heat numbers.
+**Jump to Heat** includes the categories, grouping repeated Masters prefixes.
+
+Phases 2 and 3 have a collapsed **Testing only — sample event data** panel,
+with distinct amber dashed buttons enabled by **I am using a test event**.
+**Generate test finish positions** fills missing positions across saved run
+groups. **Generate test results** fills missing run/swim times for entered
+disciplines. Existing values and manual overrides are preserved. These synthetic
+values are only for testing; they do not affect heat generation or historical
+seed lookup. An audit marker displays a test-data warning in Phases 2–4.
+
+Phase 3 status uses red for no results, amber for partial/invalid results or a
+time requiring review, and green for both valid results without a flagged outlier.
+An outlier is below half or above twice the seed or the median of at least three
+other valid same-distance times in the same heat or age/gender group. The full
+event supplies the comparison, independent of the search filter. Flags never
+alter or reject a time; they prompt the organiser to check it.
+
 ## Reverting the table-review change
 
 The initial linked-table review is saved locally at `80bc0f8`. The subsequent

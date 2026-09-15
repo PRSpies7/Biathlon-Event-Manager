@@ -490,3 +490,18 @@ div.st-key-phase1_setup button[data-testid^="stBaseButton-secondary"]:hover:not(
     border-color: var(--gn-navy);
 }
 div.st-key-phase1_setup button:disabled { opacity: .5; }
+
+/* Test-data controls are deliberately separate from operational actions. */
+div:is(.st-key-test_data_actions_2, .st-key-test_data_actions_3) div.stButton > button {
+    background: #FFF4E5;
+    border: 2px dashed #B45309;
+    color: #92400E;
+}
+div:is(.st-key-test_data_actions_2, .st-key-test_data_actions_3) div.stButton > button * {
+    color: #92400E;
+    -webkit-text-fill-color: #92400E;
+}
+div:is(.st-key-test_data_actions_2, .st-key-test_data_actions_3) div.stButton > button:hover:not(:disabled) {
+    background: #FFEDD5;
+    border-color: #92400E;
+}

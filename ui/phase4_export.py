@@ -53,6 +53,8 @@ def _normalize_editor_times(edited: pd.DataFrame, current_by_id: dict[str, dict]
 
 def render(db_path: str, event_id: int):
     st.header("Phase 4 · Final Results & Export")
+    from ui.testing_controls import test_data_notice
+    test_data_notice(db_path,event_id)
     athletes = get_athletes(db_path, event_id)
     if not athletes:
         st.warning("No event data is available.")
