@@ -106,14 +106,23 @@ def test_young_running_compatibility_is_not_transitive(profile,gender):
 
 @pytest.mark.parametrize("closer",["U/09","MASTERS 60+"])
 @pytest.mark.parametrize("gender",["GIRLS","BOYS"])
-def test_interprovincial_u8_singleton_uses_performance_not_fixed_destination(closer,gender):
+@pytest.mark.parametrize("profile",["interprovincial","league"])
+def test_u8_prefers_older_masters_before_u9_seed_similarity(closer,gender,profile):
     field=entries(1,"U/08 "+gender)+entries(8,"U/09 "+gender,20)+entries(8,"MASTERS 60+ "+gender,40)
     for row in field:
         row["run_seed"]=10000 if row["group_name"].startswith(("U/08",closer)) else 30000
-    rows=generate_heats(field,settings(),profile="interprovincial")
+    rows=generate_heats(field,settings(),profile=profile)
     target=next(h for h in heats(rows,"run") if any(r["athlete_number"]=="100" for r in h))
     assert len(target)==9
-    assert {r["group_name"] for r in target}=={"U/08 "+gender,closer+" "+gender}
+    assert {r["group_name"] for r in target}=={"U/08 "+gender,"MASTERS 60+ "+gender}
+
+
+@pytest.mark.parametrize("profile",["interprovincial","league"])
+def test_u8_uses_u9_when_older_masters_have_no_capacity(profile):
+    field=entries(1,"U/08 BOYS")+entries(8,"U/09 BOYS",20)+entries(12,"MASTERS 70+ MEN",40)
+    rows=generate_heats(field,settings(),profile=profile)
+    target=next(h for h in heats(rows,"run") if any(r["athlete_number"]=="100" for r in h))
+    assert {r["group_name"] for r in target}=={"U/08 BOYS","U/09 BOYS"}
 
 
 @pytest.mark.parametrize("categories",[("U/15","U/17","U/19"),("SENIOR","MASTERS 40+","MASTERS 50+")])

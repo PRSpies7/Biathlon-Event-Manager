@@ -1,6 +1,8 @@
 """Pre-event entry confirmation and run/swim heat review."""
 from pathlib import Path
 from hashlib import sha256
+from datetime import date
+from contextlib import nullcontext
 
 import pandas as pd
 import json
@@ -16,14 +18,27 @@ def seed_source(row, discipline):
     return "NT" if row.get(discipline+"_seed") is None else row.get(discipline+"_seed_source") or "Manual override"
 
 
-def render_event_settings(db_path,event,pending_edits=False):
-    with st.expander("Event settings"):
+def render_event_settings(db_path,event,pending_edits=False,expanded_page=False):
+    with (nullcontext() if expanded_page else st.expander("Event settings")):
         with st.form(f"event_configuration_{event['id']}"):
-            year=st.number_input("Season",min_value=1900,max_value=9999,value=event["season_year"] or infer_season(event["start_date"]))
-            lanes=st.number_input("Pool lanes",min_value=1,max_value=12,value=int(event["pool_lanes"]))
-            if st.form_submit_button("Save event configuration",disabled=pending_edits):
+            first,second,third=st.columns(3)
+            with first:
+                name=st.text_input("Meet name",value=event["name"])
+                host=st.text_input("Host / Team name",value=event["host_team"])
+            with second:
+                start=st.date_input("Meet start date",value=date.fromisoformat(event["start_date"]))
+                year=st.number_input("Season",min_value=1900,max_value=9999,value=event["season_year"] or infer_season(event["start_date"]))
+                course=st.selectbox("Pool course",["LCM","SCM"],index=0 if event["course"]=="LCM" else 1)
+            with third:
+                types=["Local","Interprovincial","National"]
+                meet_type=st.selectbox("Meet type",types,index=types.index(event["meet_type"]))
+                lanes=st.number_input("Pool lanes",min_value=1,max_value=12,value=int(event["pool_lanes"]))
+            if st.form_submit_button("Save event details",type="primary",disabled=pending_edits):
                 try:
-                    update_event(db_path,event["id"],season_year=int(year),pool_lanes=int(lanes))
+                    if not name.strip() or not host.strip():
+                        raise ValueError("Meet name and host/team name are required.")
+                    update_event(db_path,event["id"],season_year=int(year),pool_lanes=int(lanes),
+                        name=name.strip(),host_team=host.strip(),start_date=start.isoformat(),course=course,meet_type=meet_type)
                     if int(year)!=event["season_year"] and event["heat_source"]=="generated":
                         from database.repository import save_heat_assignments
                         history_path=season_database_path(Path(__file__).resolve().parents[1])
@@ -155,20 +170,37 @@ def render(db_path, event_id):
     state = review_state(event, entries)
     pending = state["dirty"]
     st.subheader(f"{event['name']} · Season {event['season_year']}")
-    render_event_settings(db_path,event,pending_edits=bool(pending))
     from services.heats import generate_heats, validate_heats, enrich_imported
     from database.repository import save_heat_assignments
     if event["heat_source"]=="imported":
         entries=enrich_imported(entries)
     has_heats=any(a.get("running_heat") or a.get("swimming_heat") for a in entries)
+    section_key=f"setup_section_{event_id}"
+    sections=["Event details","Entries and generation"] + (["Heat review"] if has_heats else [])
+    returning=st.session_state.pop(f"setup_section_return_{event_id}",None)
+    if returning in sections:
+        st.session_state[section_key]=returning
+    elif st.session_state.get(section_key) not in sections:
+        st.session_state.pop(section_key,None)
+    section=st.radio("Setup navigation",sections,index=len(sections)-1,horizontal=True,key=section_key,
+        help="Navigate within Phase 1. Save table edits before switching sections. Returning to a section does not regenerate heats.")
+    if section=="Event details":
+        st.header("1. Event details")
+        if pending:
+            st.info("Save or discard pending entry/heat changes before saving event details.")
+        render_event_settings(db_path,event,pending_edits=bool(pending),expanded_page=True)
+        if st.button("Return to entries and generation"):
+            st.session_state[f"setup_section_return_{event_id}"]="Entries and generation"
+            st.rerun()
+        return
     from services.competition import GENERATION_PROFILES, default_profile
     profile = default_profile(event["meet_type"])
     metadata = json.loads(event.get("generation_metadata") or "{}")
-    if not has_heats:
+    if section=="Entries and generation":
         st.header("2. Review and confirm entries")
         st.caption(f"{len(entries)} entries saved. Add or correct entries below if needed, then generate heats.")
-        with st.expander("Edit event entries",expanded=bool(pending)):
-            render_workbench(db_path,event,entries,state,has_heats=False)
+        with st.expander("Edit event entries",expanded=bool(pending) or has_heats):
+            render_workbench(db_path,event,entries,state,has_heats=has_heats,roster_only=True)
     if event["heat_source"]=="generated":
         generation_area = st.expander("Generation settings") if has_heats else st.container()
         with generation_area:
@@ -195,10 +227,11 @@ def render(db_path, event_id):
                 except ValueError as exc:
                     st.error(str(exc))
                 else:
+                    st.session_state[f"setup_section_return_{event_id}"]="Heat review"
                     st.rerun()
     if event["heat_status"]=="stale":
         st.warning("Assignments changed after approval. Existing operational files are stale; review both disciplines, approve and regenerate them.")
-    if not has_heats:
+    if not has_heats or section=="Entries and generation":
         return
     st.header(("4. " if event["heat_source"]=="generated" else "") + "Organise and approve heats")
     render_workbench(db_path,event,entries,state,has_heats)

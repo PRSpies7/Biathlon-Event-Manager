@@ -165,7 +165,7 @@ def _render_entry_roster(event, state):
             row = by_number[baseline["Athlete"]]
             athletes.append(dict(baseline,**{c:row[c] for c in ("Age group","Gender","Remove from event")},
                 Distance=row[f"{d.title()} distance"],Seed=row[f"{d.title()} seed"]))
-        tables[d] = ([],athletes)
+        tables[d] = (deepcopy(state["drafts"][d]["programme"]),athletes)
     return tables
 
 
@@ -187,7 +187,7 @@ def _save(db_path,event,previous,working,has_heats):
         save_heat_assignments(db_path,event["id"],rows,working["revision"])
 
 
-def render_workbench(db_path,event,entries,state,has_heats):
+def render_workbench(db_path,event,entries,state,has_heats,roster_only=False):
     state_key = f"heat_review_tables_{event['id']}"
     added = {r["athlete_number"] for r in state["rows"]}-{r["athlete_number"] for r in entries}
     show_entry_notices(duplicate_name_notices(state["rows"],only_numbers=added))
@@ -199,11 +199,11 @@ def render_workbench(db_path,event,entries,state,has_heats):
     with st.form(f"heat_review_form_{event['id']}",enter_to_submit=False):
         st.caption("Edits, additions and combinations remain unsaved until you save all changes or save and approve." if has_heats else
                    "Entry edits and additions remain unsaved until you save all changes.")
-        if not has_heats:
+        if not has_heats or roster_only:
             tables = _render_entry_roster(event,state)
         tabs = st.tabs(labels,key=f"heat_review_tabs_{event['id']}",
             default=st.session_state.get(f"heat_review_active_{event['id']}",labels[0]),
-            on_change="rerun") if has_heats else []
+            on_change="rerun") if has_heats and not roster_only else []
         for tab,(discipline,prefix),label in zip(tabs,DISCIPLINES.items(),labels):
             with tab:
                 draft = state["drafts"][discipline]
@@ -265,10 +265,10 @@ def render_workbench(db_path,event,entries,state,has_heats):
                 action = ("save",None)
             if st.form_submit_button("Discard unsaved changes",key=f"discard_heats_{event['id']}",on_click=_remember_current_tab,args=(event["id"],)):
                 action = ("discard",None)
-        if has_heats and event["heat_status"]!="approved":
+        if has_heats and not roster_only and event["heat_status"]!="approved":
             reviewed_run = st.checkbox("I have reviewed the running heats",key=f"review_run_{event['id']}_{event['heat_revision']}")
             reviewed_swim = st.checkbox("I have reviewed the swimming heats",key=f"review_swim_{event['id']}_{event['heat_revision']}")
-            if st.form_submit_button("Save and approve final heats",key=f"approve_heats_{event['id']}",on_click=_remember_current_tab,args=(event["id"],)):
+            if st.form_submit_button("Save and approve final heats",type="primary",key=f"approve_heats_{event['id']}",on_click=_remember_current_tab,args=(event["id"],)):
                 action = ("approve",None)
     if action is None:
         return

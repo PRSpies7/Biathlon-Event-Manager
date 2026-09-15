@@ -32,6 +32,11 @@ Both use the approved Master Entries Excel/PDF parsers and the same saved event.
    entries** provides one combined roster for corrections and missing athletes before
    generation; another routine entry confirmation is not required. Once heats exist,
    profile and regeneration controls are collapsed under **Generation settings**.
+   **Setup navigation** revisits event details, entries/generation and heat review
+   within Phase 1. Save table edits before switching sections. Navigation alone
+   never regenerates heats; event details have one dedicated editing section.
+   Meet type sits alongside the start date, above pool lanes and its confirmation.
+   Primary Phase 1 actions use red with white text; secondary actions remain neutral.
    One shared **Save all changes** action saves roster and both disciplines. Previously
    reviewed duplicate-name notices are not repeated here; a newly added duplicate
    still receives a collapsed notice. Programme columns are Heat, New Position,
@@ -136,8 +141,10 @@ Running continuity follows U13/U15/U17/U19/Junior/Senior/Masters 40+/50+. Prefer
 not to skip an available intermediate category when it offers a compatible,
 equally good relative seed fit. This applies to both genders and does not change
 the programme sequence. League only adds this structural tie-break to its existing
-ranking. Interprovincial U8 singletons may use U9 or older Masters over 400 m,
-with no fixed destination preference. **U8 and U11 can never share an automatic
+ranking. U8 runners prefer older Masters 60+/70+/80+ over 400 m, then U9, for both
+genders. Conservative retains tiny-heat and gender priorities; League retains its
+efficiency priority before this destination preference. Capacity and compatibility
+remain mandatory. **U8 and U11 can never share an automatic
 running heat**, even through U9. Final heat checks enforce all pairwise constraints,
 distance, profile restrictions and hard capacity. Swimming rules are unchanged.
 

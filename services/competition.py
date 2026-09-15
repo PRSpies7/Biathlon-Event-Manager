@@ -127,9 +127,9 @@ def compatibility(left, right, discipline, distance, meet_type=None):
         return 0
     if discipline == "run" and {left,right} == {"U/08","U/11"}:
         return None
-    if (discipline == "run" and distance == 400 and meet_type == "Interprovincial"
+    if (discipline == "run" and distance == 400
             and "U/08" in (left,right) and (left in OLDER_MASTERS or right in OLDER_MASTERS)):
-        return 1  # Equally valid to U8/U9; performance chooses the destination.
+        return 1  # Destination ranking prefers older Masters, then U9.
     if "SPECIAL NEEDS" in (left, right):
         return 2
     return COMPATIBILITY.get((discipline, distance), {}).get(frozenset((left, right)))

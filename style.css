@@ -453,3 +453,40 @@ div.stButton > button.red-action p,
     background: var(--gn-orange-dark);
     border-color: var(--gn-orange-dark);
 }
+
+/* Phase 1: primary actions stay red/white; secondary actions stay white/navy.
+   Cover regular and form buttons, including Markdown label descendants. */
+div.st-key-phase1_setup button[kind="primary"],
+div.st-key-phase1_setup button[data-testid^="stBaseButton-primary"] {
+    background: var(--gn-red);
+    border-color: var(--gn-red);
+    color: #FFFFFF;
+}
+div.st-key-phase1_setup button[kind="primary"] *,
+div.st-key-phase1_setup button[data-testid^="stBaseButton-primary"] * {
+    color: #FFFFFF;
+    -webkit-text-fill-color: #FFFFFF;
+}
+div.st-key-phase1_setup button[kind="primary"]:hover:not(:disabled),
+div.st-key-phase1_setup button[data-testid^="stBaseButton-primary"]:hover:not(:disabled),
+div.st-key-phase1_setup [data-testid="stDownloadButton"] button:hover:not(:disabled) {
+    background: #A70D26;
+    border-color: #A70D26;
+}
+div.st-key-phase1_setup button[kind="secondary"],
+div.st-key-phase1_setup button[data-testid^="stBaseButton-secondary"] {
+    background: var(--gn-surface);
+    border-color: var(--gn-border);
+    color: var(--gn-navy);
+}
+div.st-key-phase1_setup button[kind="secondary"] *,
+div.st-key-phase1_setup button[data-testid^="stBaseButton-secondary"] * {
+    color: var(--gn-navy);
+    -webkit-text-fill-color: var(--gn-navy);
+}
+div.st-key-phase1_setup button[kind="secondary"]:hover:not(:disabled),
+div.st-key-phase1_setup button[data-testid^="stBaseButton-secondary"]:hover:not(:disabled) {
+    background: #F1F5F9;
+    border-color: var(--gn-navy);
+}
+div.st-key-phase1_setup button:disabled { opacity: .5; }

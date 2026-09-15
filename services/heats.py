@@ -356,6 +356,14 @@ def special_needs_rank(heats, discipline):
     return fallback,unknown,gap
 
 
+def u8_masters_rank(heats, discipline):
+    """Prefer older Masters for U8 runners within already feasible arrangements."""
+    if discipline != "run":
+        return 0
+    return sum(sum(category_key(a["group_name"])=="U/08" for a in heat)
+        for heat in heats if not any(category_key(a["group_name"]) in OLDER_MASTERS for a in heat))
+
+
 def final_heat_is_compatible(heat, discipline, capacity, meet_type):
     """Automatic-only guard; manual exceptional arrangements stay supported."""
     if not heat or len(heat)>capacity:
@@ -458,7 +466,7 @@ def conservative_running_rank(heats, capacity):
     """
     score = arrangement_rank(heats,"run",capacity,capacity)
     return (heat_size_quality(heats),score[1],*special_needs_rank(heats,"run"),
-            category_continuity_penalty(heats,capacity),score[4],score[5],score[3],*score[6:])
+            category_continuity_penalty(heats,capacity),u8_masters_rank(heats,"run"),score[4],score[5],score[3],*score[6:])
 
 
 def reconsider_sparse_running(heats, capacity):
@@ -523,7 +531,7 @@ def optimise_heats(heats, discipline, capacity, meet_type):
                             continue
                         rank = conservative_running_rank(arrangement,capacity)
                     else:
-                        rank = (*special_needs_rank(arrangement,discipline),*rank)
+                        rank = (*special_needs_rank(arrangement,discipline),*rank[:2],u8_masters_rank(arrangement,discipline),*rank[2:])
                     candidates.append((rank, identity, left, right))
         if not candidates:
             return [h for h in heats if h]
@@ -619,7 +627,8 @@ def repack_league_clusters(heats, discipline, capacity, preferred):
                             continue
                         result = [h for i,h in enumerate(heats) if i not in indexes]+packed
                         rank = arrangement_rank(result,discipline,capacity,preferred)
-                        candidates.append(((rank[0],*special_needs_rank(result,discipline),*rank[1:]),result,packed))
+                        preference = (rank[1],u8_masters_rank(result,discipline),*rank[2:]) if discipline=="run" else rank[1:]
+                        candidates.append(((rank[0],*special_needs_rank(result,discipline),*preference),result,packed))
         if not candidates:
             return heats
         _,heats,packed = min(candidates,key=lambda c:c[0])

@@ -96,6 +96,11 @@ def render_operational_outputs(db_path,event_id):
 
 
 def render(db_path: str, reference_json: dict):
+    with st.container(key="phase1_setup"):
+        _render(db_path, reference_json)
+
+
+def _render(db_path: str, reference_json: dict):
     st.header("Phase 1 · Event Setup")
 
     # Phase 1 completion is persistent event state. Returning to this phase
@@ -179,12 +184,12 @@ def render(db_path: str, reference_json: dict):
             index=0 if defaults.get("course", "SCM") == "LCM" else 1,
         )
     with col3:
+        meet_types=["Local", "Interprovincial", "National"]
+        meet_type = st.selectbox("Meet type", meet_types, index=meet_types.index(defaults.get("meet_type","Local")))
         pool_lanes = st.number_input("Pool lanes", min_value=1, max_value=12,
             value=metadata.get("pool_lanes",inferred_lanes), step=1)
         capacity_confirmed = st.checkbox(f"Confirm pool capacity: {pool_lanes} lanes",
             key=f"confirm_lanes_{sha256(uploaded.getvalue()).hexdigest()[:12]}_{season_year}_{pool_lanes}") if generated else False
-        meet_types=["Local", "Interprovincial", "National"]
-        meet_type = st.selectbox("Meet type", meet_types, index=meet_types.index(defaults.get("meet_type","Local")))
 
     if not generated:
         st.subheader("Imported Master Dataset")

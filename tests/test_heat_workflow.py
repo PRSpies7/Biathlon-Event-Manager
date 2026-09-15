@@ -70,9 +70,12 @@ def test_programme_sequence_protected_opening_and_reseeded_moves():
     assert swim.index("U/13 GIRLS")<swim.index("JNR GIRLS")<swim.index("U/15 GIRLS")
     field=entries(6,"MASTERS 60+ WOMEN")+entries(2,"MASTERS 70+ WOMEN",10)+entries(2,"SPECIAL NEEDS FEMALE",20)+entries(3,"U/08 GIRLS",30)
     rows=generate_heats(field,settings())
-    opening=[r for r in rows if r["running_heat"]==1]
-    assert len(opening)==10  # Efficient League absorbs the compatible Special Needs remainder.
-    assert {r["group_name"] for r in opening}=={"MASTERS 60+ WOMEN","MASTERS 70+ WOMEN","SPECIAL NEEDS FEMALE"}
+    heat_ids={r["running_heat"] for r in rows}
+    assert len(heat_ids)==2  # U8 is now compatible with older Masters too.
+    for h in heat_ids:
+        members=[r for r in rows if r["running_heat"]==h]
+        assert 5<=len(members)<=12
+        assert any(r["group_name"].startswith("MASTERS") for r in members)
     field=generate_heats(entries(16),settings(),optimise=False)
     before={r["athlete_number"]:dict(r) for r in field}
     selected=field[0]
@@ -245,7 +248,7 @@ def test_whole_group_mixing_fast_swim_heats_and_protected_runs():
         rows=generate_heats(entries(women,"MASTERS 60+ WOMEN")+entries(men,"MASTERS 70+ MEN",20),settings())
         assert len({r["running_heat"] for r in rows})==count
     rows=generate_heats(entries(8,"MASTERS 60+ WOMEN")+entries(3,"U/08 GIRLS",20),settings())
-    assert len({r["running_heat"] for r in rows})==2 and len(rows)==11
+    assert len({r["running_heat"] for r in rows})==1 and len(rows)==11
     rows=generate_heats(entries(12,"MASTERS 60+ WOMEN")+entries(2,"SPECIAL NEEDS FEMALE",20),settings())
     special=next(r["running_heat"] for r in rows if r["group_name"]=="SPECIAL NEEDS FEMALE")
     assert not any(r["group_name"]=="MASTERS 60+ WOMEN" and r["running_heat"]==special for r in rows)

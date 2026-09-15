@@ -155,9 +155,10 @@ heats first and faster heats last; standard position/lane seeding still applies.
   suitable same-gender heat. If no such solution exists, use a valid cross-gender
   fallback rather than preserve the singleton. Special Needs retains its older
   Masters preference inside the viable same-gender/profile choices.
-- A singleton U8 runner can join suitable U9 or older Masters (60+/70+/80+) over
-  400 m. Both are equally valid strong relationships at Interprovincial; size,
-  gender and relative seed fit choose the destination, without a fixed preference.
+- U8 runners prefer older Masters (60+/70+/80+) over 400 m, then U9, for both
+  genders. Conservative applies this preference after tiny-heat repair and gender
+  suitability, before seed similarity. League shares the preference while retaining
+  its heat-count efficiency priority. Full or incompatible Masters heats cannot be used.
 - Hard capacity, distance and final pairwise compatibility always apply first.
 
 ### Running category continuity and final checks
@@ -206,7 +207,7 @@ Needs has the flexible exception described below.
 
 | Discipline / distance | Strong (1) | Neighbouring (2) | Weak (3) |
 | --- | --- | --- | --- |
-| Run 400 m | U8/U9; any older Masters pair; U8/older Masters at Interprovincial | U9/U11 | — |
+| Run 400 m | U8/U9; any older Masters pair; U8/older Masters | U9/U11 | — |
 | Run 800 m | U13/U15; any U15/U17/U19 pair; any adult-cluster pair | U13/U17; U19 with adult cluster | U13/U19; U17 with adult cluster |
 | Swim 25 m | Same U8 category uses tier 0; genders may combine where permitted | — | — |
 | Swim 50 m | U9/U11; any older Masters pair | U11/U13 | U9/U13 |
@@ -215,8 +216,8 @@ Needs has the flexible exception described below.
 Older Masters means 60+, 70+, 80+. The adult cluster means Junior, Senior,
 Masters 40+, Masters 50+. Interprovincial preserves satisfactory U11/U13 heats;
 League may repack them within valid neighbouring clusters to remove a heat.
-U8/older Masters is an Interprovincial running option for sparse repair; League
-retains its existing relationship table. U9/older Masters remains incompatible.
+U8/older Masters is a preferred running combination in both League and
+Interprovincial. U9/older Masters remains incompatible.
 Neither U9 nor Special Needs can act as a bridge to permit forbidden pairs.
 
 **Special Needs:** any recognised same-distance category is a flexible tier-2

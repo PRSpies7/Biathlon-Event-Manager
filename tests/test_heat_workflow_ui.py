@@ -235,6 +235,25 @@ def test_unified_entry_review_add_remove_and_save_before_generation(tmp_path,mon
     assert not next(b for b in app.button if b.label=="Generate heats from entries").disabled
 
 
+def test_setup_navigation_returns_to_details_and_entries_without_regenerating(tmp_path,monkeypatch):
+    app,db,eid,_=opened(tmp_path,monkeypatch,generate_heats(entries(8),settings()))
+    before=get_athletes(db,eid)
+    with patch("services.heats.generate_heats",side_effect=AssertionError("Navigation must not regenerate")):
+        app.radio(key=f"setup_section_{eid}").set_value("Event details").run()
+        assert not app.exception and not app.error
+        assert len([i for i in app.number_input if i.label=="Pool lanes"])==1
+        next(b for b in app.button if b.label=="Return to entries and generation").click().run()
+        assert app.radio(key=f"setup_section_{eid}").value=="Entries and generation"
+        assert not app.tabs and len(table(app,f"entry_roster_{eid}_").value)==8
+        submit(app,f"save_all_changes_{eid}",{f"entry_roster_{eid}_":{0:{"Run seed":"01:23.45"}}})
+        assert not app.error
+        after=get_athletes(db,eid)
+        assert [(r["running_heat"],r["swimming_heat"]) for r in after]==[(r["running_heat"],r["swimming_heat"]) for r in before]
+        app.radio(key=f"setup_section_{eid}").set_value("Heat review").run()
+        assert not app.exception and len(app.tabs)==2
+        assert not any(e.label=="Event settings" for e in app.expander)
+
+
 @pytest.mark.parametrize("generated",[True,False])
 def test_both_start_paths_and_output_regeneration_preserve_edits(tmp_path,monkeypatch,generated):
     history=tmp_path/"history.sqlite"
