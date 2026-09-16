@@ -169,3 +169,53 @@ def test_reports_receive_only_selected_season(tmp_path, monkeypatch):
         app.selectbox(key="season_selected_year").set_value(2026).run()
         assert not app.exception
         assert {r["season_year"] for r in reports.call_args.args[1]["results"]} == {2026}
+
+
+def test_workflow_radios_and_steppers_stay_in_sync(tmp_path, monkeypatch):
+    from database.repository import create_event
+
+    app = app_test(tmp_path, monkeypatch)
+    event_steps = ['1. Event Setup', '2. Run Position Mapping', '3. Results Ingestion', '4. Final Results & Export']
+    season_steps = ['1. Import Results', '2. Imported Events', '3. Athlete Database', '4. Reports']
+
+    def check_stepper(labels, active):
+        steps = [m.value for m in app.markdown if 'class="step-item ' in m.value]
+        assert len(steps) == 4
+        assert all(label in step for label, step in zip(labels, steps))
+        assert [i for i, step in enumerate(steps) if 'step-item active' in step] == [active]
+        assert not app.exception
+
+    assert app.radio(key='workflow_phase').label == 'Workflow Steps'
+    assert app.radio(key='workflow_phase').options == event_steps
+    check_stepper(event_steps, 0)
+    # An unopened event still cannot navigate past setup.
+    app.radio(key='workflow_phase').set_value(3).run()
+    assert app.radio(key='workflow_phase').value == 1
+    check_stepper(event_steps, 0)
+    db = tmp_path / 'data/biathlon_events.sqlite'
+    eid = create_event(db, 'Navigation', 'GN', '2026-09-01', 'SCM', 6)
+    app.session_state.event_id = eid
+    app.run()
+    app.radio(key='workflow_phase').set_value(3).run()
+    check_stepper(event_steps, 2)
+    app.button(key='btn_next_bottom').click().run()
+    assert app.radio(key='workflow_phase').value == 4
+    check_stepper(event_steps, 3)
+    app.button(key='btn_prev_bottom').click().run()
+    assert app.radio(key='workflow_phase').value == 3
+    app.radio(key='app_module').set_value('Season Results Database').run()
+    assert app.radio(key='season_view').label == 'Workflow Steps'
+    assert app.radio(key='season_view').options == season_steps
+    check_stepper(season_steps, 0)
+    app.button(key='season_continue').click().run()
+    check_stepper(season_steps, 1)
+    app.radio(key='season_view').set_value('Reports').run()
+    check_stepper(season_steps, 3)
+    app.button(key='season_back').click().run()
+    check_stepper(season_steps, 2)
+    app.radio(key='app_module').set_value('Event Management').run()
+    assert app.radio(key='workflow_phase').value == 3
+    check_stepper(event_steps, 2)
+    app.button(key='start_new_session').click().run()
+    assert app.radio(key='workflow_phase').value == 1
+    check_stepper(event_steps, 0)

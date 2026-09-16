@@ -59,6 +59,22 @@ phases = {
 }
 
 
+def render_workflow_stepper(labels, current_index):
+    st.markdown('<div class="workflow-stepper">', unsafe_allow_html=True)
+    for index, (column, label) in enumerate(zip(st.columns(len(labels)), labels)):
+        with column:
+            active_class = "active" if index == current_index else ""
+            st.markdown(
+                f'<div class="step-item {active_class}">{label}</div>',
+                unsafe_allow_html=True,
+            )
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+def select_workflow_phase():
+    set_phase(st.session_state.workflow_phase)
+
+
 def go_next_phase():
     """Move forward one phase without changing persistent event data."""
     if st.session_state.current_phase < TOTAL_PHASES:
@@ -158,20 +174,14 @@ with st.sidebar:
         renamed_views = {"Athletes": "Athlete Database", "Downloads": "Reports"}
         if st.session_state.get("season_view") in renamed_views:
             st.session_state.season_view = renamed_views[st.session_state.season_view]
-        st.radio("Season views", SEASON_VIEWS, key="season_view")
+        st.radio("Workflow Steps", SEASON_VIEWS, key="season_view",
+                 format_func=lambda view: f"{SEASON_VIEWS.index(view) + 1}. {view}")
     else:
         init_db(DB_PATH)
-        st.subheader("Workflow Steps")
-        for phase_number, label in phases.items():
-            is_current = st.session_state.current_phase == phase_number
-            st.button(
-                label,
-                key=f"side_nav_{phase_number}",
-                on_click=set_phase,
-                args=(phase_number,),
-                type="primary" if is_current else "secondary",
-                use_container_width=True,
-            )
+        # The phase controller also changes through Next/Previous and session reset.
+        st.session_state.workflow_phase = st.session_state.current_phase
+        st.radio("Workflow Steps", list(phases), key="workflow_phase",
+                 format_func=lambda phase: phases[phase], on_change=select_workflow_phase)
 
         st.divider()
         st.subheader("Sessions")
@@ -240,6 +250,10 @@ with st.sidebar:
                 st.caption(f"Session ID: {ev['id']}")
 
 if module == "Season Results Database":
+    render_workflow_stepper(
+        [f"{index + 1}. {view}" for index, view in enumerate(SEASON_VIEWS)],
+        SEASON_VIEWS.index(st.session_state.season_view),
+    )
     render_season_results(BASE_DIR)
     st.stop()
 
@@ -248,16 +262,7 @@ if module == "Season Results Database":
 # ============================================================================
 # The large application header was intentionally removed in V1.10, but the
 # workflow stepper remains the primary at-a-glance navigation indicator.
-st.markdown('<div class="workflow-stepper">', unsafe_allow_html=True)
-step_cols = st.columns(TOTAL_PHASES)
-for idx, (phase_number, phase_label) in enumerate(phases.items()):
-    with step_cols[idx]:
-        active_class = "active" if st.session_state.current_phase == phase_number else ""
-        st.markdown(
-            f'<div class="step-item {active_class}">{phase_label}</div>',
-            unsafe_allow_html=True,
-        )
-st.markdown('</div>', unsafe_allow_html=True)
+render_workflow_stepper(list(phases.values()), st.session_state.current_phase - 1)
 
 # ============================================================================
 # TIME DROPS REFERENCE

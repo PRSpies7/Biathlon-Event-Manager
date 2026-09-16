@@ -287,5 +287,5 @@ def test_both_start_paths_and_output_regeneration_preserve_edits(tmp_path,monkey
             click("Regenerate operational files")
         assert get_athletes(db,eid)==before and len(current_outputs(db,eid))==5
         for phase in (2,3,4):
-            app.button(key=f"side_nav_{phase}").click().run()
+            app.radio(key="workflow_phase").set_value(phase).run()
             assert not app.exception

@@ -91,7 +91,7 @@ def test_phase2_empty_heat_and_test_controls_smoke(tmp_path,monkeypatch):
     from test_heat_workflow_ui import opened
     app,db,eid,_=opened(tmp_path,monkeypatch,generate_heats(entries(3),settings()))
     approve_heats(db,eid,get_event(db,eid)["heat_revision"])
-    app.button(key="side_nav_2").click().run()
+    app.radio(key="workflow_phase").set_value(2).run()
     app.button(key=f"insert_run_heat_{eid}").click().run()
     assert not app.exception and not app.error
     assert get_running_heats(db,eid)==[1,2]
@@ -99,10 +99,10 @@ def test_phase2_empty_heat_and_test_controls_smoke(tmp_path,monkeypatch):
     app.checkbox(key=f"test_event_confirm_2_{eid}").check().run()
     app.button(key=f"generate_test_data_2_{eid}").click().run()
     assert not app.exception and not app.error
-    app.button(key="side_nav_3").click().run()
+    app.radio(key="workflow_phase").set_value(3).run()
     app.checkbox(key=f"test_event_confirm_3_{eid}").check().run()
     app.button(key=f"generate_test_data_3_{eid}").click().run()
     assert not app.exception and not app.error
-    app.button(key="side_nav_4").click().run()
+    app.radio(key="workflow_phase").set_value(4).run()
     assert not app.exception
     assert any("generated test data" in w.value for w in app.warning)
