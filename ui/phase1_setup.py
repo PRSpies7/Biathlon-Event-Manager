@@ -10,7 +10,7 @@ import streamlit as st
 from database.repository import create_event, replace_athletes, get_event, get_athletes, approve_heats
 from exporters.timedrops_json import TIMEDROPS_UTC_OFFSET, generate_timedrops_json, dumps_json
 from parsers.master_entries import parse_master_entries
-from parsers.master_entries_pdf import infer_pdf_event_defaults
+from parsers.master_entries_pdf import infer_pdf_event_defaults, infer_event_name
 from validation.validators import validate_master
 from services.competition import infer_season
 
@@ -140,9 +140,9 @@ def _render(db_path: str, reference_json: dict):
         return
 
     is_pdf = source_type == ".pdf"
-    pdf_defaults = infer_pdf_event_defaults(uploaded.name) if is_pdf else None
+    filename_defaults = infer_pdf_event_defaults(uploaded.name)
     metadata=parsed.get("metadata",{})
-    defaults=dict(pdf_defaults or {})
+    defaults=dict(filename_defaults)
     defaults.update(metadata)
     inferred_lanes = max(
         [int(r["lane"]) for r in parsed["swimming_records"] if r["lane"] is not None] or [8]
@@ -158,14 +158,17 @@ def _render(db_path: str, reference_json: dict):
     with col1:
         meet_name = st.text_input(
             "Meet name",
-            value=defaults.get("meet_name",Path(uploaded.name).stem),
+            value=defaults.get("meet_name", infer_event_name(uploaded.name)),
         )
         host_team = st.text_input(
             "Host / Team name",
             value=defaults.get("host_team","Gauteng North Biathlon"),
         )
     with col2:
-        default_start = date.fromisoformat(defaults["start_date"]) if defaults.get("start_date") else date.today()
+        try:
+            default_start = date.fromisoformat(defaults["start_date"]) if defaults.get("start_date") else date.today()
+        except ValueError:
+            default_start = date.today()
         start_date = st.date_input("Meet start date", value=default_start)
         season_year = st.number_input("Season", min_value=1900, max_value=9999,
             value=metadata.get("season_year",infer_season(start_date)), step=1, key=f"event_season_{start_date}",

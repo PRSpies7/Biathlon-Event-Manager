@@ -289,3 +289,21 @@ def test_both_start_paths_and_output_regeneration_preserve_edits(tmp_path,monkey
         for phase in (2,3,4):
             app.radio(key="workflow_phase").set_value(phase).run()
             assert not app.exception
+
+
+@pytest.mark.parametrize('generated', [True, False])
+def test_upload_name_and_date_defaults(tmp_path, monkeypatch, generated):
+    app = app_test(tmp_path, monkeypatch)
+    upload = BytesIO()
+    upload.name = 'GNB League 2_Entries_2026-09-12.xlsx'
+    parsed = {'athletes': entries(2), 'swimming_records': [], 'running_heats': [],
+              'swimming_heats': [], 'swimming_only_athletes': [], 'metadata': {}}
+    with patch('streamlit.file_uploader', return_value=upload), patch('ui.phase1_setup.parse_master_entries', return_value=parsed), patch('ui.phase1_setup.validate_master', return_value=[]):
+        app.radio(key='heat_source_0').set_value('Generate heats from entries' if generated else 'Use existing heats').run()
+        assert not app.exception
+        assert next(t.value for t in app.text_input if t.label == 'Meet name') == 'GNB League 2'
+        assert next(d.value for d in app.date_input if d.label == 'Meet start date') == date(2026, 9, 12)
+        parsed['metadata'] = {'meet_name': 'Official meet', 'start_date': '2026-09-13'}
+        app.run()
+        assert next(t.value for t in app.text_input if t.label == 'Meet name') == 'Official meet'
+        assert next(d.value for d in app.date_input if d.label == 'Meet start date') == date(2026, 9, 13)

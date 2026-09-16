@@ -190,6 +190,16 @@ def parse_master_entries_pdf(path_or_file) -> dict[str, Any]:
     }
 
 
+def infer_event_name(filename: str) -> str:
+    """Use the meet portion of entries/heats filenames for either upload format."""
+    stem = Path(filename).stem
+    name = re.sub(
+        r"[\s_-]+(?:master[\s_-]+)?(?:entries|heats)(?:[\s_-].*)?$",
+        "", stem, flags=re.IGNORECASE,
+    )
+    return name.replace("_", " ").strip() or "Biathlon Event"
+
+
 def infer_pdf_event_defaults(filename: str) -> dict[str, Any]:
     """Infer the minimum event settings needed for PDF-only initialization.
 
@@ -205,8 +215,7 @@ def infer_pdf_event_defaults(filename: str) -> dict[str, Any]:
         if date_match
         else None
     )
-    meet_name = re.sub(r"[_-]?Heats[_-]?20\d{2}[-_]\d{2}[-_]\d{2}$", "", stem, flags=re.IGNORECASE)
-    meet_name = meet_name.replace("_", " ").strip() or "Biathlon Event"
+    meet_name = infer_event_name(filename)
     return {
         "meet_name": meet_name,
         "host_team": "Gauteng North Biathlon",
