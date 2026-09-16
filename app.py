@@ -176,14 +176,14 @@ with st.sidebar:
     )
     st.divider()
 
-    module = st.radio("Module", ("Event Management", "Season Results Database"), key="app_module", on_change=change_module)
+    module = st.radio("Module", ("Event Management", "Season Results Database", "Results Verification"), key="app_module", on_change=change_module)
     if module == "Season Results Database":
         renamed_views = {"Athletes": "Athlete Database", "Downloads": "Reports"}
         if st.session_state.get("season_view") in renamed_views:
             st.session_state.season_view = renamed_views[st.session_state.season_view]
         st.radio("Workflow Steps", SEASON_VIEWS, key="season_view",
                  format_func=lambda view: f"{SEASON_VIEWS.index(view) + 1}. {view}")
-    else:
+    elif module == "Event Management":
         init_db(DB_PATH)
         # The phase controller also changes through Next/Previous and session reset.
         st.session_state.workflow_phase = st.session_state.current_phase
@@ -255,6 +255,11 @@ with st.sidebar:
             if ev:
                 st.divider()
                 st.caption(f"Session ID: {ev['id']}")
+
+if module == "Results Verification":
+    from ui.results_verification import render as render_verification
+    render_verification()
+    st.stop()
 
 if module == "Season Results Database":
     render_workflow_stepper(

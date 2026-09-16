@@ -60,6 +60,15 @@ def render(db_path: str, event_id: int):
         st.warning("No event data is available.")
         return
 
+    from services.results_verification import event_results
+    from ui.results_verification import render_verification
+    scope = f"phase4_verification_{event_id}"
+    if notice := st.session_state.pop(f"{scope}_notice", None):
+        st.success(notice)
+    with st.container(border=True):
+        st.subheader("Manual Results Verification")
+        render_verification(event_results(athletes), scope, db_path, event_id)
+
     complete = [a for a in athletes if a.get("run_time") and a.get("swim_time")]
     excluded = [a for a in athletes if not (a.get("run_time") and a.get("swim_time"))]
 

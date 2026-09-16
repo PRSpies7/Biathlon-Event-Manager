@@ -198,3 +198,32 @@ it keeps their files. Missing workspaces are harmless. Historical season results
 source, fixtures, examples, reference documents and templates are never targeted.
 Runtime workspaces are ignored by Git. The old `data/generated` event JSON copies
 were disposable exports and have been removed; reference documents remain intact.
+
+### Results Verification
+
+Use **Manual Results Verification** in Event Management Step 4, or the standalone
+**Results Verification** module. Both use the same engine and review panel.
+The standalone module accepts final-results XML, Master Results Excel, and the
+existing published season-results Excel/PDF formats; it never imports into history.
+
+Upload both manual Run and Swim PDFs, then select **Verify Results**. Athlete ID
+has priority; exact normalized names are a fallback, and ambiguous matches require
+correction. Differences up to and including 0.40 seconds pass. Differences through
+1.00 second require a choice; larger differences are warned and shown first.
+Choose **Use Electronic** or **Use Manual**, then **Apply Selected Results**.
+Unselected issues never change results. Step 4 uses its existing manual-time update
+path and refreshes its authoritative table and exports. It does not calculate
+competition scores/rankings; published season scores are preserved independently.
+
+Handwritten extraction is isolated in `parsers/manual_results_pdf.py`. It uses the
+existing run-sheet columns and swim timekeeper table cells. No handwriting OCR,
+paid service, or API key is installed. Text readings remain unconfirmed; scans with
+no readable rows are flagged. Use **Review or transcribe manual readings** and
+**Recheck edited readings** to correct IDs/times against the PDFs. A recognizer can
+later be supplied through the crop-based interface after validation with real
+completed run and swim sheets. Missing readings are never treated as a pass.
+
+`N/S`, `NS`, and `DNS` mean did not start; selecting Manual clears the relevant
+captured time. Blank readings remain missing. Compact handwritten times such as
+`106.44` are proposed as `01:06.44` and require review. Real handwritten samples
+containing these cases are still needed to validate automatic recognition.
