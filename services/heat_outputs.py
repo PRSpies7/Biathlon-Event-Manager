@@ -1,5 +1,6 @@
 """Build and store one revision-consistent operational package."""
 import json
+from hashlib import sha256
 
 from database.db import get_conn
 from exporters.heats import build_heats_pdf, build_heats_xlsx
@@ -7,6 +8,7 @@ from exporters.athlete_event_mapping import build_printable_athlete_mapping_xlsx
 from exporters.swim_timekeeper import build_swim_timekeeper_xlsx
 from exporters.timedrops_json import generate_timedrops_json, dumps_json
 from services.heats import enrich_imported, validate_heats
+from services.event_workspace import save_output, output_path
 
 XLSX="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
@@ -41,15 +43,27 @@ def generate_outputs(db_path,event_id,reference):
         if current["heat_revision"]!=event["heat_revision"] or current["heat_status"]!="approved":
             raise ValueError("Assignments changed during export. Review and regenerate the files.")
         conn.execute("DELETE FROM event_outputs WHERE event_id=?",(event_id,))
+        for name, (mime, content) in files.items():
+            save_output(db_path, event_id, name, content)
         conn.executemany("INSERT INTO event_outputs VALUES (?,?,?,?,?)",
-            [(event_id,event["heat_revision"],name,mime,content) for name,(mime,content) in files.items()])
+            [(event_id,event["heat_revision"],name,mime,sha256(content).digest()) for name,(mime,content) in files.items()])
         conn.execute("UPDATE events SET exports_revision=heat_revision WHERE id=?",(event_id,))
     return files
 
 
 def current_outputs(db_path,event_id):
     with get_conn(db_path) as conn:
-        return {r["filename"]:(r["mime"],r["content"]) for r in conn.execute("""
+        records = conn.execute("""
             SELECT o.* FROM event_outputs o JOIN events e ON e.id=o.event_id
             WHERE e.id=? AND e.heat_status='approved' AND e.approved_revision=e.heat_revision
-              AND e.exports_revision=e.heat_revision AND o.revision=e.heat_revision""",(event_id,))}
+              AND e.exports_revision=e.heat_revision AND o.revision=e.heat_revision""",(event_id,)).fetchall()
+    files = {}
+    for record in records:
+        path = output_path(db_path, event_id, record["filename"])
+        if not path.is_file():
+            return {}  # Missing or legacy package requires explicit regeneration.
+        content = path.read_bytes()
+        if sha256(content).digest() != record["content"]:
+            return {}  # Incomplete writes or older packages are never offered.
+        files[record["filename"]] = (record["mime"], content)
+    return files

@@ -182,3 +182,19 @@ affiliation and event awards, and provides seven Excel reports including school
 team rankings and qualification. See
 [Season Results Database V1](SEASON_RESULTS_DATABASE.md) for usage, persistent
 SQLite configuration, supported layouts and deployment limitations.
+
+### Event runtime files
+
+Disposable event files live beside the event database in
+`data/runtime/event_<event_id>/{uploads,outputs,temp}/`. Operational PDF, Excel
+and TimeDrops JSON packages, run position workbooks and final Excel/XML exports
+are saved in `outputs`. Uploads are processed in memory; no extra copies are made.
+Operational downloads retain approval/revision checks and verify file integrity.
+Legacy database-only packages need explicit regeneration before downloading.
+
+Reset Sessions still clears all saved event sessions. Its optional **Also delete
+event files** checkbox removes only those sessions' runtime workspaces. Unchecked,
+it keeps their files. Missing workspaces are harmless. Historical season results,
+source, fixtures, examples, reference documents and templates are never targeted.
+Runtime workspaces are ignored by Git. The old `data/generated` event JSON copies
+were disposable exports and have been removed; reference documents remain intact.

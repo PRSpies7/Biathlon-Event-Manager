@@ -488,6 +488,8 @@ def render(db_path: str, event_id: int):
         from database.repository import get_event
         event = get_event(db_path, event_id)
         xlsx = build_run_positions_xlsx(export_athletes, export_groups)
+        from services.event_workspace import save_output
+        save_output(db_path, event_id, "Run Positions.xlsx", xlsx)
         event_name = (event["name"] if event else "Event").strip()
         from exporters.filenames import event_filename
         st.download_button(

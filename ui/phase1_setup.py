@@ -15,14 +15,6 @@ from validation.validators import validate_master
 from services.competition import infer_season
 
 
-def _generated_dir(db_path: str) -> Path:
-    return Path(db_path).resolve().parent / "generated"
-
-
-def _json_path(db_path: str, event_id: int) -> Path:
-    return _generated_dir(db_path) / f"event_{event_id}_meet_program.json"
-
-
 def _render_persistent_event(db_path: str, event_id: int):
     event = get_event(db_path, event_id)
     athletes = get_athletes(db_path, event_id)
@@ -236,9 +228,6 @@ def _render(db_path: str, reference_json: dict):
             st.session_state.event_id = event_id
             generate_outputs(db_path,event_id,reference_json)
             st.session_state.timedrops_json = dumps_json(json_data)
-            generated_dir = _generated_dir(db_path)
-            generated_dir.mkdir(parents=True, exist_ok=True)
-            _json_path(db_path, event_id).write_text(st.session_state.timedrops_json, encoding="utf-8")
             st.session_state.active_phase = 1
             st.success("Event initialized successfully. The persistent Master Dataset has been created.")
             st.rerun()

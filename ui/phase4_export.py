@@ -152,6 +152,9 @@ def render(db_path: str, event_id: int):
 
     xlsx = build_master_import_xlsx(athletes)
     xml = build_results_xml(athletes)
+    from services.event_workspace import save_output
+    save_output(db_path, event_id, "Final Results.xlsx", xlsx)
+    save_output(db_path, event_id, "Final Results.xml", xml)
     event = get_event(db_path, event_id)
     event_name = event["name"] if event else "Event"
     col1, col2 = st.columns(2)

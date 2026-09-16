@@ -53,8 +53,15 @@ def get_events(db_path: str) -> list[dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
-def delete_all_events(db_path: str) -> int:
+def delete_all_events(db_path: str, delete_event_files: bool = False) -> int:
     """Delete all saved event sessions and their cascading related records."""
+    if delete_event_files:
+        from services.event_workspace import cleanup_workspace, workspace_path
+        event_ids = [event["id"] for event in get_events(db_path)]
+        for event_id in event_ids:
+            workspace_path(db_path, event_id)
+        for event_id in event_ids:
+            cleanup_workspace(db_path, event_id)
     with get_conn(db_path) as conn:
         event_count = int(conn.execute("SELECT COUNT(*) FROM events").fetchone()[0])
         conn.execute("DELETE FROM events")

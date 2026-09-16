@@ -125,9 +125,9 @@ def start_new_session():
     st.session_state.new_session_token += 1
 
 
-def reset_saved_sessions():
+def reset_saved_sessions(delete_event_files=False):
     """Delete all saved events, then return this browser session to clean Phase 1."""
-    delete_all_events(str(DB_PATH))
+    delete_all_events(str(DB_PATH), delete_event_files=delete_event_files)
     start_new_session()
     for key in list(st.session_state.keys()):
         if key.startswith(("phase2_", "phase3_", "phase4_", "heat_review_tables_", "heat_review_active_", "heat_review_tabs_", "entry_removals_", "entry_values_")):
@@ -217,11 +217,17 @@ with st.sidebar:
 
         if st.session_state.get("confirm_reset_sessions"):
             st.warning("Delete all saved sessions and their event data?")
+            delete_event_files = st.checkbox("Also delete event files", value=False,
+                help="Deletes files uploaded or generated for the events being cleared. Historical season results are not affected.")
             confirm_col, cancel_col = st.columns(2)
             with confirm_col:
                 if st.button("Confirm reset", key="confirm_reset_sessions_button", type="primary", width="stretch"):
-                    reset_saved_sessions()
-                    st.rerun()
+                    try:
+                        reset_saved_sessions(delete_event_files)
+                    except (OSError, ValueError) as exc:
+                        st.error(f"Reset could not finish: {exc}")
+                    else:
+                        st.rerun()
             with cancel_col:
                 if st.button("Cancel", key="cancel_reset_sessions_button", width="stretch"):
                     st.session_state.pop("confirm_reset_sessions", None)
