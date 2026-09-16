@@ -72,11 +72,11 @@ def result_indicator(row, peers=()):
     if not any(row.get(d+"_time") for d in ("run","swim")):
         return "🔴"
     if not all(t is not None and t>0 for t in times):
-        return "🟠"
+        return "🟡"
     for discipline,value in zip(("run","swim"),times):
         seed = row.get(discipline+"_seed")
         if seed and (value<seed/2 or value>seed*2):
-            return "🟠"
+            return "🟡"
         from statistics import median
         from services.competition import category_key
         prefix = "running" if discipline=="run" else "swimming"
@@ -92,5 +92,5 @@ def result_indicator(row, peers=()):
             valid = [time_hundredths(other.get(discipline+"_time")) for other in cohort]
             valid = [t for t in valid if t is not None and t>0]
             if len(valid)>=3 and (value<median(valid)/2 or value>median(valid)*2):
-                return "🟠"
+                return "🟡"
     return "🟢"

@@ -72,16 +72,16 @@ def test_sample_data_keeps_existing_values_and_is_marked(tmp_path):
 def test_result_colours_and_heat_or_category_outliers():
     row=dict(athlete_number="1",group_name="U/13 GIRLS",gender="F",running_heat=1,swimming_heat=1,run_distance=800,swim_distance=50)
     assert result_indicator(row)=="🔴"
-    assert result_indicator(dict(row,run_time="02:00.00"))=="🟠"
+    assert result_indicator(dict(row,run_time="02:00.00"))=="🟡"
     row.update(run_time="02:00.00",swim_time="00:40.00")
     assert result_indicator(row)=="🟢"
-    assert result_indicator(dict(row,run_seed=3000))=="🟠"
+    assert result_indicator(dict(row,run_seed=3000))=="🟡"
     peers=[dict(row,athlete_number=str(i),run_time="00:50.00") for i in (2,3,4)]
-    assert result_indicator(row,peers)=="🟠"
+    assert result_indicator(row,peers)=="🟡"
     assert result_indicator(row,peers[:2])=="🟢"
     for p in peers:
         p["running_heat"]=2  # Category reference still catches it.
-    assert result_indicator(row,peers)=="🟠"
+    assert result_indicator(row,peers)=="🟡"
     for p in peers:
         p["run_distance"]=400
     assert result_indicator(row,peers)=="🟢"

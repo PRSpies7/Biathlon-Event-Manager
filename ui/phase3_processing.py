@@ -185,8 +185,8 @@ def render(db_path: str, event_id: int):
             for a in filtered_athletes
         ])
         st.caption(f"{len(filtered_athletes)} of {len(athletes)} athlete(s) shown.")
-        st.caption("🔴 No results · 🟠 Partial results or time to review · 🟢 Both results recorded")
+        st.caption("🔴 No results · 🟡 Partial results or time to review · 🟢 Both results recorded")
         st.dataframe(df, width="stretch", hide_index=True,column_config={"Status":st.column_config.TextColumn(width="small",
-            help="Amber also flags invalid times, or a time below half/above twice its seed or the median of at least three other same-distance results in its heat or age/gender group. Review only; times are never changed.")})
+            help="Yellow also flags invalid times, or a time below half/above twice its seed or the median of at least three other same-distance results in its heat or age/gender group. Review only; times are never changed.")})
     else:
         st.info("The Master Dataset is currently empty.")
