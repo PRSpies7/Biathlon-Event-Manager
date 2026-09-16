@@ -358,3 +358,27 @@ def test_last_heat_mapping_saved_or_navigation_blocked(tmp_path, monkeypatch, ac
         assert app.session_state[f'phase2_heat_{eid}'] == 2
         assert app.radio(key='app_module').value == 'Event Management'
         assert any('Duplicate position' in e.value for e in app.error)
+
+
+@pytest.mark.parametrize('runtime', ['04:12.50', 'invalid'])
+def test_partial_final_results_downloads(tmp_path, monkeypatch, runtime):
+    from database.db import get_conn
+    from services.event_workspace import workspace_path
+    app, db, eid, _ = opened(tmp_path, monkeypatch, generate_heats(entries(1), settings()))
+    approve_heats(db, eid, get_event(db, eid)['heat_revision'])
+    with get_conn(db) as conn:
+        conn.execute('UPDATE athletes SET run_time=? WHERE event_id=?', (runtime, eid))
+    app.radio(key='workflow_phase').set_value(4).run()
+    assert not app.exception
+    if runtime == 'invalid':
+        assert any('Final validation failed' in e.value for e in app.error)
+        assert not app.get('download_button')
+    else:
+        downloads = app.get('download_button')
+        assert len(downloads) == 2
+        assert all(not d.proto.disabled for d in downloads)
+        folder = workspace_path(db, eid) / 'outputs'
+        assert (folder / 'Review Master Results 2026-09-01.xlsx').is_file()
+        assert (folder / 'Review Master Results 2026-09-01.xml').is_file()
+        athlete = get_athletes(db, eid)[0]
+        assert athlete['run_time'] == runtime and athlete['swim_time'] is None

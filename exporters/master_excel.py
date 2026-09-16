@@ -19,15 +19,15 @@ def build_master_import_xlsx(athletes: list[dict[str, Any]]) -> BytesIO:
         cell.number_format = "@"
 
     for a in athletes:
-        # The supplied reference output contains only athletes with both valid times.
-        if not a.get("run_time") or not a.get("swim_time"):
+        # Export partial results without changing the captured source times.
+        if not a.get("run_time") and not a.get("swim_time"):
             continue
         ws.append([
             str(a["athlete_number"]),
             str(a["athlete_name"]),
             str(a["athlete_name"]),
-            str(a["run_time"]),
-            str(a["swim_time"]),
+            str(a.get("run_time") or "00:00.00"),
+            str(a.get("swim_time") or "00:00.00"),
         ])
         for c in ws[ws.max_row]:
             c.number_format = "@"

@@ -132,10 +132,14 @@ def render(db_path: str, event_id: int):
     athletes = get_athletes(db_path, event_id)
     complete = [a for a in athletes if a.get("run_time") and a.get("swim_time")]
     excluded = [a for a in athletes if not (a.get("run_time") and a.get("swim_time"))]
-    invalid_complete = validate_times(complete, require_complete=True)
+    exportable = [a for a in athletes if a.get("run_time") or a.get("swim_time")]
+    partial = [a for a in exportable if not (a.get("run_time") and a.get("swim_time"))]
+    invalid_complete = validate_times(exportable, require_complete=False)
 
-    if excluded:
-        st.warning(f"{len(excluded)} athlete(s) are incomplete and will not be included in the final XLSX/XML export until both times are present.")
+    if partial:
+        st.info(f"{len(partial)} athlete(s) have partial results. Missing times export as 00:00.00; captured results remain unchanged.")
+    if len(exportable) < len(athletes):
+        st.caption(f"{len(athletes) - len(exportable)} athlete(s) with no results are excluded from exports.")
 
     if invalid_complete:
         st.error("Final validation failed. Correct the highlighted time values before exporting.")
@@ -145,28 +149,30 @@ def render(db_path: str, event_id: int):
 
     st.divider()
     st.subheader("Final Output")
-    if complete:
+    if exportable:
         st.success("Final dataset is valid for export.")
     else:
-        st.info("No complete results are currently available for export.")
+        st.info("No results are currently available for export.")
 
     xlsx = build_master_import_xlsx(athletes)
     xml = build_results_xml(athletes)
     from services.event_workspace import save_output
-    save_output(db_path, event_id, "Final Results.xlsx", xlsx)
-    save_output(db_path, event_id, "Final Results.xml", xml)
     event = get_event(db_path, event_id)
     event_name = event["name"] if event else "Event"
+    xlsx_name = event_results_filename(event_name, "xlsx", event["start_date"] if event else None)
+    xml_name = event_results_filename(event_name, "xml", event["start_date"] if event else None)
+    save_output(db_path, event_id, xlsx_name, xlsx)
+    save_output(db_path, event_id, xml_name, xml)
     col1, col2 = st.columns(2)
     with col1:
         st.download_button(
-            "Download Master Excel", data=xlsx, file_name=event_results_filename(event_name, "xlsx", event["start_date"] if event else None),
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="primary", disabled=not complete
+            "Download Master Results (.xlsx)", data=xlsx, file_name=xlsx_name,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", type="primary", disabled=not exportable
         )
     with col2:
         st.download_button(
-            "Download Results XML", data=xml, file_name=event_results_filename(event_name, "xml", event["start_date"] if event else None),
-            mime="application/xml", type="primary", disabled=not complete
+            "Download Master Results (.xml)", data=xml, file_name=xml_name,
+            mime="application/xml", type="primary", disabled=not exportable
         )
 
     st.divider()

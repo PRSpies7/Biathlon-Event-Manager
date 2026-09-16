@@ -160,3 +160,21 @@ def test_event_results_filename_uses_a_sanitised_event_name():
     assert event_filename("GN League 3", "Combined Heats", "pdf", "2026-09-14") == "GN League 3 Combined Heats 2026-09-14.pdf"
     assert event_filename("GN League 3", "Swim Timekeeper Sheets", "xlsx", "2026-09-14") == "GN League 3 Swim Timekeeper Sheets 2026-09-14.xlsx"
     assert event_results_filename("GN League 3", "xml", "2026-09-14") == "GN League 3 Master Results 2026-09-14.xml"
+
+
+def test_partial_results_export_zero_times_without_changing_source():
+    from copy import deepcopy
+    from xml.etree.ElementTree import fromstring
+    payload = [
+        {'athlete_number': '1', 'athlete_name': 'Run only', 'run_time': '04:12.50', 'swim_time': None},
+        {'athlete_number': '2', 'athlete_name': 'Swim only', 'run_time': '', 'swim_time': '01:05.20'},
+        {'athlete_number': '3', 'athlete_name': 'Both', 'run_time': '04:00.00', 'swim_time': '01:00.00'},
+        {'athlete_number': '4', 'athlete_name': 'Neither'},
+    ]
+    original = deepcopy(payload)
+    expected = [('04:12.50', '00:00.00'), ('00:00.00', '01:05.20'), ('04:00.00', '01:00.00')]
+    ws = load_workbook(build_master_import_xlsx(payload)).active
+    assert [(row[3], row[4]) for row in ws.iter_rows(min_row=2, values_only=True)] == expected
+    results = fromstring(build_results_xml(payload)).findall('result')
+    assert [(r.findtext('runtime'), r.findtext('swimtime')) for r in results] == expected
+    assert payload == original
