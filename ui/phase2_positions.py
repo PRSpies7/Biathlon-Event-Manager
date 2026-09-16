@@ -274,6 +274,17 @@ def _render_compact_athlete_controls(db_path: str, event_id: int, athletes: list
                 st.rerun()
 
 
+def _jump_to_heat(db_path, event_id, current_heat):
+    jump_key = f"jump_heat_{event_id}_{current_heat}"
+    issues = save_current_mapping(db_path, event_id)
+    if issues:
+        st.session_state[f"phase2_next_errors_{event_id}"] = issues
+        st.session_state[jump_key] = current_heat
+    else:
+        st.session_state[f"phase2_heat_{event_id}"] = st.session_state[jump_key]
+        st.session_state.pop(f"phase2_pending_{event_id}", None)
+
+
 def render(db_path: str, event_id: int):
     st.header("Phase 2 · Run Position Mapping")
     for issue in st.session_state.pop(f"phase2_next_errors_{event_id}", []):
@@ -306,10 +317,9 @@ def render(db_path: str, event_id: int):
             index=heats.index(current_heat),
             format_func=lambda x: heat_description(x,athletes),
             key=f"jump_heat_{event_id}_{current_heat}",
+            on_change=_jump_to_heat,
+            args=(db_path, event_id, current_heat),
         )
-        if jump != current_heat:
-            st.session_state[key] = jump
-            st.rerun()
 
     with control2:
         combine_key = f"phase2_combine_{event_id}_{_selected_key(current_unit)}"
@@ -407,6 +417,14 @@ def render(db_path: str, event_id: int):
         )
 
     target_unit = None
+    with middle:
+        if st.button("Save Positions", key=f"save_positions_{event_id}"):
+            issues = save_current_mapping(db_path, event_id)
+            if issues:
+                for issue in issues:
+                    st.error(issue)
+            else:
+                st.success("Positions saved.")
     if prev_clicked and idx > 0:
         target_unit = units[idx - 1]
     elif next_clicked and idx < len(units) - 1:
@@ -502,7 +520,7 @@ def render(db_path: str, event_id: int):
             key=f"export_run_positions_{event_id}",
         )
     else:
-        st.info("No run positions have been persisted yet. Complete a heat and use Next Heat or Previous Heat to save its positions.")
+        st.info("No run positions have been saved yet. Use Save Positions, or navigate to another heat or phase to save.")
 
     st.subheader("Restore Run Position Export")
     imported_file = st.file_uploader(

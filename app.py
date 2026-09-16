@@ -76,30 +76,37 @@ def select_workflow_phase():
 
 
 def go_next_phase():
-    """Move forward one phase without changing persistent event data."""
+    """Save pending mapping edits before moving forward."""
     if st.session_state.current_phase < TOTAL_PHASES:
         if st.session_state.current_phase > 1 and not st.session_state.event_id:
             return
-        if st.session_state.current_phase == 2:
-            issues = save_current_mapping(str(DB_PATH), st.session_state.event_id)
-            if issues:
-                st.session_state[f"phase2_next_errors_{st.session_state.event_id}"] = issues
-                return
-            st.session_state.pop(f"phase2_next_errors_{st.session_state.event_id}", None)
-        st.session_state.current_phase += 1
-        st.session_state.active_phase = st.session_state.current_phase
+        set_phase(st.session_state.current_phase + 1)
 
 
 def go_prev_phase():
-    """Move backward one phase without changing persistent event data."""
+    """Save pending mapping edits before moving backward."""
     if st.session_state.current_phase > 1:
-        st.session_state.current_phase -= 1
-        st.session_state.active_phase = st.session_state.current_phase
+        set_phase(st.session_state.current_phase - 1)
+
+
+def save_mapping_before_navigation():
+    if st.session_state.current_phase == 2 and st.session_state.event_id:
+        issues = save_current_mapping(str(DB_PATH), st.session_state.event_id)
+        st.session_state[f"phase2_next_errors_{st.session_state.event_id}"] = issues
+        return not issues
+    return True
+
+
+def change_module():
+    if st.session_state.app_module != "Event Management" and not save_mapping_before_navigation():
+        st.session_state.app_module = "Event Management"
 
 
 def set_phase(phase_number: int):
-    """Direct phase navigation; no SQLite data is modified."""
+    """Save the visible mapping before leaving Phase 2."""
     phase_number = max(1, min(TOTAL_PHASES, int(phase_number)))
+    if phase_number != st.session_state.current_phase and not save_mapping_before_navigation():
+        return
     if phase_number > 1 and not st.session_state.event_id:
         st.session_state.current_phase = 1
     else:
@@ -169,7 +176,7 @@ with st.sidebar:
     )
     st.divider()
 
-    module = st.radio("Module", ("Event Management", "Season Results Database"), key="app_module")
+    module = st.radio("Module", ("Event Management", "Season Results Database"), key="app_module", on_change=change_module)
     if module == "Season Results Database":
         renamed_views = {"Athletes": "Athlete Database", "Downloads": "Reports"}
         if st.session_state.get("season_view") in renamed_views:

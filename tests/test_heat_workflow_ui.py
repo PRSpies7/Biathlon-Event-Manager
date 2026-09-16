@@ -307,3 +307,54 @@ def test_upload_name_and_date_defaults(tmp_path, monkeypatch, generated):
         app.run()
         assert next(t.value for t in app.text_input if t.label == 'Meet name') == 'Official meet'
         assert next(d.value for d in app.date_input if d.label == 'Meet start date') == date(2026, 9, 13)
+
+
+@pytest.mark.parametrize('action', ['save', 'previous', 'next_phase', 'previous_phase', 'sidebar', 'jump', 'module'])
+@pytest.mark.parametrize('valid', [True, False])
+def test_last_heat_mapping_saved_or_navigation_blocked(tmp_path, monkeypatch, action, valid):
+    rows = generate_heats(entries(2), settings())
+    for row in rows:
+        row['running_heat'] = 2
+    app, db, eid, _ = opened(tmp_path, monkeypatch, rows)
+    approve_heats(db, eid, get_event(db, eid)['heat_revision'])
+    # Keep an earlier heat available while testing edits in the last heat.
+    from database.repository import save_run_positions
+    save_run_positions(db, eid, [1], {})
+    app.session_state[f'phase2_heat_{eid}'] = 2
+    app.radio(key='workflow_phase').set_value(2).run()
+    assert not app.exception
+    assert app.button(key=f'next_heat_{eid}').disabled
+    if action == 'save':
+        app.button(key=f'save_positions_{eid}').click()
+    elif action == 'previous':
+        app.button(key=f'prev_heat_{eid}').click()
+    elif action == 'next_phase':
+        app.button(key='btn_next_bottom').click()
+    elif action == 'previous_phase':
+        app.button(key='btn_prev_bottom').click()
+    elif action == 'sidebar':
+        app.radio(key='workflow_phase').set_value(3)
+    elif action == 'jump':
+        app.selectbox(key=f'jump_heat_{eid}_2').set_value(1)
+    else:
+        app.radio(key='app_module').set_value('Season Results Database')
+    states = app._tree.get_widget_states()
+    editor = table(app, f'phase2_editor_{eid}_2')
+    states.widgets.append(WidgetState(id=editor.proto.id, string_value=json.dumps({
+        'edited_rows': {'0': {'Position': '1'}, '1': {'Position': '2' if valid else '1'}},
+        'added_rows': [], 'deleted_rows': []})))
+    app._run(widget_state=states)
+    assert not app.exception
+    positions = [a['run_position'] for a in get_athletes(db, eid)]
+    if valid:
+        assert positions == [1, 2]
+        assert not app.error
+        if action == 'save':
+            assert app.session_state.current_phase == 2
+            assert any(s.value == 'Positions saved.' for s in app.success)
+    else:
+        assert positions == [None, None]
+        assert app.session_state.current_phase == 2
+        assert app.session_state[f'phase2_heat_{eid}'] == 2
+        assert app.radio(key='app_module').value == 'Event Management'
+        assert any('Duplicate position' in e.value for e in app.error)
