@@ -1,7 +1,7 @@
 """Known heat-sheet geometry with a small, optional handwriting recognizer boundary.
 
 A recognizer receives a pdfplumber page crop of one Time cell and returns
-(text, certain). No OCR service, credentials, or network calls are configured.
+(text, certain). Scanned pages can use the local OCR adapter; no document upload service is used.
 """
 from io import BytesIO
 import re
@@ -9,7 +9,7 @@ import pdfplumber
 from services.results_verification import ManualReading
 
 
-def extract_manual_pdf(payload, discipline, recognizer=None):
+def extract_manual_pdf(payload, discipline, recognizer=None, *, recognize_scans=False):
     readings, warnings = [], []
     with pdfplumber.open(BytesIO(payload)) as pdf:
         if not pdf.pages:
@@ -17,6 +17,12 @@ def extract_manual_pdf(payload, discipline, recognizer=None):
         for page_number, page in enumerate(pdf.pages, 1):
             words = page.extract_words()
             text = page.extract_text() or ''
+            if not text.strip() and recognize_scans:
+                from services.local_results_ocr import extract_scanned_page
+                scanned, notices = extract_scanned_page(page, discipline, page_number)
+                readings.extend(scanned)
+                warnings.extend(notices)
+                continue
             if discipline == 'run' and 'Swimming Heats' in text:
                 continue
             if discipline == 'swim' and 'Running Heats' in text:
@@ -75,6 +81,6 @@ def extract_manual_pdf(payload, discipline, recognizer=None):
                     found += 1
             if not found:
                 warnings.append(f'{discipline.title()} page {page_number}: no readable athlete rows. Scanned handwriting requires manual transcription or a configured recognizer.')
-    if recognizer is None:
+    if recognizer is None and not recognize_scans:
         warnings.append(f'{discipline.title()}: automatic handwriting recognition is not available. Extracted text is unconfirmed; review it against the original PDF. Never treat a missing reading as verified.')
     return readings, warnings

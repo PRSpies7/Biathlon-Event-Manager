@@ -215,15 +215,27 @@ Unselected issues never change results. Step 4 uses its existing manual-time upd
 path and refreshes its authoritative table and exports. It does not calculate
 competition scores/rankings; published season scores are preserved independently.
 
-Handwritten extraction is isolated in `parsers/manual_results_pdf.py`. It uses the
-existing run-sheet columns and swim timekeeper table cells. No handwriting OCR,
-paid service, or API key is installed. Text readings remain unconfirmed; scans with
-no readable rows are flagged. Use **Review or transcribe manual readings** and
-**Recheck edited readings** to correct IDs/times against the PDFs. A recognizer can
-later be supplied through the crop-based interface after validation with real
-completed run and swim sheets. Missing readings are never treated as a pass.
+Scanned PDFs are recognized locally using RapidOCR/ONNX Runtime. Install the
+optional dependencies with `.venv/Scripts/python.exe -m pip install -r requirements-ocr.txt`.
+They are already installed in this working environment. No API key is needed and
+PDFs are not uploaded to a service. Both verification interfaces invoke the same
+recognition adapter automatically when a page has no text layer.
+
+The adapter locates printed athlete rows in the known run/swim layouts and reads
+individual time boxes. Each proposed reading includes an image of the original
+row. All OCR readings remain unconfirmed, regardless of recognition scores.
+Review the ID and handwriting before choosing Electronic or Manual; correct
+misread IDs/times under **Review or transcribe manual readings**, then recheck.
+Missing rows remain issues. Blanks and crossed-out rows are never automatically
+converted into recorded results. Very different layouts or poor scans may need
+manual transcription.
 
 `N/S`, `NS`, and `DNS` mean did not start; selecting Manual clears the relevant
-captured time. Blank readings remain missing. Compact handwritten times such as
-`106.44` are proposed as `01:06.44` and require review. Real handwritten samples
-containing these cases are still needed to validate automatic recognition.
+captured time. Compact times such as `106.44`, `10944`, `1.1708`, and alternative
+separators such as `40:12` are proposed as formatted times and require review.
+The local sample check used the first page of each supplied League 2 PDF: 19 run
+rows and 21 swim rows were detected. Some digits were misread, particularly on the
+run sheet; this is assisted transcription, not validated unattended recognition.
+
+Recognition models are provided by [RapidOCR](https://github.com/RapidAI/RapidOCR).
+Models are cached in the Python environment and are not event runtime outputs.

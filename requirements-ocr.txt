@@ -1,0 +1,3 @@
+# Local recognition for scanned Run/Swim results. No API keys required.
+rapidocr==3.9.2
+onnxruntime>=1.24,<2

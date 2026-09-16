@@ -29,8 +29,9 @@ def render_verification(electronic, scope, db_path=None, event_id=None):
         state = None
     if st.button('Verify Results', key=f'{scope}_verify', disabled=not (run and swim and electronic)):
         try:
-            run_rows, run_warnings = extract_manual_pdf(run.getvalue(), 'run')
-            swim_rows, swim_warnings = extract_manual_pdf(swim.getvalue(), 'swim')
+            with st.spinner('Reading both PDFs locally. Initial model setup may take a few minutes; scanned readings require review.'):
+                run_rows, run_warnings = extract_manual_pdf(run.getvalue(), 'run', recognize_scans=True)
+                swim_rows, swim_warnings = extract_manual_pdf(swim.getvalue(), 'swim', recognize_scans=True)
             manual = run_rows + swim_rows
             issues = verify_results(electronic, manual)
         except Exception as exc:
@@ -66,9 +67,10 @@ def render_verification(electronic, scope, db_path=None, event_id=None):
         if st.button('Recheck edited readings', key=f'{scope}_recheck'):
             manual = []
             for index, row in enumerate(records):
-                certain = index >= len(rows) or row != original[index] or rows[index]['certain']
+                certain = index >= len(rows) or row['time'] != original[index]['time'] or rows[index]['certain']
                 manual.append(ManualReading(str(row['athlete_id']), str(row['athlete_name']),
-                                            row['discipline'], str(row['time']) or None, certain, str(row['source'])))
+                                            row['discipline'], str(row['time']) or None, certain, str(row['source']),
+                                            rows[index].get('preview') if index < len(rows) else None))
             try:
                 state['issues'] = verify_results(electronic, manual)
             except ValueError as exc:
@@ -90,6 +92,8 @@ def render_verification(electronic, scope, db_path=None, event_id=None):
             high_risk = issue.difference is not None and issue.difference > 1
             title = f'{issue.athlete_id or "Unknown ID"} · {issue.athlete_name or "Unknown athlete"} · {issue.discipline.title()}'
             (st.warning if high_risk else st.write)(('⚠ High risk — ' if high_risk else '') + title)
+            if issue.preview:
+                st.image(issue.preview, caption='Original scanned row — check athlete ID and handwritten time before choosing a result.')
             difference = f'{issue.difference:.3f} s' if issue.difference is not None else '—'
             st.write(f'Manual: {issue.manual_time or "—"} · Electronic: {issue.electronic_time or "—"} · Difference: {difference}')
             if manual_value(issue.manual_time)[1]:

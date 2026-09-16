@@ -177,7 +177,7 @@ def test_both_screens_use_shared_engine_and_apply(tmp_path, monkeypatch, standal
     scope = 'verification_standalone' if standalone else f'phase4_verification_{eid}'
     def upload(label, **kwargs):
         return electronic_file if label == 'Electronic final results' else pdf
-    def extract(payload, discipline):
+    def extract(payload, discipline, **kwargs):
         return [Reading('100', 'Athlete 0', discipline, '01:02.00' if discipline == 'run' else '00:32.23', True)], []
     with patch('streamlit.file_uploader', side_effect=upload), patch('ui.results_verification.extract_manual_pdf', side_effect=extract), patch('ui.results_verification.verify_results', wraps=verify_results) as engine:
         if standalone:

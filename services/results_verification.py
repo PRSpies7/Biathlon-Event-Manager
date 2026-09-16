@@ -31,11 +31,24 @@ def no_start(value):
 def manual_value(value):
     """Compact handwritten MSS.hh is a reviewable candidate, never a silent fix."""
     text = str(value or '').strip()
+    compact_digits = re.fullmatch(r'(\d{4,6})', text)
+    if compact_digits:
+        digits = compact_digits[1]
+        return f'{int(digits[:-4] or 0)}:{digits[-4:-2]}.{digits[-2:]}', True
+    compact_fraction = re.fullmatch(r'(\d{1,2})[.:](\d{4})', text)
+    if compact_fraction:
+        return f'{int(compact_fraction[1])}:{compact_fraction[2][:2]}.{compact_fraction[2][2:]}', True
+    # Some timekeepers use a colon/comma between seconds and hundredths.
+    # This alternative reading is always flagged for confirmation.
+    seconds_only = re.fullmatch(r'(\d{2})[:,](\d{2})', text)
+    if seconds_only and int(seconds_only[1]) < 60:
+        return f'00:{seconds_only[1]}.{seconds_only[2]}', True
+    text = text.replace(',', '.')
     match = re.fullmatch(r'(\d{3,4})\.(\d{1,2})', text)
     if match:
         digits, fraction = match.groups()
         return f'{int(digits[:-2])}:{digits[-2:]}.{fraction}', True
-    return value, False
+    return text, text != str(value or '').strip()
 
 
 def formatted_time(value):
@@ -64,6 +77,7 @@ class ManualReading:
     time: str | None
     certain: bool = False
     source: str = ''
+    preview: bytes | None = None
 
 
 @dataclass(frozen=True)
@@ -79,6 +93,7 @@ class Issue:
     matching: str
     target_id: str | None
     source: str = ''
+    preview: bytes | None = None
 
 
 def event_results(rows):
@@ -148,7 +163,7 @@ def verify_results(electronic, manual):
             issues.append(Issue(str(len(issues)), target.athlete_id if target else reading.athlete_id,
                 target.athlete_name if target else reading.athlete_name, discipline, reading.time,
                 electronic_time, difference, status, method,
-                target.athlete_id if target and status != 'DUPLICATE_MANUAL_RESULT' else None, reading.source))
+                target.athlete_id if target and status != 'DUPLICATE_MANUAL_RESULT' else None, reading.source, reading.preview))
     for result in electronic:
         for discipline in ('run', 'swim'):
             if getattr(result, discipline + '_expected') and (result.athlete_id, discipline) not in seen:
