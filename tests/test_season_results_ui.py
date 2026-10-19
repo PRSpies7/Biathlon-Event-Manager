@@ -171,6 +171,49 @@ def test_reports_receive_only_selected_season(tmp_path, monkeypatch):
         assert {r["season_year"] for r in reports.call_args.args[1]["results"]} == {2026}
 
 
+def test_reset_and_reimport_selects_imported_season(tmp_path, monkeypatch):
+    from dataclasses import replace
+    from database.season_repository import store_event
+
+    app = app_test(tmp_path, monkeypatch)
+    app.radio(key="app_module").set_value("Season Results Database").run()
+    db = tmp_path / "data" / "season_results.sqlite"
+    event = replace(sample_event(), season_year=2027)
+    store_event(db, event)
+    app.radio(key="season_view").set_value("Athlete Database").run()
+    app.button(key="season_reset").click().run()
+    app.button(key="season_confirm_reset_button").click().run()
+    # Viewing the empty database leaves the season selector on legacy/unassigned.
+    app.radio(key="season_view").set_value("Imported Events").run()
+    assert app.selectbox(key="season_selected_year").value is None
+    app.radio(key="season_view").set_value("Import Results").run()
+    app.session_state.season_pending = [{"event": event, "token": "again", "outcome": ""}]
+    app.run()
+    app.button(key="season_import").click().run()
+    assert not app.exception
+    assert len(season_snapshot(db, 2027)["results"]) == 2
+    app.button(key="season_saved_2027").click().run()
+    assert app.selectbox(key="season_selected_year").value == 2027
+    assert len(app.dataframe[0].value) == 1
+
+
+def test_all_duplicate_skips_disable_import(tmp_path, monkeypatch):
+    from dataclasses import replace
+    from database.season_repository import store_event
+
+    app = app_test(tmp_path, monkeypatch)
+    app.radio(key="app_module").set_value("Season Results Database").run()
+    event = replace(sample_event(), season_year=2027)
+    db = tmp_path / "data" / "season_results.sqlite"
+    store_event(db, event)
+    app.session_state.season_pending = [{"event": event, "token": "duplicate", "outcome": ""}]
+    app.run()
+    assert app.button(key="season_import").disabled
+    assert any("Nothing is selected" in message.value for message in app.info)
+    app.radio(key="season_action_duplicate").set_value("Overwrite").run()
+    assert not app.button(key="season_import").disabled
+
+
 def test_workflow_radios_and_steppers_stay_in_sync(tmp_path, monkeypatch):
     from database.repository import create_event
 

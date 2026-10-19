@@ -22,6 +22,9 @@ See [database migrations](DATABASE_MIGRATIONS.md) for backup and storage details
    event results or skip this event?** Choose **Overwrite** or **Skip**. Skip is
    the default. Duplicate identities within a batch receive the same choice.
 4. Select **Import selected results**. Each event is a separate transaction.
+   The preview shows selected event/result counts and skipped events. When every
+   event is skipped, importing is disabled. After saving, **View saved events for
+   Season …** opens the imported events with that season selected.
    Overwriting removes its entire old result and award set and inserts the new
    set atomically, retaining its event ID. A failed transaction rolls back that
    event; previously completed events in the batch remain saved.
@@ -45,6 +48,9 @@ See [database migrations](DATABASE_MIGRATIONS.md) for backup and storage details
    unassigned records must be assigned before resetting. Reset also clears import previews.
    Event Management sessions remain intact. Export or back up anything you need
    before resetting; the action cannot be undone.
+   No app restart is needed after reset: upload the files again, preview them,
+   confirm their details and select **Import selected results**. Previewing alone
+   does not save anything. A new season can be imported without resetting older seasons.
 
 ## Report rules
 

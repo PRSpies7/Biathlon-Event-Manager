@@ -39,6 +39,20 @@ Previous heat assignments never train future generation. See the complete
 - Navigation: Open previous saved event sessions and view the current Master Dataset at any time.
 - Run TXT timing-button import is intentionally **not implemented** in V1.9. It remains a future enhancement.
 
+## Quick Excel to XML conversion
+
+Choose **Quick Tools** in the sidebar, upload an edited final-results `.xlsx`
+export, then select **Download Final Results XML**. No event setup is required;
+conversion does not change saved sessions. The XML uses the existing final-results
+format and the uploaded filename with an `.xml` extension.
+
+Keep the original `Athlete nr`, `Athlete Name`, `athleteSurname`, `runtime`, and
+`swimtime` headers. Times accept `MM:SS.ss` and native Excel time cells. Blank or
+`00:00.00` times are treated as missing; partial results export the missing time as
+`00:00.00`, and athletes with neither time are excluded. Invalid times, missing
+names/numbers, duplicate numbers, Excel errors and formulas block conversion.
+Replace formulas with calculated values before uploading.
+
 ## Important architecture
 
 SQLite is the application's live persistent Master Dataset.

@@ -176,7 +176,7 @@ with st.sidebar:
     )
     st.divider()
 
-    module = st.radio("Module", ("Event Management", "Season Results Database", "Results Verification"), key="app_module", on_change=change_module)
+    module = st.radio("Module", ("Event Management", "Season Results Database", "Results Verification", "Quick Tools"), key="app_module", on_change=change_module)
     if module == "Season Results Database":
         renamed_views = {"Athletes": "Athlete Database", "Downloads": "Reports"}
         if st.session_state.get("season_view") in renamed_views:
@@ -255,6 +255,11 @@ with st.sidebar:
             if ev:
                 st.divider()
                 st.caption(f"Session ID: {ev['id']}")
+
+if module == "Quick Tools":
+    from ui.quick_tools import render as render_quick_tools
+    render_quick_tools()
+    st.stop()
 
 if module == "Results Verification":
     from ui.results_verification import render as render_verification

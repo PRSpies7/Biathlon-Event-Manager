@@ -13,7 +13,7 @@ def build_results_xml(athletes: list[dict[str, Any]]) -> bytes:
         result = SubElement(root, "result")
         SubElement(result, "athleteNo").text = str(a["athlete_number"])
         SubElement(result, "athleteName").text = str(a["athlete_name"])
-        SubElement(result, "athleteSurname").text = str(a["athlete_name"])
+        SubElement(result, "athleteSurname").text = str(a.get("athlete_surname") or a["athlete_name"])
         SubElement(result, "runtime").text = str(a.get("run_time") or "00:00.00")
         SubElement(result, "swimtime").text = str(a.get("swim_time") or "00:00.00")
 

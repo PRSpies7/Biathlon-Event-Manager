@@ -24,6 +24,11 @@ def _set_view(view):
     st.session_state.season_view = view
 
 
+def _show_imported_events(season_year):
+    st.session_state.season_view = "Imported Events"
+    st.session_state.season_selected_year = season_year
+
+
 def _continue_navigation(view):
     index = VIEWS.index(view)
     st.divider()
@@ -41,7 +46,7 @@ def _continue_navigation(view):
 
 def _imports(db_path):
     st.subheader("Upload published final results for the current season")
-    st.caption("Multiple files are accepted.")
+    st.caption("Upload files → Preview results → Confirm event details → Import selected results. Multiple files are accepted; uploading or previewing alone does not save results.")
     uploads = st.file_uploader("Final results files", type=["pdf", "xlsx"], accept_multiple_files=True,
                               key=f"season_uploads_{st.session_state.get('season_upload_generation', 0)}")
     if st.button("Preview results", disabled=not uploads, key="season_preview"):
@@ -64,6 +69,11 @@ def _imports(db_path):
     pending = st.session_state.get("season_pending", [])
     if not pending:
         return
+    saved_years = sorted({item["event"].season_year for item in pending
+                          if item.get("saved") and item["event"].season_year is not None}, reverse=True)
+    for year in saved_years:
+        st.button(f"View saved events for Season {year}", key=f"season_saved_{year}",
+                  on_click=_show_imported_events, args=(year,))
     st.subheader("Pre-import summary")
     summaries, decisions, seen = [], [], set()
     ready = True
@@ -104,20 +114,32 @@ def _imports(db_path):
                 try:
                     candidate.check_structure()
                 except ValueError as exc:
-                    st.info(str(exc))
+                    if not candidate.results and event.results:
+                        st.error("No GN results remain after filtering this interprovincial file. Check the Province / Team columns and competition type before importing.")
+                    else:
+                        st.error(str(exc))
                     ready = False
                 seen.add(identity)
             summaries.append(summary)
             decisions.append((item, candidate, action))
     if summaries:
         st.dataframe(summaries, hide_index=True, width="stretch")
-        if st.button("Import selected results", type="primary", disabled=not ready, key="season_import"):
+        selected = [candidate for _, candidate, action in decisions if action != "Skip"]
+        st.caption(f"Selected: {len(selected)} event(s), {sum(len(event.results) for event in selected)} results. Skipped: {len(decisions) - len(selected)} event(s).")
+        if not selected:
+            st.info("Nothing is selected for import. Tick Import this event, or choose Overwrite for an existing event.")
+        if st.button("Import selected results", type="primary", disabled=not ready or not selected, key="season_import"):
             for item, event, action in decisions:
                 try:
                     event_id = import_event(db_path, event, action)
                     item["outcome"] = "Skipped" if event_id is None else f"{'Replaced' if action == 'Overwrite' else 'Imported'} {event.name} ({len(event.results)} results)"
+                    item["event"] = event
+                    item["saved"] = event_id is not None
                 except EventAlreadyExists:
                     st.warning("An event was imported after this preview. Review its Overwrite / Skip choice.")
+                    return
+                except ValueError as exc:
+                    st.error(f"Could not save {event.source_filename}: {exc}")
                     return
                 except Exception:
                     st.error(f"Could not save {event.source_filename}. Its transaction was rolled back; any other completed imports remain saved. Check the database configuration and retry.")
@@ -200,7 +222,7 @@ def render(base_dir):
     st.header("Season Results Database")
     st.caption("Seasons end in July: August-December belongs to the following year's season. Inferred seasons can be corrected.")
     if st.session_state.pop("season_reset_notice", False):
-        st.success("The season database has been reset. You can import results for a new season.")
+        st.success("The selected season has been reset. To rebuild it, return to Import Results, upload the files again, preview them and select Import selected results. No app restart is needed.")
     try:
         db_path = season_database_path(base_dir)
         init_season_db(db_path)
