@@ -2,9 +2,21 @@
 
 Open **Season Results Database** in the sidebar. This is independent of the four
 event-management phases and their saved sessions. One historical database now
-holds multiple seasons. Confirm **Season** in the event details. The August–July
+holds multiple seasons. Confirm **Season** in the event details. The August–April
 season is named for its ending year: September 2026 defaults to Season 2027.
 The inferred value can be overridden.
+
+The database opens on saved **Events**, with an **Athletes** tab for searching and
+checking individual results. **Import or update events** expands on the Events
+screen; no step-by-step navigation is required. **View reports** opens the Reports
+module and retains the selected season. The Reports update link returns directly
+to the import section.
+
+Reports provides the combined season workbook first. Specialist downloads focus
+on athlete qualification, school qualification and team places, ranked performances,
+and affiliation follow-up. Each workbook starts with the decision-making summary;
+supporting detail follows only where needed. Records and the full archival database
+export are separate expandable sections. Report data tabs include column filters.
 
 Previously unassigned events with valid dates receive an inferred season; explicit
 seasons are preserved. **Imported Events** allows corrections. Records whose season
@@ -13,34 +25,37 @@ See [database migrations](DATABASE_MIGRATIONS.md) for backup and storage details
 
 ## Use
 
-1. In **Import Results**, upload one or more PDF / `.xlsx` files and select
-   **Preview results**. No database results change at this stage.
+1. On **Events**, expand **Import or update events**, upload one or more PDF / `.xlsx`
+   files and select **Process results**. Valid new events are saved immediately;
+   when the whole batch succeeds, Reports opens with the processed season selected.
 2. Check the source filename, detected event name, date, competition type, result
    count and awards count. **Event details** allows brief metadata corrections.
    Dates come from document contents, never a potentially misleading filename.
 3. Existing events prompt: **This event already exists. Overwrite the existing
    event results or skip this event?** Choose **Overwrite** or **Skip**. Skip is
    the default. Duplicate identities within a batch receive the same choice.
-4. Select **Import selected results**. Each event is a separate transaction.
+4. For duplicates or incomplete metadata, review the choices and select
+   **Process selected results**. Each event is a separate transaction.
    The preview shows selected event/result counts and skipped events. When every
    event is skipped, importing is disabled. After saving, **View saved events for
    Season …** opens the imported events with that season selected.
    Overwriting removes its entire old result and award set and inserts the new
    set atomically, retaining its event ID. A failed transaction rolls back that
    event; previously completed events in the batch remain saved.
-5. **Imported Events**, **Athlete Database**, and **Reports** have a **Season**
-   selector. Event date is displayed separately. **Athlete Database** supports search,
+5. The database and Reports share a **Season** selector. Event date is displayed
+   separately. **Athletes** supports search,
    affiliation filtering, individual results and manual affiliation corrections.
-   Back / Continue buttons follow the same style as Event Management navigation.
+   **View reports** opens Reports directly; its update button returns to importing.
    Report descriptions use hover help beside each title; download buttons sit
    directly below. On-screen qualification previews are collapsible.
-6. **Reports** provides seven Excel downloads: full database, primary/high school
-   results, qualified schools, affiliated athletes, qualified athletes, top athletes, and records. See the report
+6. **Reports** provides the combined season workbook and focused athlete qualification,
+   school selection, ranked performance and affiliation downloads, plus records and
+   an archival database export. See the report
    rules below. The full database includes Athletes, Event Results, Imported Events
    and Event Awards sheets, plus Current Records when references have been saved.
    The Athletes sheet has one row per season athlete, `Affiliated` /
    `Not Affiliated`, attendance counts and one readable awards column.
-7. **Reset Database** on **Athlete Database** opens a warning with **Cancel** and
+7. **Reset Database** under **Database maintenance** opens a warning with **Cancel** and
    **Confirm Reset Database**. For an assigned season it removes only that season's
    events, results, awards and category memberships, preserving other seasons,
    shared athlete identities and record references. An entirely unassigned legacy
@@ -48,11 +63,28 @@ See [database migrations](DATABASE_MIGRATIONS.md) for backup and storage details
    unassigned records must be assigned before resetting. Reset also clears import previews.
    Event Management sessions remain intact. Export or back up anything you need
    before resetting; the action cannot be undone.
-   No app restart is needed after reset: upload the files again, preview them,
-   confirm their details and select **Import selected results**. Previewing alone
-   does not save anything. A new season can be imported without resetting older seasons.
+   No app restart is needed after reset: upload the files again and select
+   **Process results**. A new season can be imported without resetting older seasons.
 
 ## Report rules
+
+### Season 2027 attendance update
+
+For U/08 through U/19, qualification requires **four completed qualifying events,
+including at least one interprovincial or GN Championship**. JNR/junior, senior and
+Masters through 80+ require **three**, also including an IP/GN Championship.
+Additional interprovincials/championships can substitute for league events. Two
+leagues, one championship and one IP therefore satisfy U/08–U/19 attendance.
+Each event counts once; one championship cannot occupy two attendance places.
+Earlier seasons retain the previous attendance rules described below. Special Needs
+attendance and all points thresholds remain unchanged. School selection uses the
+updated 2027 attendance rule when assessing its age-group athletes.
+
+Summary separates **Qualification Status** (Qualified / Not qualified) from the
+adjacent **Qualification requirements** column, which explains outstanding events
+or points, for example **+2 events: 1 IP/Champs + 1 League; Score 1890+**.
+Extra IP/championship events can still substitute for the league places described
+in that short reminder. Qualified athletes show None in the requirements column.
 
 Reports show athlete number, name, age group and school. Result reports also show
 run time, swim time and total points. They sort age groups from youngest to oldest
@@ -79,7 +111,21 @@ information as described below.
   at least two events without affiliating, including those outside the main sheet.
 - **Qualified schools**: a school ranking plus a School Athlete Scores sheet with
   all eligible athletes, affiliation, selection/place, qualification shortfalls,
-  best score and its event/date, counted contribution, and every event's raw total.
+  and named age-group/extra-place attendance breakdowns. Empty mandatory or extra
+  places are included in Qualification requirements as "athlete needed".
+  Qualified and Full team cells use green for Yes and red for No in both the
+  combined and specialist school workbooks. Missing events identifies the age group
+  or extra place. Team athletes and Highest scores are separate final columns,
+  using the same position labels to match names, scores and outstanding requirements.
+  Primary Schools precedes High Schools in both downloads.
+  All school athletes lists each school athlete once with their age group and
+  highest completed season score, including age groups outside team selection.
+  Athletes with only DNF, missing or zero-time results are excluded from this list;
+  a DNF does not disqualify an athlete who completed another event. The listed age
+  group is the category of the best completed result. This roster does not change
+  which selected athletes contribute to the school total.
+  Athlete detail shows the best score and its event/date, counted contribution,
+  and every event's raw total.
   Names ending in `Ps` use primary rules; `Hs` use high-school rules (case ignored).
   Unrecognized suffixes remain visible with a missing-type explanation and no
   invented score. Primary teams require one athlete each from U9, U11, U13 and
@@ -203,7 +249,7 @@ restarts. **Reset Sessions** does not delete season data.
 One database file holds multiple seasons. Select the required season in the app;
 there is no need to configure a new file each year. Seasons are named for their
 ending year: August–December events default to the following year, and
-January–July events default to their calendar year. The organiser can correct
+January–April events default to their calendar year. The organiser can correct
 the inferred season before saving. Historical seeding searches that season and
 at most the two immediately preceding seasons.
 

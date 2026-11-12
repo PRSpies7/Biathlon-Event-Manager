@@ -17,53 +17,64 @@ from services.season_results_service import athlete_rows, import_event, import_s
 from services.competition import infer_season
 from ui.season_reports import render as render_reports
 
-VIEWS = ("Import Results", "Imported Events", "Athlete Database", "Reports")
+VIEWS = ("Events", "Athletes")
 
 
-def _set_view(view):
-    st.session_state.season_view = view
+def _open_reports():
+    st.session_state.app_module = "Reports"
+
+
+def _open_imports():
+    st.session_state.app_module = "Season Results Database"
+    st.session_state.season_view = "Events"
+    st.session_state.season_import_open = True
 
 
 def _show_imported_events(season_year):
-    st.session_state.season_view = "Imported Events"
+    st.session_state.season_view = "Events"
     st.session_state.season_selected_year = season_year
-
-
-def _continue_navigation(view):
-    index = VIEWS.index(view)
-    st.divider()
-    with st.container(key="season_navigation"):
-        back, _, forward = st.columns([2.5, 1, 2.5], vertical_alignment="center")
-        with back:
-            if index > 0:
-                st.button(f"← Back to {VIEWS[index - 1]}", key="season_back",
-                          type="secondary", width="stretch", on_click=_set_view, args=(VIEWS[index - 1],))
-        with forward:
-            if index < len(VIEWS) - 1:
-                st.button(f"Continue to {VIEWS[index + 1]} →", key="season_continue",
-                          type="primary", width="stretch", on_click=_set_view, args=(VIEWS[index + 1],))
 
 
 def _imports(db_path):
     st.subheader("Upload published final results for the current season")
-    st.caption("Upload files → Preview results → Confirm event details → Import selected results. Multiple files are accepted; uploading or previewing alone does not save results.")
+    st.caption("Upload files, then select Process results to save new events and open Reports. Existing events and files needing confirmed details are shown below for review; nothing is overwritten automatically.")
     uploads = st.file_uploader("Final results files", type=["pdf", "xlsx"], accept_multiple_files=True,
                               key=f"season_uploads_{st.session_state.get('season_upload_generation', 0)}")
-    if st.button("Preview results", disabled=not uploads, key="season_preview"):
+    if st.button("Process results", disabled=not uploads, key="season_preview", type="primary"):
         pending = []
         errors = []
+        saved = []
         with st.spinner("Reading result files…"):
             for i, upload in enumerate(uploads):
                 payload = upload.getvalue()
                 token = sha256(payload + upload.name.encode()).hexdigest()[:16] + f"_{i}"
                 try:
                     parsed = parse_season_results(BytesIO(payload), upload.name)
-                    pending.append({"event": parsed, "token": token, "outcome": ""})
+                    item = {"event": parsed, "token": token, "outcome": ""}
+                    pending.append(item)
+                    if parsed.event_date and parsed.competition_type:
+                        candidate = replace(parsed, season_year=parsed.season_year or infer_season(parsed.event_date))
+                        from services.season_scope import gn_event
+                        candidate = gn_event(candidate)
+                        candidate.check_structure()
+                        if import_summary(db_path,candidate)["Status"] == "New":
+                            import_event(db_path,candidate)
+                            item.update(event=candidate,saved=True,outcome=f"Processed {candidate.name} ({len(candidate.results)} results)")
+                            saved.append(candidate)
+                    else:
+                        parsed.notes.append("Confirm the event details below, then select Process selected results to save this event.")
                 except Exception as exc:
                     errors.append(f"{upload.name}: {exc}")
+                    if pending and pending[-1]["token"] == token:
+                        pending.pop()
         # Session state holds only the temporary preview; saved data lives in SQLite.
         st.session_state.season_pending = pending
         st.session_state.season_parse_errors = errors
+        if saved:
+            st.session_state.season_process_notices = [f"{e.name}: saved {len(e.results)} results to Season {e.season_year}." for e in saved]
+            if not errors and all(item.get("saved") for item in pending):
+                st.session_state.season_processed_year = max(saved,key=lambda e:e.event_date).season_year
+            st.rerun()
     for error in st.session_state.get("season_parse_errors", []):
         st.error(error)
     pending = st.session_state.get("season_pending", [])
@@ -74,7 +85,7 @@ def _imports(db_path):
     for year in saved_years:
         st.button(f"View saved events for Season {year}", key=f"season_saved_{year}",
                   on_click=_show_imported_events, args=(year,))
-    st.subheader("Pre-import summary")
+    st.subheader("Processing summary and review")
     summaries, decisions, seen = [], [], set()
     ready = True
     for item in pending:
@@ -92,7 +103,7 @@ def _imports(db_path):
                 season_year = st.number_input("Season", min_value=1900, max_value=9999,
                     value=event.season_year or infer_season(event_date or date.today()), step=1,
                     key=f"season_year_{token}_{event_date}",
-                    help="August-December belongs to the following year's season. Override if needed.")
+                    help="Seasons run August–April and are named for the year they end. August 2026–April 2027 is Season 2027. Override if needed.")
                 competition_type = st.selectbox("Competition type", COMPETITION_TYPES,
                     index=COMPETITION_TYPES.index(event.competition_type) if event.competition_type else None,
                     placeholder="Confirm competition type", key=f"season_type_{token}")
@@ -128,7 +139,7 @@ def _imports(db_path):
         st.caption(f"Selected: {len(selected)} event(s), {sum(len(event.results) for event in selected)} results. Skipped: {len(decisions) - len(selected)} event(s).")
         if not selected:
             st.info("Nothing is selected for import. Tick Import this event, or choose Overwrite for an existing event.")
-        if st.button("Import selected results", type="primary", disabled=not ready or not selected, key="season_import"):
+        if st.button("Process selected results", type="primary", disabled=not ready or not selected, key="season_import"):
             for item, event, action in decisions:
                 try:
                     event_id = import_event(db_path, event, action)
@@ -148,7 +159,7 @@ def _imports(db_path):
 
 
 def _events(snapshot):
-    st.subheader("Current database for the current season")
+    st.subheader("Saved events")
     if not snapshot["events"]:
         st.info("No events imported yet.")
         return
@@ -218,11 +229,13 @@ def _reset_database_controls(db_path, snapshot, season_year=None):
                       on_click=_confirm_database_reset, args=(db_path, season_year))
 
 
-def render(base_dir):
-    st.header("Season Results Database")
-    st.caption("Seasons end in July: August-December belongs to the following year's season. Inferred seasons can be corrected.")
+def render(base_dir, *, reports=False):
+    st.title("Reports" if reports else "Season Results Database")
+    st.caption("Download season qualification, event results and school reports from the saved database." if reports else
+               "Browse saved events and athletes for the selected season. Import or update events here, or open Reports for qualification and team selection.")
+    st.caption("Seasons run from August to April and are named for the year they end. August 2026–April 2027 is Season 2027. Inferred seasons can be corrected.")
     if st.session_state.pop("season_reset_notice", False):
-        st.success("The selected season has been reset. To rebuild it, return to Import Results, upload the files again, preview them and select Import selected results. No app restart is needed.")
+        st.success("The selected season has been reset. To rebuild it, open Import or update events, upload the files again, preview them and select Import selected results. No app restart is needed.")
     try:
         db_path = season_database_path(base_dir)
         init_season_db(db_path)
@@ -232,38 +245,58 @@ def render(base_dir):
     except sqlite3.Error:
         st.error("The season database could not be opened. Check that its configured folder is writable and the file is a SQLite database.")
         return
-    view = st.session_state.get("season_view", VIEWS[0])
-    if view == "Import Results":
-        _imports(db_path)
-        _continue_navigation(view)
-        return
     years = available_seasons(db_path)
+    if st.session_state.get("season_selected_year") not in [*years, None]:
+        st.session_state.pop("season_selected_year", None)
+    if years and st.session_state.get("season_selected_year") is None and not season_snapshot(db_path, None)["events"]:
+        st.session_state.season_selected_year = years[0]
     selected_year = st.selectbox("Season", [*years, None],
         format_func=lambda year: str(year) if year is not None else "Unassigned (legacy)",
         key="season_selected_year", on_change=lambda: st.session_state.pop("season_confirm_reset", None))
     snapshot = season_snapshot(db_path, selected_year)
+    if reports:
+        for notice in st.session_state.get("season_process_notices", []):
+            st.success(notice)
+        latest = max(snapshot["events"], key=lambda e: (e["event_date"], e["id"]), default=None)
+        if latest:
+            st.info(f"Latest event in this season: {latest['name']} · Event date: {latest['event_date']}")
+        else:
+            st.info("No events have been imported for this season.")
+        st.button("Upload latest events in Season Results Database", key="reports_open_imports", on_click=_open_imports)
+        render_reports(db_path, {**snapshot, "season_year": selected_year})
+        return
+    st.button("View reports", key="season_open_reports", on_click=_open_reports)
+    legacy_views = {"Import Results":"Events", "Imported Events":"Events", "Athlete Database":"Athletes"}
+    view = legacy_views.get(st.session_state.get("season_view"),st.session_state.get("season_view","Events"))
+    if view not in VIEWS:
+        view = "Events"
+    st.session_state.season_view = view
+    events_tab, athletes_tab = st.tabs(VIEWS, key="season_view", default=view, on_change="rerun")
     if selected_year is None and snapshot["events"]:
-        st.warning("These records have no confirmed season and are excluded from historical seed lookup. Assign a season in Imported Events.")
-    if view == "Imported Events":
-        _events(snapshot)
-        if snapshot["events"]:
-            with st.expander("Correct an event's season"):
-                choices = {e["id"]: e for e in snapshot["events"]}
-                event_id = st.selectbox("Event", list(choices),
-                    format_func=lambda key: f"{choices[key]['name']} · {choices[key]['event_date']}")
-                year = st.number_input("Confirmed season", min_value=1900, max_value=9999,
-                    value=choices[event_id]["season_year"] or infer_season(choices[event_id]["event_date"]), key=f"correct_year_{event_id}")
-                if st.button("Assign season"):
-                    try:
-                        assign_event_season(db_path, event_id, int(year))
-                    except (ValueError, sqlite3.IntegrityError) as exc:
-                        st.error(f"Could not assign season: {exc}")
-                    else:
-                        st.rerun()
-    elif view == "Athlete Database":
-        _athletes(db_path, snapshot)
+        st.warning("These records have no confirmed season and are excluded from historical seed lookup. Assign a season in Events.")
+    if events_tab.open:
+        with events_tab:
+            _events(snapshot)
+            with st.expander("Import or update events", expanded=st.session_state.get("season_import_open",False)):
+                _imports(db_path)
+            if snapshot["events"]:
+                with st.expander("Correct an event's season"):
+                    choices = {e["id"]: e for e in snapshot["events"]}
+                    event_id = st.selectbox("Event", list(choices),
+                        key=f"season_correct_event_{selected_year}",
+                        format_func=lambda key, options=choices: f"{options[key]['name']} · {options[key]['event_date']}")
+                    year = st.number_input("Confirmed season", min_value=1900, max_value=9999,
+                        value=choices[event_id]["season_year"] or infer_season(choices[event_id]["event_date"]), key=f"correct_year_{event_id}")
+                    if st.button("Assign season"):
+                        try:
+                            assign_event_season(db_path, event_id, int(year))
+                        except (ValueError, sqlite3.IntegrityError) as exc:
+                            st.error(f"Could not assign season: {exc}")
+                        else:
+                            st.rerun()
+    if athletes_tab.open:
+        with athletes_tab:
+            _athletes(db_path, snapshot)
+    with st.expander("Database maintenance"):
         if selected_year is not None or not years:
             _reset_database_controls(db_path, snapshot, selected_year)
-    elif view == "Reports":
-        render_reports(db_path, snapshot)
-    _continue_navigation(view)

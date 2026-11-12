@@ -75,6 +75,42 @@ def test_form_batches_both_disciplines_and_remembers_swimming(tmp_path,monkeypat
     assert len(saved)==len(before)
 
 
+def test_heat_undo_redo_and_reopen_single_saved_session(tmp_path,monkeypatch):
+    app,db,eid,_=opened(tmp_path,monkeypatch,generate_heats(entries(16),settings(),optimise=False))
+    fields = ("athlete_number","running_heat","running_lane","swimming_heat","swimming_lane")
+    def assignments():
+        return [tuple(r[f] for f in fields) for r in get_athletes(db,eid)]
+    before = assignments()
+    edits = {f"heat_editor_{eid}_run_":{0:{"Heat":9}},
+             f"heat_editor_{eid}_swim_":{0:{"Heat":9}}}
+    submit(app,f"save_all_changes_{eid}",edits)
+    after = assignments()
+    assert after != before
+    submit(app,f"undo_heats_{eid}")
+    assert assignments() == before
+    submit(app,f"redo_heats_{eid}")
+    assert assignments() == after
+    app.button(key="start_new_session").click().run()
+    assert app.session_state.event_id is None
+    app.button(key="open_saved_session").click().run()
+    assert not app.exception and not app.error
+    assert app.session_state.event_id == eid
+    assert assignments() == after
+    assert len(table(app,f"heat_editor_{eid}_swim_").value) == 16
+
+
+def test_unsaved_heat_move_undo_redo(tmp_path,monkeypatch):
+    app,db,eid,_=opened(tmp_path,monkeypatch,generate_heats(entries(16),settings(),optimise=False))
+    before = table(app,f"heat_editor_{eid}_run_").value.copy()
+    submit(app,f"undo_heats_{eid}",{f"heat_editor_{eid}_run_":{0:{"Heat":9}}})
+    assert table(app,f"heat_editor_{eid}_run_").value.equals(before)
+    submit(app,f"redo_heats_{eid}")
+    redone = table(app,f"heat_editor_{eid}_run_").value
+    assert redone.loc[redone["Athlete"] == before.iloc[0]["Athlete"],"Heat"].item() == 9
+    submit(app,f"save_all_changes_{eid}")
+    assert not app.error
+
+
 def test_profile_choice_changes_generation_not_event_type(tmp_path,monkeypatch):
     app,db,eid,_=opened(tmp_path,monkeypatch,generate_heats(entries(4)+entries(2,"U/13 BOYS",20),settings()))
     assert app.selectbox(key=f"generation_profile_{eid}").value=="league"

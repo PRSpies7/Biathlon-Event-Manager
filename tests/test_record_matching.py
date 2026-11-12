@@ -49,7 +49,7 @@ def test_record_preview_compares_before_save(tmp_path, monkeypatch):
     store_event(db, sample_event())
     app.session_state.season_records_preview = {"source": "records.xlsx", "records": validate_record_benchmarks([
         {"category": "Girls Under 11", "total_points": "2000"}])}
-    app.radio(key="season_view").set_value("Reports").run()
+    app.radio(key="app_module").set_value("Reports").run()
     assert not app.exception
     assert any("Record comparison" in d.value.columns for d in app.dataframe)
     assert not any("Supply current category records to enable" in i.value for i in app.info)

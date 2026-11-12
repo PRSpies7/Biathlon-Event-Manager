@@ -1,4 +1,4 @@
-# Biathlon Event Manager v1.7 Project Structure
+# Biathlon Event Manager v2.3 Project Structure
 
 ```text
 biathlon_event_manager_v1.7/

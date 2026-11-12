@@ -8,6 +8,12 @@ from parsers.final_results_excel import parse_final_results_excel
 
 def render():
     st.header("Quick Tools")
+    st.caption("Convert final-results Excel files to XML or verify electronic results against manual result sheets.")
+    tool = st.radio("Tool", ["Excel to XML", "Results Verification"], key="quick_tool", horizontal=True)
+    if tool == "Results Verification":
+        from ui.results_verification import render as render_verification
+        render_verification()
+        return
     st.subheader("Final Results: Excel to XML")
     st.caption("Upload an edited final-results Excel export and download the matching XML. No event setup is needed, and saved event results are unchanged.")
     upload = st.file_uploader("Upload final results Excel", type=["xlsx"], key="quick_results_excel")

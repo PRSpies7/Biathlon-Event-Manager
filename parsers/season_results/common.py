@@ -5,7 +5,7 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal, InvalidOperation
 import re
 
-from .models import Award, CHAMPIONSHIP, INTERPROVINCIAL, LEAGUE, NormalizedEvent, Result, is_gn_championship
+from .models import Award, CHAMPIONSHIP, INTERPROVINCIAL, LEAGUE, NormalizedEvent, Result, is_gn_championship, is_interprovincial_name
 
 AFL_RE = re.compile(r"\(\s*AFL\s*\*?\s*\)", re.I)
 PB_RE = re.compile(r"\(\s*PB\s*\)|\bPB\b", re.I)
@@ -74,13 +74,13 @@ def recognize_metadata(lines: list, filename: str, layout_type: str = "") -> Nor
             except ValueError as exc:
                 raise ValueError("The document contains an unreadable event date.") from exc
             break
-    title = next((s for s in strings if re.search(r"league\s*\d+|inter[ -]?provincial|championship|\bchamps\b", s, re.I)), "")
+    title = next((s for s in strings if re.search(r"league\s*\d+|championship|\bchamps\b", s, re.I) or is_interprovincial_name(s)), "")
     if not title:
         title = next((s for s in strings if s not in {"Competition Name", "Competition Date"}
                       and not DATE_RE.search(s) and not s.startswith("Reports")), "")
     title = text(DATE_RE.sub("", title)).strip(" -")
     detected = (CHAMPIONSHIP if is_gn_championship(title)
-                else INTERPROVINCIAL if re.search(r"inter[ -]?provincial", title, re.I)
+                else INTERPROVINCIAL if is_interprovincial_name(title)
                 else LEAGUE if re.search(r"league\s*\d+", title, re.I) else "")
     notes = []
     if not detected:

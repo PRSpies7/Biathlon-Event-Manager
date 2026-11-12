@@ -13,6 +13,11 @@ COMPETITION_TYPES = (LEAGUE, INTERPROVINCIAL, CHAMPIONSHIP, NATIONAL)
 AWARD_TYPES = ("Runner", "Swimmer", "Overall Athlete")
 
 
+def is_interprovincial_name(name: str) -> bool:
+    """Published reports also abbreviate Interprovincial as a standalone IP."""
+    return bool(re.search(r"inter[ -]?provincial|\bIP\b", name, re.I))
+
+
 def is_gn_championship(name: str) -> bool:
     return bool(re.search(r"\b(?:GN|GAUTENG\s+NORTH)\b", name, re.I)
                 and re.search(r"\b(?:CHAMPIONSHIPS?|CHAMPS)\b", name, re.I))

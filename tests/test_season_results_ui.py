@@ -27,26 +27,68 @@ def test_navigation_independent_of_workflow_and_reference(tmp_path, monkeypatch)
     assert not app.exception
     app.radio(key="app_module").set_value("Season Results Database").run()
     assert not app.exception
-    assert app.header[0].value == "Season Results Database"
+    assert app.title[0].value == "Season Results Database"
     assert not any(b.key == "btn_next_bottom" for b in app.button)
     # The season module is usable even if the workflow's TimeDrops reference is missing.
     (tmp_path / "data" / "TimeDrops JSON example.json").unlink()
-    for view in ("Imported Events", "Athlete Database", "Reports"):
+    for view in ("Athletes", "Events"):
+        app.session_state["season_view"] = view
         with patch("database.db.init_db", side_effect=AssertionError("Season module must not initialize the workflow database")):
-            app.button(key="season_continue").click().run()
+            app.run()
         assert not app.exception and not app.error
-        assert app.radio(key="season_view").value == view
-    assert not any(b.key == "season_continue" for b in app.button)
-    for view in ("Athlete Database", "Imported Events", "Import Results"):
-        assert app.button(key="season_back").label == f"← Back to {view}"
-        app.button(key="season_back").click().run()
-        assert not app.exception
-        assert app.radio(key="season_view").value == view
+        assert app.session_state["season_view"] == view
+    assert not any(b.key in {"season_continue","season_back"} for b in app.button)
     (tmp_path / "data" / "TimeDrops JSON example.json").write_text("{}", encoding="utf-8")
     app.radio(key="app_module").set_value("Event Management").run()
     assert not app.exception
     assert any(b.key == "btn_next_bottom" for b in app.button)
     assert app.session_state.current_phase == 1
+
+
+def test_import_screen_shows_saved_season_results_without_upload(tmp_path, monkeypatch):
+    from dataclasses import replace
+    from database.season_repository import store_event
+    from database.season_db import init_season_db
+    app = app_test(tmp_path, monkeypatch)
+    db = tmp_path / "data" / "season_results.sqlite"
+    init_season_db(db)
+    for year in (2026,2027):
+        store_event(db,replace(sample_event(),season_year=year))
+    app.radio(key="app_module").set_value("Season Results Database").run()
+    assert not app.exception and not app.error
+    assert app.session_state["season_view"] == "Events"
+    assert app.selectbox(key="season_selected_year").value == 2027
+    assert any("Event name" in frame.value.columns for frame in app.dataframe)
+    app.selectbox(key="season_selected_year").set_value(2026).run()
+    events = next(frame.value for frame in app.dataframe if "Event name" in frame.value.columns)
+    assert set(events["Season"]) == {2026}
+    app.button(key="season_open_reports").click().run()
+    assert not app.exception and not app.error
+    assert app.selectbox(key="season_selected_year").value == 2026
+    assert not any(b.key in {"season_back","season_continue"} for b in app.button)
+    app.button(key="reports_open_imports").click().run()
+    assert not app.exception and not app.error
+    assert app.selectbox(key="season_selected_year").value == 2026
+    assert app.session_state["season_view"] == "Events"
+    assert next(e for e in app.expander if e.label == "Import or update events").proto.expanded
+
+
+def test_reports_latest_event_uses_competition_date_not_import_order(tmp_path,monkeypatch):
+    from dataclasses import replace
+    from datetime import date
+    from database.season_db import init_season_db
+    from database.season_repository import store_event
+    app = app_test(tmp_path,monkeypatch)
+    db = tmp_path/"data/season_results.sqlite"
+    init_season_db(db)
+    base = sample_event()
+    store_event(db,replace(base,name="League 5",event_date=date(2026,11,10),season_year=2027))
+    store_event(db,replace(base,name="Earlier event imported later",event_date=date(2026,10,3),season_year=2027))
+    with patch("ui.season_results.render_reports"):
+        app.radio(key="app_module").set_value("Reports").run()
+    assert not app.exception and not app.error
+    assert any(i.value == "Latest event in this season: League 5 · Event date: 2026-11-10" for i in app.info)
+    assert not any("Earlier event imported later" in i.value or "Imported:" in i.value for i in app.info)
 
 
 def test_preview_import_duplicate_skip_overwrite_affiliation(tmp_path, monkeypatch):
@@ -69,13 +111,14 @@ def test_preview_import_duplicate_skip_overwrite_affiliation(tmp_path, monkeypat
     app.button(key="season_import").click().run()
     assert not app.exception
     assert len(season_snapshot(db)["results"]) == 1
-    app.radio(key="season_view").set_value("Athlete Database").run()
+    app.session_state["season_view"] = "Athletes"
+    app.run()
     assert not app.exception
     app.checkbox[0].uncheck()
-    app.button[0].click().run()
+    next(b for b in app.button if b.label == "Save affiliation").click().run()
     assert not app.exception
     assert season_snapshot(db)["athletes"][0]["affiliated"] == 0
-    app.radio(key="season_view").set_value("Reports").run()
+    app.radio(key="app_module").set_value("Reports").run()
     assert not app.exception
 
 
@@ -104,11 +147,12 @@ def test_season_start_and_confirmed_database_reset(tmp_path, monkeypatch):
     event = sample_event()
     store_event(db, event)
     store_event(db, replace(event, name="Earlier event", event_date=date(2026, 7, 1)))
-    app.radio(key="season_view").set_value("Imported Events").run()
+    app.session_state["season_view"] = "Events"
+    app.run()
     assert app.selectbox(key="season_selected_year").value is None
     assert any("no confirmed season" in w.value for w in app.warning)
-    assert app.button(key="season_continue").label == "Continue to Athlete Database →"
-    app.button(key="season_continue").click().run()
+    app.session_state["season_view"] = "Athletes"
+    app.run()
     before = season_snapshot(db)
     app.button(key="season_reset").click().run()
     assert season_snapshot(db) == before
@@ -124,7 +168,8 @@ def test_season_start_and_confirmed_database_reset(tmp_path, monkeypatch):
     assert "season_pending" not in app.session_state
     assert app.button(key="season_reset").disabled
     assert any("has been reset" in s.value for s in app.success)
-    app.button(key="season_back").click().run()
+    app.session_state["season_view"] = "Events"
+    app.run()
     assert not any("Current season starting" in c.value for c in app.caption)
 
 
@@ -136,10 +181,9 @@ def test_reports_and_current_record_save(tmp_path, monkeypatch):
     app.radio(key="app_module").set_value("Season Results Database").run()
     db = tmp_path / "data" / "season_results.sqlite"
     store_event(db, sample_event())
-    app.radio(key="season_view").set_value("Reports").run()
+    app.radio(key="app_module").set_value("Reports").run()
     assert not app.exception
-    assert {s.value for s in app.subheader} == {
-        "Full database", "Primary schools and high schools results", "Qualified schools", "Affiliated athletes", "Qualified athletes", "Top athletes", "Records"}
+    assert {"Season qualification and results","Athlete qualification","School qualification and teams","Ranked athletes","Affiliation and follow-up","Records"} <= {s.value for s in app.subheader}
     app.session_state.season_records_preview = {"source": "records.xlsx", "records": validate_record_benchmarks([
         {"category": "U/11 GIRLS", "athlete_number": "00999", "total_points": "2000"}])}
     app.run()
@@ -163,7 +207,7 @@ def test_reports_receive_only_selected_season(tmp_path, monkeypatch):
     for year in (2026, 2027):
         store_event(db, replace(sample_event(), season_year=year))
     with patch("ui.season_results.render_reports") as reports:
-        app.radio(key="season_view").set_value("Reports").run()
+        app.radio(key="app_module").set_value("Reports").run()
         assert not app.exception
         assert {e["season_year"] for e in reports.call_args.args[1]["events"]} == {2027}
         app.selectbox(key="season_selected_year").set_value(2026).run()
@@ -180,13 +224,16 @@ def test_reset_and_reimport_selects_imported_season(tmp_path, monkeypatch):
     db = tmp_path / "data" / "season_results.sqlite"
     event = replace(sample_event(), season_year=2027)
     store_event(db, event)
-    app.radio(key="season_view").set_value("Athlete Database").run()
+    app.session_state["season_view"] = "Athletes"
+    app.run()
     app.button(key="season_reset").click().run()
     app.button(key="season_confirm_reset_button").click().run()
     # Viewing the empty database leaves the season selector on legacy/unassigned.
-    app.radio(key="season_view").set_value("Imported Events").run()
+    app.session_state["season_view"] = "Events"
+    app.run()
     assert app.selectbox(key="season_selected_year").value is None
-    app.radio(key="season_view").set_value("Import Results").run()
+    app.session_state["season_view"] = "Events"
+    app.run()
     app.session_state.season_pending = [{"event": event, "token": "again", "outcome": ""}]
     app.run()
     app.button(key="season_import").click().run()
@@ -219,11 +266,11 @@ def test_workflow_radios_and_steppers_stay_in_sync(tmp_path, monkeypatch):
 
     app = app_test(tmp_path, monkeypatch)
     event_steps = ['1. Event Setup', '2. Run Position Mapping', '3. Results Ingestion', '4. Final Results & Export']
-    season_steps = ['1. Import Results', '2. Imported Events', '3. Athlete Database', '4. Reports']
+    season_steps = ['1. Import Results', '2. Imported Events', '3. Athlete Database']
 
     def check_stepper(labels, active):
         steps = [m.value for m in app.markdown if 'class="step-item ' in m.value]
-        assert len(steps) == 4
+        assert len(steps) == len(labels)
         assert all(label in step for label, step in zip(labels, steps))
         assert [i for i, step in enumerate(steps) if 'step-item active' in step] == [active]
         assert not app.exception
@@ -247,15 +294,15 @@ def test_workflow_radios_and_steppers_stay_in_sync(tmp_path, monkeypatch):
     app.button(key='btn_prev_bottom').click().run()
     assert app.radio(key='workflow_phase').value == 3
     app.radio(key='app_module').set_value('Season Results Database').run()
-    assert app.radio(key='season_view').label == 'Workflow Steps'
-    assert app.radio(key='season_view').options == season_steps
-    check_stepper(season_steps, 0)
-    app.button(key='season_continue').click().run()
-    check_stepper(season_steps, 1)
-    app.radio(key='season_view').set_value('Reports').run()
-    check_stepper(season_steps, 3)
-    app.button(key='season_back').click().run()
-    check_stepper(season_steps, 2)
+    assert app.session_state["season_view"] == "Events"
+    assert not [m for m in app.markdown if 'class="step-item ' in m.value]
+    app.session_state["season_view"] = "Athletes"
+    app.run()
+    app.button(key='season_open_reports').click().run()
+    assert app.radio(key='app_module').value == 'Reports'
+    app.button(key='reports_open_imports').click().run()
+    assert app.session_state["season_view"] == "Events"
+    assert next(e for e in app.expander if e.label == "Import or update events").proto.expanded
     app.radio(key='app_module').set_value('Event Management').run()
     assert app.radio(key='workflow_phase').value == 3
     check_stepper(event_steps, 2)

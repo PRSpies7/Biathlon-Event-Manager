@@ -12,7 +12,7 @@ from .excel import parse_excel
 from .interprovincial_pdf import parse_interprovincial_pdf
 from .league_pdf import parse_league_pdf
 from .common import header_mapping
-from .models import is_gn_championship
+from .models import is_gn_championship, is_interprovincial_name
 
 
 def parse_season_results(source, filename: str | None = None):
@@ -32,12 +32,12 @@ def parse_season_results(source, filename: str | None = None):
             first = pdf.pages[0].extract_text() or ""
             if not first.strip():
                 raise ValueError("This PDF has no extractable text. Upload the original text PDF or Excel results.")
+            mappings = [header_mapping(t.extract()[0]) for t in pdf.pages[0].find_tables() if t.rows]
+            team_layout = any(m and ("team" in m.values() or "province" in m.values()) for m in mappings)
             if is_gn_championship(" ".join(first.splitlines()[:5])):
                 # GN championships can use either supported published report layout.
-                mappings = [header_mapping(t.extract()[0]) for t in pdf.pages[0].find_tables() if t.rows]
-                team_layout = any(m and ("team" in m.values() or "province" in m.values()) for m in mappings)
                 event = (parse_interprovincial_pdf if team_layout else parse_league_pdf)(pdf, filename)
-            elif re.search(r"inter[ -]?provincial", first, re.I):
+            elif is_interprovincial_name(" ".join(first.splitlines()[:5])) or team_layout:
                 event = parse_interprovincial_pdf(pdf, filename)
             elif re.search(r"league\s*\d+", first, re.I):
                 event = parse_league_pdf(pdf, filename)

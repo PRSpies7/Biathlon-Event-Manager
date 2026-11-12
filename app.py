@@ -11,13 +11,13 @@ from ui.phase1_setup import render as render_phase1
 from ui.phase2_positions import render as render_phase2, save_current_mapping
 from ui.phase3_processing import render as render_phase3
 from ui.phase4_export import render as render_phase4
-from ui.season_results import VIEWS as SEASON_VIEWS, render as render_season_results
+from ui.season_results import render as render_season_results
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 DB_PATH = DATA_DIR / "biathlon_events.sqlite"
 TIMEDROPS_REF = DATA_DIR / "TimeDrops JSON example.json"
-VERSION = "2.2"
+VERSION = "2.3"
 TOTAL_PHASES = 4
 
 st.set_page_config(
@@ -176,14 +176,15 @@ with st.sidebar:
     )
     st.divider()
 
-    module = st.radio("Module", ("Event Management", "Season Results Database", "Results Verification", "Quick Tools"), key="app_module", on_change=change_module)
-    if module == "Season Results Database":
-        renamed_views = {"Athletes": "Athlete Database", "Downloads": "Reports"}
-        if st.session_state.get("season_view") in renamed_views:
-            st.session_state.season_view = renamed_views[st.session_state.season_view]
-        st.radio("Workflow Steps", SEASON_VIEWS, key="season_view",
-                 format_func=lambda view: f"{SEASON_VIEWS.index(view) + 1}. {view}")
-    elif module == "Event Management":
+    processed_season = st.session_state.pop("season_processed_year", None)
+    if processed_season is not None:
+        st.session_state.season_selected_year = processed_season
+        st.session_state.app_module = "Reports"
+    if st.session_state.get("app_module") == "Results Verification":
+        st.session_state.app_module = "Quick Tools"
+        st.session_state.quick_tool = "Results Verification"
+    module = st.radio("Module", ("Event Management", "Season Results Database", "Reports", "Quick Tools"), key="app_module", on_change=change_module)
+    if module == "Event Management":
         init_db(DB_PATH)
         # The phase controller also changes through Next/Previous and session reset.
         st.session_state.workflow_phase = st.session_state.current_phase
@@ -217,6 +218,8 @@ with st.sidebar:
                 on_change=_handle_session_change,
                 args=(options,),
             )
+            if st.button("Open saved session", key="open_saved_session", width="stretch"):
+                open_event(options[st.session_state.session_selector])
         else:
             st.caption("No saved sessions yet.")
 
@@ -256,21 +259,20 @@ with st.sidebar:
                 st.divider()
                 st.caption(f"Session ID: {ev['id']}")
 
+if module == "Event Management":
+    st.title("Event Management")
+    st.caption("Manage an event when automated or live results are unavailable: prepare running and swimming heats, capture results, and export the final results. Saved sessions retain saved heat adjustments; use Save all changes before leaving heat review.")
+
 if module == "Quick Tools":
     from ui.quick_tools import render as render_quick_tools
     render_quick_tools()
     st.stop()
 
-if module == "Results Verification":
-    from ui.results_verification import render as render_verification
-    render_verification()
+if module == "Reports":
+    render_season_results(BASE_DIR, reports=True)
     st.stop()
 
 if module == "Season Results Database":
-    render_workflow_stepper(
-        [f"{index + 1}. {view}" for index, view in enumerate(SEASON_VIEWS)],
-        SEASON_VIEWS.index(st.session_state.season_view),
-    )
     render_season_results(BASE_DIR)
     st.stop()
 

@@ -71,7 +71,7 @@ def _whole_number(value, label):
 
 
 def _reorder_programme(original, edited, athletes):
-    programme = deepcopy(edited)
+    programme = [{k:v for k,v in p.items() if k not in {"Categories","Athletes"}} for p in deepcopy(edited)]
     known = {p["Heat"] for p in programme}
     for row in athletes:
         heat = _whole_number(row["Heat"],"Heat")
@@ -189,6 +189,11 @@ def _save(db_path,event,previous,working,has_heats):
 
 def render_workbench(db_path,event,entries,state,has_heats,roster_only=False):
     state_key = f"heat_review_tables_{event['id']}"
+    history_key = f"heat_history_{event['id']}"
+    history = st.session_state.get(history_key)
+    if history is None or history["revision"] != event["heat_revision"]:
+        history = {"revision":event["heat_revision"], "undo":[], "redo":[]}
+        st.session_state[history_key] = history
     added = {r["athlete_number"] for r in state["rows"]}-{r["athlete_number"] for r in entries}
     show_entry_notices(duplicate_name_notices(state["rows"],only_numbers=added))
     save_label = "Save all changes"
@@ -255,6 +260,14 @@ def render_workbench(db_path,event,entries,state,has_heats,roster_only=False):
             if st.form_submit_button("Add athlete",key=f"add_athlete_{event['id']}",on_click=_remember_current_tab,args=(event["id"],),help="Adds an athlete to the draft. Save all changes to keep the entry."):
                 action = ("add_athlete",None)
         with st.container(horizontal=True):
+            if has_heats and not roster_only:
+                if st.form_submit_button("Undo", key=f"undo_heats_{event['id']}",
+                        on_click=_remember_current_tab,args=(event["id"],)):
+                    action = ("undo",None)
+                if st.form_submit_button("Redo", key=f"redo_heats_{event['id']}",
+                        disabled=not bool(history["redo"]),on_click=_remember_current_tab,args=(event["id"],)):
+                    action = ("redo",None)
+                st.caption("Undo/redo heat edits in this browser session. Saved changes remain available when reopening the event. Undoing saved edits requires approval and fresh operational files again.")
             if st.form_submit_button("Remove selected entries",key=f"remove_review_entries_{event['id']}",
                 on_click=_remember_current_tab,args=(event["id"],),
                 help="Removes the ticked entries from the draft in both disciplines. Save all changes to confirm. Historical results are retained."):
@@ -274,9 +287,40 @@ def render_workbench(db_path,event,entries,state,has_heats,roster_only=False):
         return
     kind,discipline = action
     if kind=="discard":
+        history["undo"] = [item for item in history["undo"] if item[0] == "saved"]
+        history["redo"].clear()
         del st.session_state[state_key]
         st.rerun()
     try:
+        if kind in {"undo", "redo"}:
+            # Form submission captures cell edits that have not yet been saved.
+            working = _collect(state,tables,has_heats)
+            changed = working["rows"] != state["rows"] or working["drafts"] != state["drafts"]
+            if kind == "redo" and changed:
+                raise ValueError("Save or undo the new table edits before redoing earlier changes.")
+            if kind == "undo" and changed:
+                history["redo"].append(("draft",deepcopy(working)))
+                state["version"] += 1
+                st.rerun()
+            source, target = ("undo","redo") if kind == "undo" else ("redo","undo")
+            if not history[source]:
+                st.info("No heat changes to undo." if kind == "undo" else "No heat changes to redo.")
+                return
+            mode, snapshot = history[source][-1]
+            if mode == "draft":
+                history[target].append(("draft",deepcopy(state)))
+                restored = deepcopy(snapshot)
+                restored["version"] = state["version"] + 1
+                st.session_state[state_key] = restored
+            else:
+                if state["dirty"] or changed:
+                    raise ValueError("Save or discard pending edits before undoing or redoing saved changes.")
+                save_heat_assignments(db_path,event["id"],snapshot,event["heat_revision"])
+                history[target].append(("saved",deepcopy(entries)))
+                history["revision"] = get_event(db_path,event["id"])["heat_revision"]
+                del st.session_state[state_key]
+            history[source].pop()
+            st.rerun()
         if kind=="remove" and not any(r["Remove from event"] for _,athletes in tables.values() for r in athletes):
             raise ValueError("Select entries in the Remove from event column first.")
         working = _collect(state,tables,has_heats)
@@ -293,9 +337,9 @@ def render_workbench(db_path,event,entries,state,has_heats,roster_only=False):
                 working["lane_overrides"] -= involved
             working["drafts"][discipline] = _new_draft(working["rows"],discipline,programme)
         elif kind=="add_athlete":
-            history = season_database_path(Path(__file__).resolve().parents[1])
-            init_season_db(history)
-            row = prepare_late_entry(working["rows"],event,history,number,name,category,gender,run,swim)
+            seed_history = season_database_path(Path(__file__).resolve().parents[1])
+            init_season_db(seed_history)
+            row = prepare_late_entry(working["rows"],event,seed_history,number,name,category,gender,run,swim)
             if not has_heats:
                 row.update(running_heat=None,running_lane=None,swimming_heat=None,swimming_lane=None)
             working["rows"].append(row)
@@ -309,10 +353,20 @@ def render_workbench(db_path,event,entries,state,has_heats,roster_only=False):
             if kind=="approve" and not (reviewed_run and reviewed_swim):
                 raise ValueError("Confirm review of both disciplines before approval.")
             _save(db_path,event,entries,working,has_heats)
+            history["undo"] = [item for item in history["undo"] if item[0] == "saved"]
+            if {r["athlete_number"] for r in entries} == {r["athlete_number"] for r in working["rows"]}:
+                history["undo"].append(("saved",deepcopy(entries)))
+                history["undo"] = history["undo"][-50:]
+            else:
+                history["undo"].clear()
+            history["redo"].clear()
+            history["revision"] = get_event(db_path,event["id"])["heat_revision"]
             if kind=="approve":
                 approve_heats(db_path,event["id"],get_event(db_path,event["id"])["heat_revision"])
             del st.session_state[state_key]
             st.rerun()
+        history["undo"].append(("draft",deepcopy(state)))
+        history["redo"].clear()
         st.session_state[state_key] = working
     except (ValueError,TypeError,OverflowError) as exc:
         st.error(str(exc))

@@ -137,6 +137,7 @@ def render_verification(electronic, scope, db_path=None, event_id=None):
 
 def render():
     st.header('Results Verification')
+    st.caption('Compare electronic final results with manual running and swimming result PDFs, review missing or differing times, and reconcile selected results. Standalone verification does not change the season database.')
     st.subheader('Results to Verify')
     upload = st.file_uploader('Electronic final results', type=['xml', 'xlsx', 'pdf'], key='verification_electronic')
     if not upload:

@@ -1,12 +1,12 @@
 @echo off
 setlocal EnableExtensions
-title Biathlon Event Manager 2.2
+title Biathlon Event Manager 2.3
 
 cd /d "%~dp0"
 
 echo.
 echo ============================================================
-echo             Biathlon Event Manager 2.2
+echo             Biathlon Event Manager 2.3
 echo ============================================================
 echo.
 

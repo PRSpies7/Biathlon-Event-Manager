@@ -181,7 +181,8 @@ def test_both_screens_use_shared_engine_and_apply(tmp_path, monkeypatch, standal
         return [Reading('100', 'Athlete 0', discipline, '01:02.00' if discipline == 'run' else '00:32.23', True)], []
     with patch('streamlit.file_uploader', side_effect=upload), patch('ui.results_verification.extract_manual_pdf', side_effect=extract), patch('ui.results_verification.verify_results', wraps=verify_results) as engine:
         if standalone:
-            app.radio(key='app_module').set_value('Results Verification').run()
+            app.radio(key='app_module').set_value('Quick Tools').run()
+            app.radio(key='quick_tool').set_value('Results Verification').run()
         else:
             app.radio(key='workflow_phase').set_value(4).run()
         assert not app.exception

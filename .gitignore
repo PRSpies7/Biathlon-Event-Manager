@@ -22,4 +22,5 @@ data/biathlon_events.sqlite*
 htmlcov/
 tmp/
 output/
+outputs/
 data/runtime/

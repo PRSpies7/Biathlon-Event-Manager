@@ -172,7 +172,7 @@ def _render(db_path: str, reference_json: dict):
         start_date = st.date_input("Meet start date", value=default_start)
         season_year = st.number_input("Season", min_value=1900, max_value=9999,
             value=metadata.get("season_year",infer_season(start_date)), step=1, key=f"event_season_{start_date}",
-            help="Inferred from the meet date: seasons run August-July. Override if needed.")
+            help="Inferred from the meet date: seasons run August–April and are named for the year they end. August 2026–April 2027 is Season 2027. Override if needed.")
         course = st.selectbox(
             "Pool course",
             ["LCM", "SCM"],

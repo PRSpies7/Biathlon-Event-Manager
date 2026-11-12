@@ -83,7 +83,7 @@ def qualified_athlete_report(snapshot):
     for row in top_rows:
         qualification = qualifications[row["Athlete number"]]
         rows.append({**row, "Qualified": qualification["Qualified"],
-                     "Missing to qualify": qualification["Missing to qualify"]})
+                     "Missing to qualify": compact_qualification_requirements(qualification["Missing to qualify"])})
     headers = list(headers)
     headers.insert(headers.index("Athlete name") + 1, "Qualified")
     headers.append("Missing to qualify")
@@ -175,6 +175,27 @@ def completed_result(result):
     return True
 
 
+def compact_qualification_requirements(description):
+    """Short report wording only; underlying eligibility explanations stay intact."""
+    if not description or description == "None":
+        return "None"
+    count = re.search(r"(\d+) more completed events?",description)
+    needs_ip = "interprovincial or Gauteng North Championship" in description
+    score = re.search(r"Best completed score of at least (\d+) points required",description)
+    parts = []
+    if count or needs_ip:
+        required = max(int(count[1]) if count else 0,int(needs_ip))
+        events = f"+{required} event{'s' if required != 1 else ''}"
+        if needs_ip:
+            events += ": 1 IP/Champs"
+            if required > 1:
+                events += f" + {required-1} League"
+        parts.append(events)
+    if score:
+        parts.append(f"Score {score[1]}+")
+    return "; ".join(parts) if parts else description
+
+
 def attendance_qualification(results, required=4):
     """Distinct completed meets, including at least one IP or named GN championship."""
     completed = {r["event_id"]: r for r in results if completed_result(r)}
@@ -196,7 +217,8 @@ def attendance_qualification(results, required=4):
                        else "1 interprovincial or Gauteng North Championship")
     return {"Completed league events": len(leagues), "Completed interprovincial events": len(ip),
             "Completed championship events": len(championships), "Completed distinct qualifying events": len(counted),
-            "Required completed events": required, "Qualified": "No" if missing else "Yes",
+            "Required completed events": required,
+            "Qualified": "No" if missing else "Yes",
             "Missing to qualify": "; ".join(missing) or "None",
             "Counted events": "; ".join(f"{r['event_name']} ({r['event_date']})" for r in sorted(counted.values(), key=lambda r: (r["event_date"], r["event_id"])))}
 

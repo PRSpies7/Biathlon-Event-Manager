@@ -175,7 +175,7 @@ def test_qualified_workbook_matches_top_athletes_with_status_and_shortfall(db):
     assert [{h: row[h] for h in top_headers[:10]} for row in rows] == [{h: row[h] for h in top_headers[:10]} for row in top_rows]
     assert rows[0]["Qualified"] == "Yes" and rows[0]["Missing to qualify"] == "None"
     assert rows[1]["Qualified"] == "No"
-    assert rows[1]["Missing to qualify"] == "3 more completed events; including at least 1 interprovincial or Gauteng North Championship"
+    assert rows[1]["Missing to qualify"] == "+3 events: 1 IP/Champs + 2 League"
     workbook = openpyxl.load_workbook(build_qualified_athletes_xlsx(snapshot, rows))
     assert workbook.sheetnames == ["Qualified Athletes", "Insights"]
     exported = list(workbook.active.values)
@@ -185,14 +185,14 @@ def test_qualified_workbook_matches_top_athletes_with_status_and_shortfall(db):
     assert list(exported[0]) == expected_headers
     assert workbook.active.max_row == 3 and workbook.active.freeze_panes == "E2"
     assert exported[1][3] == "Yes" and exported[1][-1] == "None"
-    assert exported[2][3] == "No" and exported[2][-1] == "3 more completed events; including at least 1 interprovincial or Gauteng North Championship"
+    assert exported[2][3] == "No" and exported[2][-1] == "+3 events: 1 IP/Champs + 2 League"
     workbook.close()
 
 
 @pytest.mark.parametrize("category,leagues,ip,missing", [
-    ("U/11 GIRLS", 2, 1, "1 more completed event"),
-    ("U/11 GIRLS", 3, 0, "1 more completed event; including at least 1 interprovincial or Gauteng North Championship"),
-    ("JNR WOMEN", 1, 1, "1 more completed event"),
+    ("U/11 GIRLS", 2, 1, "+1 event"),
+    ("U/11 GIRLS", 3, 0, "+1 event: 1 IP/Champs"),
+    ("JNR WOMEN", 1, 1, "+1 event"),
     ("MASTERS 60+ MEN", 2, 1, "None"),
 ])
 def test_qualification_report_shortfalls_use_completed_event_requirements(db, category, leagues, ip, missing):

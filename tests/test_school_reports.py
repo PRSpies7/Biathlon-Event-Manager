@@ -215,9 +215,10 @@ def test_compact_team_members_and_event_shortfalls():
     snapshot["results"] = [r for r in snapshot["results"] if r["event_id"] <= 2]
     row = qualified_schools_report(snapshot)[0][0]
     assert row["Missing team members"] == "u/09; u/13; + 2"
-    assert row["Missing Events"] == "1 x League; 1 x IP/Champs"
-    # Missing attendance is summarized across the team, not added per athlete.
-    assert "2 x IP" not in row["Missing Events"]
+    assert "U/11: +2 events: 1 IP/Champs + 1 League" in row["Missing Events"]
+    assert "U/15: +2 events: 1 IP/Champs + 1 League" in row["Missing Events"]
+    for place in ("U/09","U/13","Extra 1","Extra 2"):
+        assert f"{place}: athlete needed" in row["Qualification requirements"]
 
 
 def test_school_summary_separates_athlete_shortfalls_from_detail():
@@ -227,9 +228,7 @@ def test_school_summary_separates_athlete_shortfalls_from_detail():
     row = summary[0]
     assert row["Full team"] == "Yes"
     assert row["Missing team members"] == "None"
-    assert "Under-9: interprovincial or GN Championship required" in row["Qualification requirements"]
-    assert "Under-9: more completed" in row["Qualification requirements"]
-    assert "Athlete 1" not in row["Qualification requirements"]
+    assert row["Qualification requirements"] == "U/09: +3 events: 1 IP/Champs + 2 League"
     assert "Athlete 1" in row["Missing to qualify"]
     assert "3 more completed events" in row["Missing to qualify"]
 
@@ -240,7 +239,7 @@ def test_school_event_summary_does_not_require_extra_league_when_only_ip_is_miss
     row = qualified_schools_report(snapshot)[0][0]
     assert row["Full team"] == "Yes"
     assert row["Qualified"] == "No"
-    assert row["Qualification requirements"] == "Under-9: interprovincial or GN Championship required"
+    assert row["Qualification requirements"] == "U/09: +1 event: 1 IP/Champs"
 
 
 @pytest.mark.parametrize("ip_layout", [False, True])

@@ -1,4 +1,4 @@
-BIATHLON EVENT MANAGER v1.9
+BIATHLON EVENT MANAGER v2.3
 =============================
 
 NORMAL USE
